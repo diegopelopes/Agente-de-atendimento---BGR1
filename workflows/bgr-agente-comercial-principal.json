@@ -22,7 +22,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "bgr-whatsapp",
-        "responseMode": "responseNode",
+        "responseMode": "onReceived",
         "options": {}
       },
       "id": "webhook-whatsapp-001",
@@ -255,16 +255,38 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { \"messaging_product\": \"whatsapp\", \"to\": $json.body.entry[0].changes[0].value.messages[0].from, \"type\": \"text\", \"text\": { \"body\": $json.output } } }}",
-        "options": {}
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/{PHONE_NUMBER_ID}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to: $json.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from || '', type: 'text', text: { preview_url: false, body: $json.output || '' } }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "id": "responder-whatsapp-001",
       "name": "Responder WhatsApp",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [900, 400],
-      "disabled": true
+      "disabled": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "WhatsApp Business - BGR"
+        }
+      }
     },
     {
       "parameters": {},
