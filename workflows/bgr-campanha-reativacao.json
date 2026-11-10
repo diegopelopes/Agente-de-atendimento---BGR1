@@ -81,8 +81,44 @@
           },
           "conditions": [
             {
-              "id": "condition-optout",
+              "id": "condition-optout-phone",
               "leftValue": "={{ $json.telefone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "condition-optout-not-sim",
+              "leftValue": "={{ ($json.opt_out || $json.descadastro || 'nao').toString().toLowerCase() }}",
+              "rightValue": "sim",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "condition-optout-not-true",
+              "leftValue": "={{ ($json.opt_out || $json.descadastro || 'false').toString().toLowerCase() }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "condition-lgpd-date",
+              "leftValue": "={{ $json.data_autorizacao }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "condition-lgpd-origin",
+              "leftValue": "={{ $json.origem_autorizacao }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -103,7 +139,7 @@
         300
       ],
       "notesInFlow": true,
-      "notes": "PLACEHOLDER: Verificar se o contato está na lista de opt-out.\nImplementar consulta à lista interna de descadastro.\nRemover contatos que solicitaram exclusão."
+      "notes": "LGPD & Opt-Out: Bloqueia qualquer contato com opt_out/descadastro ativo ('sim'/'true') ou sem data_autorizacao e origem_autorizacao."
     },
     {
       "parameters": {

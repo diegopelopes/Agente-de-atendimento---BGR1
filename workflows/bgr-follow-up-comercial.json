@@ -71,7 +71,7 @@
       "credentials": {
         "httpHeaderAuth": {
           "id": "",
-          "name": "Power CRM API - BGR"
+          "name": "Power CRM - Bearer"
         }
       },
       "notesInFlow": true,
@@ -237,7 +237,7 @@
       "credentials": {
         "httpHeaderAuth": {
           "id": "",
-          "name": "WhatsApp Business API - BGR"
+          "name": "WhatsApp Business - BGR"
         }
       },
       "notesInFlow": true,
@@ -283,7 +283,7 @@
       "credentials": {
         "httpHeaderAuth": {
           "id": "",
-          "name": "WhatsApp Business API - BGR"
+          "name": "WhatsApp Business - BGR"
         }
       },
       "notesInFlow": true,
@@ -329,7 +329,7 @@
       "credentials": {
         "httpHeaderAuth": {
           "id": "",
-          "name": "WhatsApp Business API - BGR"
+          "name": "WhatsApp Business - BGR"
         }
       },
       "notesInFlow": true,
@@ -375,7 +375,7 @@
       "credentials": {
         "httpHeaderAuth": {
           "id": "",
-          "name": "WhatsApp Business API - BGR"
+          "name": "WhatsApp Business - BGR"
         }
       },
       "notesInFlow": true,
@@ -421,7 +421,7 @@
       "credentials": {
         "httpHeaderAuth": {
           "id": "",
-          "name": "Power CRM API - BGR"
+          "name": "Power CRM - Bearer"
         }
       },
       "notesInFlow": true,
