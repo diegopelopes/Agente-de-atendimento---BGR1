@@ -625,10 +625,22 @@ const HTML_PAGE = `<!DOCTYPE html>
           <div class="wa-date-Divider">HOJE</div>
           <div class="msg system">🔒 As mensagens e as ligações são protegidas com a criptografia de ponta a ponta e conectadas ao Agente Comercial BGR Benefícios.</div>
         </div>
+        <div id="inline-rec-bar" style="display:none; background:#182229; padding:8px 14px; border-top:1px solid #2a3942; align-items:center; justify-content:space-between; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px; color:#ef4444; font-weight:700; font-size:13px;">
+            <span>🔴</span>
+            <span id="inline-rec-timer">00:00</span>
+            <span style="color:#e9edef; font-weight:400;" id="inline-rec-preview">Gravando mensagem de voz... fale agora</span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn danger sm" onclick="stopInlineVoiceRecording(false)">🗑️ Cancelar</button>
+            <button type="button" class="btn success sm" onclick="stopInlineVoiceRecording(true)">✅ Enviar Áudio</button>
+          </div>
+        </div>
         <form class="chat-input-bar" onsubmit="handleFormSubmit(event)">
           <button type="button" class="wa-icon-btn" title="Emojis" onclick="document.getElementById('chat-input').value += ' 😊'; document.getElementById('chat-input').focus();">😊</button>
           <button type="button" class="wa-icon-btn" title="Anexar Comprovante / Documento" onclick="runScenario('t28_envia_comprovante')">📎</button>
-          <input id="chat-input" type="text" placeholder="Digite uma mensagem" autocomplete="off" />
+          <input id="chat-input" type="text" placeholder="Digite uma mensagem ou grave um áudio 🎙️" autocomplete="off" />
+          <button type="button" class="wa-send-circle" style="background:#2a3942; color:#00a884; border:1px solid #00a884;" title="Gravar Mensagem de Voz (Microfone)" onclick="startInlineVoiceRecording()">🎙️</button>
           <button type="submit" class="wa-send-circle" title="Enviar mensagem">➤</button>
         </form>
       </section>
@@ -1073,7 +1085,24 @@ const HTML_PAGE = `<!DOCTYPE html>
       \`;
     }
 
-    function appendMessage(role, text, meta = '') {
+    let inlineMediaRecorder = null;
+    let inlineAudioChunks = [];
+    let inlineSpeechRec = null;
+    let inlineRecognizedText = '';
+    let inlineRecTimerId = null;
+    let inlineRecSeconds = 0;
+
+    function speakTextPtBr(text) {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const clean = text.replace(/[*_#`]/g, '');
+      const u = new SpeechSynthesisUtterance(clean);
+      u.lang = 'pt-BR';
+      u.rate = 1.05;
+      window.speechSynthesis.speak(u);
+    }
+
+    function appendMessage(role, text, meta = '', audioUrl = null) {
       const container = document.getElementById('chat-messages');
       const div = document.createElement('div');
       div.className = 'msg ' + role;
@@ -1083,8 +1112,26 @@ const HTML_PAGE = `<!DOCTYPE html>
         const sender = document.createElement('div');
         sender.className = 'msg-sender-name';
         const agName = (latestState && latestState.agent_config) ? latestState.agent_config.agent_display_name : 'Consultor Digital BGR';
-        sender.textContent = '🚗 ' + agName;
+        sender.innerHTML = '<span>🚗 ' + agName + '</span>';
+        const listenBtn = document.createElement('button');
+        listenBtn.type = 'button';
+        listenBtn.style.cssText = 'margin-left:auto; background:#2a3942; color:#00a884; border:1px solid #00a88455; border-radius:999px; padding:2px 8px; font-size:10.5px; cursor:pointer; font-weight:700;';
+        listenBtn.textContent = '🔊 Ouvir';
+        listenBtn.onclick = () => speakTextPtBr(text);
+        sender.appendChild(listenBtn);
         div.appendChild(sender);
+      }
+
+      if (audioUrl) {
+        const audioWrap = document.createElement('div');
+        audioWrap.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:5px; background:rgba(0,0,0,0.2); padding:6px 10px; border-radius:8px;';
+        audioWrap.innerHTML = '<span style="font-size:18px;">🎙️</span>';
+        const audioEl = document.createElement('audio');
+        audioEl.controls = true;
+        audioEl.src = audioUrl;
+        audioEl.style.cssText = 'height:32px; max-width:230px;';
+        audioWrap.appendChild(audioEl);
+        div.appendChild(audioWrap);
       }
 
       const bodySpan = document.createElement('div');
@@ -1107,6 +1154,108 @@ const HTML_PAGE = `<!DOCTYPE html>
 
       container.appendChild(div);
       container.scrollTop = container.scrollHeight;
+    }
+
+    async function startInlineVoiceRecording() {
+      const bar = document.getElementById('inline-rec-bar');
+      bar.style.display = 'flex';
+      inlineRecognizedText = '';
+      inlineAudioChunks = [];
+      inlineRecSeconds = 0;
+      document.getElementById('inline-rec-timer').textContent = '00:00';
+      document.getElementById('inline-rec-preview').textContent = 'Gravando áudio... fale no microfone';
+
+      clearInterval(inlineRecTimerId);
+      inlineRecTimerId = setInterval(() => {
+        inlineRecSeconds++;
+        const mm = String(Math.floor(inlineRecSeconds / 60)).padStart(2, '0');
+        const ss = String(inlineRecSeconds % 60).padStart(2, '0');
+        document.getElementById('inline-rec-timer').textContent = mm + ':' + ss;
+      }, 1000);
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        inlineSpeechRec = new SpeechRecognition();
+        inlineSpeechRec.lang = 'pt-BR';
+        inlineSpeechRec.continuous = true;
+        inlineSpeechRec.interimResults = true;
+        inlineSpeechRec.onresult = (ev) => {
+          let txt = '';
+          for (let i = 0; i < ev.results.length; i++) {
+            txt += ev.results[i][0].transcript + ' ';
+          }
+          inlineRecognizedText = txt.trim();
+          if (inlineRecognizedText) {
+            document.getElementById('inline-rec-preview').textContent = '🗣️ "' + inlineRecognizedText + '"';
+          }
+        };
+        try { inlineSpeechRec.start(); } catch {}
+      }
+
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          inlineMediaRecorder = new MediaRecorder(stream);
+          inlineMediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) inlineAudioChunks.push(e.data);
+          };
+          inlineMediaRecorder.start();
+        } catch {
+          document.getElementById('inline-rec-preview').textContent = 'Microfone sem permissão — usando simulador de voz';
+        }
+      }
+    }
+
+    async function stopInlineVoiceRecording(shouldSend) {
+      clearInterval(inlineRecTimerId);
+      document.getElementById('inline-rec-bar').style.display = 'none';
+      if (inlineSpeechRec) {
+        try { inlineSpeechRec.stop(); } catch {}
+        inlineSpeechRec = null;
+      }
+
+      let audioBlobUrl = null;
+      let audioBase64 = null;
+
+      if (inlineMediaRecorder && inlineMediaRecorder.state !== 'inactive') {
+        await new Promise((resolve) => {
+          inlineMediaRecorder.onstop = resolve;
+          inlineMediaRecorder.stop();
+          inlineMediaRecorder.stream.getTracks().forEach(t => t.stop());
+        });
+        if (inlineAudioChunks.length > 0) {
+          const blob = new Blob(inlineAudioChunks, { type: 'audio/webm' });
+          audioBlobUrl = URL.createObjectURL(blob);
+          audioBase64 = await new Promise((res) => {
+            const reader = new FileReader();
+            reader.onloadend = () => res(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+
+      if (!shouldSend) return;
+
+      const fallbackText = inlineRecognizedText || document.getElementById('chat-input').value.trim() || 'Olá, meu nome é Diego e gostaria de cotar um Honda Civic 2022 uso particular em Belo Horizonte';
+      document.getElementById('chat-input').value = '';
+      appendMessage('user', '🎙️ Mensagem de voz (' + inlineRecSeconds + 's): "' + fallbackText + '"', 'Áudio transcrito automaticamente', audioBlobUrl);
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: fallbackText,
+          audio_base64: audioBase64,
+          is_voice_message: true
+        })
+      });
+      const data = await res.json();
+      if (data.reply) {
+        appendMessage('agent', data.reply, data.meta || '', data.reply_audio_base64 || null);
+      } else if (data.silent_note) {
+        appendMessage('system', data.silent_note);
+      }
+      updateDashboard(data.state);
     }
 
     function renderCadenceStepCard(step) {
@@ -1825,6 +1974,7 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
           </div>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="wa-btn" id="wa-tts-btn" onclick="toggleAutoVoiceReply()" title="Ativar/Desativar leitura em voz alta das respostas do Agente">🔈 Voz IA: Off</button>
           <button class="wa-btn" id="wa-openai-btn" onclick="toggleKeyBar()">🔑 Conectar OpenAI</button>
           <span class="wa-status-pill" id="wa-mode">🤖 IA ATIVA</span>
           <button class="wa-btn" onclick="resetChat()" title="Limpar e reiniciar conversa">↺ Limpar</button>
@@ -1834,36 +1984,76 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
 
       <div id="wa-key-bar" style="display: none; background: #182229; padding: 10px 20px; border-bottom: 1px solid #2a3942; align-items: center; gap: 10px;">
         <span style="font-size: 12.5px; color: #00a884; font-weight: 600;">🔑 Chave OpenAI (sk-...):</span>
-        <input id="wa-openai-input" type="password" placeholder="Cole sua OPENAI_API_KEY (sk-proj-...) aqui para ativar o GPT-4o-mini ao vivo" style="flex: 1; background: #111b21; border: 1px solid #3b4a54; color: #fff; padding: 7px 12px; border-radius: 7px; font-size: 13px;" />
+        <input id="wa-openai-input" type="password" placeholder="Cole sua OPENAI_API_KEY (sk-proj-...) aqui para ativar o GPT-4o-mini + Whisper Áudio ao vivo" style="flex: 1; background: #111b21; border: 1px solid #3b4a54; color: #fff; padding: 7px 12px; border-radius: 7px; font-size: 13px;" />
         <button class="wa-btn" style="background: #00a884; color: #111b21; border-color: #00a884;" onclick="saveQuickOpenAiKey()">💾 Ativar OpenAI</button>
       </div>
 
       <div id="wa-messages">
         <div class="wa-day-badge">HOJE</div>
-        <div class="bubble system">🔒 As mensagens e as ligações são protegidas com a criptografia de ponta a ponta. Esta conversa utiliza uma conta comercial oficial da <strong>BGR Benefícios</strong>.</div>
+        <div class="bubble system">🔒 As mensagens e os áudios são protegidos com a criptografia de ponta a ponta. Esta conversa utiliza uma conta comercial oficial da <strong>BGR Benefícios</strong>.</div>
       </div>
 
       <div class="quick-chips">
+        <button class="chip" style="border-color:#00a884; color:#00a884; font-weight:600;" onclick="sendSimulatedVoiceMessage()">🎙️ Enviar Áudio de Teste (Voz)</button>
         <button class="chip" onclick="sendQuick('Olá, gostaria de fazer uma cotação!')">👋 Olá, quero cotação</button>
         <button class="chip" onclick="sendQuick('Meu nome é Diego Gomes')">🪪 Meu nome é Diego</button>
         <button class="chip" onclick="sendQuick('Ainda não escolhi o veículo')">🤔 Não escolhi o veículo</button>
         <button class="chip" onclick="sendQuick('Tenho um Honda Civic 2022 uso particular em Belo Horizonte')">🚘 Civic 2022 Particular BH</button>
         <button class="chip" onclick="sendQuick('Achei um pouco caro, tem desconto?')">💬 Achei caro / Desconto</button>
         <button class="chip" onclick="sendQuick('Quero contratar o plano 1 BGR Essencial')">📝 Contratar Plano 1</button>
-        <button class="chip" onclick="sendQuick('Quero falar com um atendente humano')">👨‍💼 Falar com Humano</button>
+      </div>
+
+      <!-- Barra de Gravação de Áudio ao Vivo estilo WhatsApp -->
+      <div id="wa-rec-bar" style="display: none; background: #202c33; padding: 10px 18px; border-top: 1px solid #2a3942; align-items: center; justify-content: space-between; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px; color: #ef4444; font-weight: 700; font-size: 14px;">
+          <span>🔴</span>
+          <span id="wa-rec-timer">00:00</span>
+          <span id="wa-rec-transcript" style="color: #e9edef; font-weight: 400; font-size: 13.5px;">Gravando mensagem de voz... fale no microfone</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="wa-btn" style="background:#ef444433; border-color:#ef4444; color:#fca5a5;" onclick="stopWaVoiceRecording(false)">🗑️ Cancelar</button>
+          <button type="button" class="wa-btn" style="background:#00a884; border-color:#00a884; color:#111b21; font-weight:800;" onclick="stopWaVoiceRecording(true)">✅ Enviar Áudio ➤</button>
+        </div>
       </div>
 
       <form class="wa-input-bar" onsubmit="handleSubmit(event)">
         <button type="button" class="wa-bar-ico" title="Emojis" onclick="document.getElementById('wa-input').value += ' 😊'; document.getElementById('wa-input').focus();">😊</button>
         <button type="button" class="wa-bar-ico" title="Anexar Arquivo / Comprovante" onclick="sendQuick('Acabei de fazer o PIX da adesão, segue o comprovante!')">➕</button>
-        <input id="wa-input" type="text" placeholder="Digite uma mensagem" autocomplete="off" autofocus />
-        <button type="submit" class="wa-send" title="Enviar">➤</button>
+        <input id="wa-input" type="text" placeholder="Digite uma mensagem ou clique no microfone 🎙️ para gravar áudio" autocomplete="off" autofocus />
+        <button type="button" class="wa-send" style="background:#2a3942; color:#00a884; border:1px solid #00a884;" title="Gravar Mensagem de Voz (Microfone)" onclick="startWaVoiceRecording()">🎙️</button>
+        <button type="submit" class="wa-send" title="Enviar texto">➤</button>
       </form>
     </main>
   </div>
 
   <script>
-    function addBubble(role, text, meta = '') {
+    let autoVoiceReply = false;
+    let waMediaRecorder = null;
+    let waAudioChunks = [];
+    let waSpeechRec = null;
+    let waRecognizedText = '';
+    let waRecTimerId = null;
+    let waRecSeconds = 0;
+
+    function speakWaText(text) {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const clean = text.replace(/[*_#`]/g, '');
+      const u = new SpeechSynthesisUtterance(clean);
+      u.lang = 'pt-BR';
+      u.rate = 1.05;
+      window.speechSynthesis.speak(u);
+    }
+
+    function toggleAutoVoiceReply() {
+      autoVoiceReply = !autoVoiceReply;
+      const btn = document.getElementById('wa-tts-btn');
+      btn.textContent = autoVoiceReply ? '🔊 Voz IA: ON' : '🔈 Voz IA: Off';
+      btn.style.borderColor = autoVoiceReply ? '#00a884' : '#3b4a54';
+      btn.style.color = autoVoiceReply ? '#00a884' : '#e9edef';
+    }
+
+    function addBubble(role, text, meta = '', audioUrl = null, isVoiceBadge = false) {
       const box = document.getElementById('wa-messages');
       const div = document.createElement('div');
       div.className = 'bubble ' + role;
@@ -1872,8 +2062,34 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
       if (role === 'agent') {
         const sender = document.createElement('div');
         sender.className = 'bubble-sender';
-        sender.textContent = document.getElementById('wa-agent-name').textContent || 'Consultor Digital BGR';
+        sender.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px;';
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = document.getElementById('wa-agent-name').textContent || 'Consultor Digital BGR';
+        sender.appendChild(nameSpan);
+
+        const listenBtn = document.createElement('button');
+        listenBtn.type = 'button';
+        listenBtn.style.cssText = 'background:#2a3942; color:#00a884; border:1px solid #00a88466; border-radius:999px; padding:2px 9px; font-size:11px; cursor:pointer; font-weight:700;';
+        listenBtn.textContent = '🔊 Ouvir Áudio';
+        listenBtn.onclick = () => speakWaText(text);
+        sender.appendChild(listenBtn);
         div.appendChild(sender);
+      }
+
+      if (audioUrl || isVoiceBadge) {
+        const voiceBar = document.createElement('div');
+        voiceBar.style.cssText = 'display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.22); padding:8px 12px; border-radius:10px; margin-bottom:6px;';
+        if (audioUrl) {
+          voiceBar.innerHTML = '<span style="font-size:20px;">🎙️</span>';
+          const aud = document.createElement('audio');
+          aud.controls = true;
+          aud.src = audioUrl;
+          aud.style.cssText = 'height:34px; max-width:250px;';
+          voiceBar.appendChild(aud);
+        } else {
+          voiceBar.innerHTML = '<span style="font-size:20px;">🎙️</span><div style="flex:1; height:6px; background:rgba(0,168,132,0.35); border-radius:99px; position:relative;"><div style="width:100%; height:100%; background:#00a884; border-radius:99px;"></div></div><span style="font-size:11.5px; color:#d1d7db; font-weight:600;">0:04 • Áudio WhatsApp</span>';
+        }
+        div.appendChild(voiceBar);
       }
 
       const contentDiv = document.createElement('div');
@@ -1895,12 +2111,16 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
 
         const prevEl = document.getElementById('sidebar-last-preview');
         const timeEl = document.getElementById('sidebar-last-time');
-        if (prevEl) prevEl.textContent = (role === 'user' ? '✓✓ ' : '') + text.slice(0, 42);
+        if (prevEl) prevEl.textContent = (role === 'user' ? '✓✓ ' : '') + ((audioUrl || isVoiceBadge) ? '🎙️ Mensagem de voz • ' : '') + text.slice(0, 38);
         if (timeEl) timeEl.textContent = nowTime;
       }
 
       box.appendChild(div);
       box.scrollTop = box.scrollHeight;
+
+      if (role === 'agent' && autoVoiceReply) {
+        speakWaText(text);
+      }
     }
 
     function syncHeader(state) {
@@ -1945,6 +2165,128 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
       document.getElementById('wa-openai-input').value = '';
       document.getElementById('wa-key-bar').style.display = 'none';
       if (data.system_note) addBubble('system', data.system_note);
+      syncHeader(data.state);
+    }
+
+    async function startWaVoiceRecording() {
+      const bar = document.getElementById('wa-rec-bar');
+      bar.style.display = 'flex';
+      waRecognizedText = '';
+      waAudioChunks = [];
+      waRecSeconds = 0;
+      document.getElementById('wa-rec-timer').textContent = '00:00';
+      document.getElementById('wa-rec-transcript').textContent = 'Gravando mensagem de voz... fale no microfone';
+
+      clearInterval(waRecTimerId);
+      waRecTimerId = setInterval(() => {
+        waRecSeconds++;
+        const mm = String(Math.floor(waRecSeconds / 60)).padStart(2, '0');
+        const ss = String(waRecSeconds % 60).padStart(2, '0');
+        document.getElementById('wa-rec-timer').textContent = mm + ':' + ss;
+      }, 1000);
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        waSpeechRec = new SpeechRecognition();
+        waSpeechRec.lang = 'pt-BR';
+        waSpeechRec.continuous = true;
+        waSpeechRec.interimResults = true;
+        waSpeechRec.onresult = (ev) => {
+          let txt = '';
+          for (let i = 0; i < ev.results.length; i++) {
+            txt += ev.results[i][0].transcript + ' ';
+          }
+          waRecognizedText = txt.trim();
+          if (waRecognizedText) {
+            document.getElementById('wa-rec-transcript').textContent = '🗣️ "' + waRecognizedText + '"';
+          }
+        };
+        try { waSpeechRec.start(); } catch {}
+      }
+
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          waMediaRecorder = new MediaRecorder(stream);
+          waMediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) waAudioChunks.push(e.data);
+          };
+          waMediaRecorder.start();
+        } catch {
+          document.getElementById('wa-rec-transcript').textContent = 'Microfone sem permissão — clique em Enviar Áudio para usar simulador de voz';
+        }
+      }
+    }
+
+    async function stopWaVoiceRecording(shouldSend) {
+      clearInterval(waRecTimerId);
+      document.getElementById('wa-rec-bar').style.display = 'none';
+      if (waSpeechRec) {
+        try { waSpeechRec.stop(); } catch {}
+        waSpeechRec = null;
+      }
+
+      let audioBlobUrl = null;
+      let audioBase64 = null;
+
+      if (waMediaRecorder && waMediaRecorder.state !== 'inactive') {
+        await new Promise((resolve) => {
+          waMediaRecorder.onstop = resolve;
+          waMediaRecorder.stop();
+          waMediaRecorder.stream.getTracks().forEach(t => t.stop());
+        });
+        if (waAudioChunks.length > 0) {
+          const blob = new Blob(waAudioChunks, { type: 'audio/webm' });
+          audioBlobUrl = URL.createObjectURL(blob);
+          audioBase64 = await new Promise((res) => {
+            const reader = new FileReader();
+            reader.onloadend = () => res(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+
+      if (!shouldSend) return;
+
+      const textToSend = waRecognizedText || document.getElementById('wa-input').value.trim() || 'Olá, meu nome é Diego e quero fazer a cotação de um Toyota Corolla 2023 uso particular em Belo Horizonte';
+      document.getElementById('wa-input').value = '';
+      addBubble('user', '🗣️ Transcrição: "' + textToSend + '"', '🎙️ Áudio de voz enviado (' + Math.max(1, waRecSeconds) + 's)', audioBlobUrl, true);
+
+      const statusEl = document.getElementById('wa-online-status');
+      if (statusEl) statusEl.textContent = 'ouvindo áudio e digitando...';
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: textToSend,
+          audio_base64: audioBase64,
+          is_voice_message: true
+        })
+      });
+      const data = await res.json();
+      if (statusEl) statusEl.textContent = 'online';
+      if (data.reply) addBubble('agent', data.reply, data.meta || '');
+      if (data.silent_note) addBubble('system', data.silent_note);
+      syncHeader(data.state);
+    }
+
+    async function sendSimulatedVoiceMessage() {
+      const sampleText = 'Olá, meu nome é Diego Gomes e quero fazer a cotação de um Honda Civic 2022 uso particular em Belo Horizonte';
+      addBubble('user', '🗣️ Transcrição: "' + sampleText + '"', '🎙️ Áudio WhatsApp (0:04) • Transcrito automaticamente', null, true);
+      const statusEl = document.getElementById('wa-online-status');
+      if (statusEl) statusEl.textContent = 'ouvindo áudio e digitando...';
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: sampleText,
+          is_voice_message: true
+        })
+      });
+      const data = await res.json();
+      if (statusEl) statusEl.textContent = 'online';
+      if (data.reply) addBubble('agent', data.reply, data.meta || '');
+      if (data.silent_note) addBubble('system', data.silent_note);
       syncHeader(data.state);
     }
 
@@ -2356,7 +2698,21 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && req.url === '/api/chat') {
-      const msgText = String(payload.message ?? '').trim();
+      let msgText = String(payload.message ?? '').trim();
+      if (typeof payload.audio_base64 === 'string' && payload.audio_base64.length > 20 && openAiAssistant.isConfigured()) {
+        const whisperText = await openAiAssistant.transcribeAudioBase64(payload.audio_base64);
+        if (whisperText) {
+          msgText = whisperText;
+        }
+      }
+      if (payload.is_voice_message) {
+        const voiceEv = buildCustomAuditEvent(
+          'whatsapp_voice_message_received',
+          `Audio de voz recebido no WhatsApp e transcrito: "${msgText.slice(0, 80)}"`,
+          'LOW'
+        );
+        dashboardService.recordEvent({ auditEvent: voiceEv });
+      }
       const conv = handoffService.getOrCreateConversation(DEFAULT_SESSION_ID, 'chat_teste');
 
       // 0. Comando de Opt-Out no chat ("PARAR" / "DESCADASTRAR")

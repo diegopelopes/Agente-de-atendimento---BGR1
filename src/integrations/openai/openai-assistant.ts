@@ -219,6 +219,68 @@ REGRAS OBRIGATÓRIAS:
       modelUsed: this.model,
     };
   }
+
+  /**
+   * Transcreve áudio de voz enviado pelo cliente usando OpenAI Whisper (whisper-1)
+   */
+  async transcribeAudioBase64(audioBase64: string, mimeType = 'audio/webm'): Promise<string | null> {
+    if (!this.isConfigured() || !audioBase64) {
+      return null;
+    }
+    try {
+      const cleanBase64 = audioBase64.includes(',') ? audioBase64.split(',')[1] : audioBase64;
+      const buffer = Buffer.from(cleanBase64, 'base64');
+      const ext = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'm4a' : 'webm';
+      const blob = new Blob([buffer], { type: mimeType });
+      const form = new FormData();
+      form.append('file', blob, `whatsapp_voice.${ext}`);
+      form.append('model', 'whisper-1');
+      form.append('language', 'pt');
+
+      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: form,
+      });
+
+      if (!response.ok) return null;
+      const data = (await response.json()) as { text?: string };
+      return data.text?.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Sintetiza resposta em áudio neural (OpenAI TTS tts-1) para enviar mensagem de voz no WhatsApp
+   */
+  async synthesizeSpeechBase64(text: string, voice: 'nova' | 'onyx' | 'alloy' = 'nova'): Promise<string | null> {
+    if (!this.isConfigured() || !text.trim()) {
+      return null;
+    }
+    try {
+      const response = await fetch('https://api.openai.com/v1/audio/speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'tts-1',
+          voice,
+          input: text.slice(0, 900),
+          response_format: 'mp3',
+        }),
+      });
+      if (!response.ok) return null;
+      const arrayBuf = await response.arrayBuffer();
+      return `data:audio/mp3;base64,${Buffer.from(arrayBuf).toString('base64')}`;
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const SUPABASE_SQL_SCHEMA = `-- =========================================================================
