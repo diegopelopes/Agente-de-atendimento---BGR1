@@ -277,13 +277,44 @@ export class AgentRouterService {
     const nameMatch = text.match(/(?:meu\s+nome\s+[eé]|sou\s+o|sou\s+a|me\s+chamo)\s+([A-ZÀ-Úa-zà-ú]+(?:\s+[A-ZÀ-Úa-zà-ú]+)*)/i);
     if (nameMatch && !session.lead.name) {
       session.lead.name = nameMatch[1].trim();
+    } else if (
+      session.greeted &&
+      !session.lead.name &&
+      !/^(ol[aá]|oi|bom\s+dia|boa\s+tarde|boa\s+noite|quero|quanto|qual|voc[eê]|tenho|ignore)/i.test(text) &&
+      /^[A-ZÀ-Úa-zà-ú]{2,}(?:\s+[A-ZÀ-Úa-zà-ú]{2,}){0,3}$/.test(text.trim())
+    ) {
+      session.lead.name = text.trim();
     }
 
-    const carMatch = text.match(/\b(Honda|Toyota|Fiat|Volkswagen|VW|Chevrolet|Hyundai)\s+([A-Za-z0-9]+)\s+(19\d{2}|20\d{2})\b/i);
+    const carMatch = text.match(
+      /\b(Honda|Toyota|Fiat|Volkswagen|VW|Chevrolet|Hyundai|Jeep|Renault|Nissan|Ford|BYD|Caoa|Peugeot|Citroen)\s+([A-Za-z0-9À-ú]+)\s+(19\d{2}|20\d{2})\b/i
+    );
     if (carMatch) {
       session.vehicle.brand = carMatch[1];
       session.vehicle.model = carMatch[2];
       session.vehicle.year = Number(carMatch[3]);
+    } else {
+      const modelOnlyMatch = text.match(
+        /\b(Civic|Corolla|Onix|HB20|Gol|Polo|Toro|Strada|Compass|Renegade|Creta|Tracker|Kicks|Hilux|HR-V|Fastback|Pulse|Argo|Cronos|Mobi|Kwid|Sandero|Duster|EcoSport|Ranger|S10)\s+(19\d{2}|20\d{2})\b/i
+      );
+      if (modelOnlyMatch) {
+        session.vehicle.brand = session.vehicle.brand ?? 'Veículo';
+        session.vehicle.model = modelOnlyMatch[1];
+        session.vehicle.year = Number(modelOnlyMatch[2]);
+      }
+    }
+
+    if (/\b(particular|passeio|pessoal|fam[ií]lia)\b/i.test(text)) {
+      session.vehicle.usage = 'particular';
+    } else if (/\b(aplicativo|uber|99|motorista\s+de\s+app|aluguel|comercial|trabalho)\b/i.test(text)) {
+      session.vehicle.usage = 'aplicativo';
+    }
+
+    const cityMatch = text.match(
+      /\b(Belo\s+Horizonte|BH|Contagem|Betim|Uberl[aâ]ndia|Juiz\s+de\s+Fora|S[aã]o\s+Paulo|SP|Rio\s+de\s+Janeiro|RJ|Curitiba|Bras[ií]lia|Goi[aâ]nia|Salvador|Recife|Fortaleza|Campinas|Vit[oó]ria)(?:\s*[/-]\s*([A-Z]{2}))?\b/i
+    );
+    if (cityMatch) {
+      session.lead.city_uf = cityMatch[2] ? `${cityMatch[1]}/${cityMatch[2].toUpperCase()}` : cityMatch[1];
     }
   }
 

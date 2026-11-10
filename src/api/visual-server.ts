@@ -334,6 +334,7 @@ const HTML_PAGE = `<!DOCTYPE html>
     </div>
 
     <div style="display: flex; gap: 8px; align-items: center;">
+      <a href="/chat" target="_blank" class="btn success sm" style="text-decoration: none;">💬 Abrir Chat Cliente (Nova Aba)</a>
       <span id="mode-badge" class="badge">🤖 IA ATIVA</span>
       <span id="stage-badge" class="badge warn">📍 contato_iniciado</span>
       <button class="btn danger sm" onclick="resetSimulator()">↺ Reiniciar</button>
@@ -1190,11 +1191,185 @@ const HTML_PAGE = `<!DOCTYPE html>
 </body>
 </html>`;
 
+const CHAT_ONLY_HTML = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp Web — Atendimento BGR Benefícios</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: #0b141a; color: #e9edef; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .wa-shell {
+      width: 100%; max-width: 920px; height: 94vh; background: #111b21;
+      border: 1px solid #222e35; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    }
+    .wa-header {
+      background: #202c33; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #2a3942;
+    }
+    .wa-profile { display: flex; align-items: center; gap: 12px; }
+    .wa-avatar {
+      width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #00a884, #2563eb);
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .wa-status-pill {
+      padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      background: rgba(0, 168, 132, 0.2); color: #00a884; border: 1px solid rgba(0, 168, 132, 0.4);
+    }
+    .wa-btn {
+      background: #2a3942; color: #e9edef; border: 1px solid #3b4a54; padding: 7px 12px;
+      border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: none;
+    }
+    .wa-btn:hover { background: #00a884; color: #111b21; border-color: #00a884; }
+    #wa-messages {
+      flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px;
+      background: radial-gradient(circle at center, #0f1920 0%, #0b141a 100%);
+    }
+    .bubble {
+      max-width: 78%; padding: 11px 15px; border-radius: 12px; font-size: 14.5px; line-height: 1.45; white-space: pre-wrap;
+      position: relative;
+    }
+    .bubble.user { align-self: flex-end; background: #005c4b; color: #e9edef; border-top-right-radius: 2px; }
+    .bubble.agent { align-self: flex-start; background: #202c33; color: #e9edef; border-top-left-radius: 2px; border: 1px solid #2a3942; }
+    .bubble.system { align-self: center; max-width: 90%; background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.35); color: #fcd34d; font-size: 12.5px; text-align: center; }
+    .bubble-meta { font-size: 11px; color: #8696a0; margin-top: 6px; }
+    .quick-chips {
+      background: #182229; padding: 8px 16px; display: flex; gap: 8px; overflow-x: auto; border-top: 1px solid #222e35;
+    }
+    .chip {
+      background: #202c33; color: #d1d7db; border: 1px solid #2a3942; padding: 6px 12px;
+      border-radius: 999px; font-size: 12px; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+    }
+    .chip:hover { background: #00a884; color: #111b21; border-color: #00a884; font-weight: 600; }
+    .wa-input-bar {
+      background: #202c33; padding: 12px 16px; display: flex; gap: 10px; align-items: center;
+    }
+    .wa-input-bar input {
+      flex: 1; background: #2a3942; border: none; color: #e9edef; padding: 12px 16px;
+      border-radius: 10px; font-size: 15px; outline: none;
+    }
+    .wa-send {
+      background: #00a884; color: #111b21; border: none; padding: 12px 20px;
+      border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer;
+    }
+    .wa-send:hover { background: #06cf9c; }
+  </style>
+</head>
+<body>
+  <div class="wa-shell">
+    <div class="wa-header">
+      <div class="wa-profile">
+        <div class="wa-avatar">🚗</div>
+        <div>
+          <div style="font-weight: 700; font-size: 16px;" id="wa-agent-name">Consultor Digital BGR Benefícios</div>
+          <div style="font-size: 12px; color: #8696a0;">
+            WhatsApp Oficial: <strong id="wa-agent-phone" style="color: #00a884;">+55 31 99888-7766</strong> • <span id="wa-stage">contato_iniciado</span>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span class="wa-status-pill" id="wa-mode">🤖 IA ATIVA</span>
+        <button class="wa-btn" onclick="resetChat()">↺ Nova Conversa</button>
+        <a href="/" class="wa-btn">⚙️ Painel Completo</a>
+      </div>
+    </div>
+
+    <div id="wa-messages">
+      <div class="bubble system">🔒 As mensagens desta conversa são protegidas e conectadas em tempo real ao Agente Comercial BGR Benefícios. Digite sua mensagem abaixo ou clique nas sugestões rápidas!</div>
+    </div>
+
+    <div class="quick-chips">
+      <button class="chip" onclick="sendQuick('Olá, gostaria de fazer uma cotação!')">👋 Olá, quero cotação</button>
+      <button class="chip" onclick="sendQuick('Meu nome é Diego Gomes')">🪪 Meu nome é Diego</button>
+      <button class="chip" onclick="sendQuick('Tenho um Honda Civic 2022 uso particular em Belo Horizonte')">🚘 Civic 2022 Particular BH</button>
+      <button class="chip" onclick="sendQuick('Achei um pouco caro, tem desconto?')">💬 Achei caro / Desconto</button>
+      <button class="chip" onclick="sendQuick('Quero contratar o plano 1 BGR Essencial')">📝 Quero contratar Plano 1</button>
+      <button class="chip" onclick="sendQuick('Já assinei o contrato e fiz o PIX, já estou protegido?')">⏳ Já assinei / Fiz PIX</button>
+      <button class="chip" onclick="sendQuick('Quero falar com um atendente humano')">👨‍💼 Falar com Humano</button>
+    </div>
+
+    <form class="wa-input-bar" onsubmit="handleSubmit(event)">
+      <input id="wa-input" type="text" placeholder="Digite uma mensagem para conversar com o Agente BGR..." autocomplete="off" autofocus />
+      <button type="submit" class="wa-send">Enviar ➤</button>
+    </form>
+  </div>
+
+  <script>
+    function addBubble(role, text, meta = '') {
+      const box = document.getElementById('wa-messages');
+      const div = document.createElement('div');
+      div.className = 'bubble ' + role;
+      div.textContent = text;
+      if (meta) {
+        const m = document.createElement('div');
+        m.className = 'bubble-meta';
+        m.textContent = meta;
+        div.appendChild(m);
+      }
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function syncHeader(state) {
+      if (!state) return;
+      if (state.agent_config) {
+        document.getElementById('wa-agent-phone').textContent = state.agent_config.agent_phone;
+        document.getElementById('wa-agent-name').textContent = state.agent_config.agent_display_name;
+      }
+      if (state.conversation) {
+        document.getElementById('wa-stage').textContent = 'Etapa: ' + state.conversation.current_stage;
+        const m = state.conversation.attendance_mode;
+        document.getElementById('wa-mode').textContent = (m === 'ia_ativa' ? '🤖 ' : '👨‍💼 ') + m.toUpperCase();
+      }
+    }
+
+    async function sendQuick(text) {
+      addBubble('user', text);
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+      const data = await res.json();
+      if (data.reply) addBubble('agent', data.reply, data.meta || '');
+      if (data.silent_note) addBubble('system', data.silent_note);
+      syncHeader(data.state);
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+      const inp = document.getElementById('wa-input');
+      const val = inp.value.trim();
+      if (!val) return;
+      inp.value = '';
+      sendQuick(val);
+    }
+
+    async function resetChat() {
+      const res = await fetch('/api/reset', { method: 'POST' });
+      const data = await res.json();
+      document.getElementById('wa-messages').innerHTML = '<div class="bubble system">✨ Nova conversa iniciada! Digite "Olá" abaixo para começar o atendimento com o Agente BGR.</div>';
+      syncHeader(data.state);
+    }
+
+    fetch('/api/state').then(r => r.json()).then(d => syncHeader(d.state));
+  </script>
+</body>
+</html>`;
+
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(HTML_PAGE);
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/chat') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(CHAT_ONLY_HTML);
       return;
     }
 
@@ -1501,6 +1676,30 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && req.url === '/api/chat') {
+      const msgText = String(payload.message ?? '').trim();
+      const conv = handoffService.getOrCreateConversation(DEFAULT_SESSION_ID, 'chat_teste');
+
+      // 0. Comando de Opt-Out no chat ("PARAR" / "DESCADASTRAR")
+      if (/^(parar|sair|descadastrar|cancelar\s+mensagens)$/i.test(msgText)) {
+        const optRes = whatsappService.processInboundWebhook({
+          message_id: `wamid.chat_${Date.now()}`,
+          from_phone: '+5511999990001',
+          text_body: 'PARAR',
+          received_at_iso: new Date().toISOString(),
+        });
+        campaignService.registerOptOutSuppression('+5511999990001');
+        dashboardService.recordEvent({ auditEvent: optRes.audit_event });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            reply: optRes.immediate_reply_text,
+            meta: `📱 agente: ${agentConfig.agent_phone} | Opt-Out LGPD processado`,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
+
       const gate = handoffService.evaluateIncomingMessageGate(DEFAULT_SESSION_ID, 'chat_teste');
       if (!gate.allow_ai_processing) {
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -1518,8 +1717,90 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      // Objeção de preço ou pedido de desconto na conversa natural
+      if (/\b(desconto|mais\s+barato|50%|abatimento)\b/i.test(msgText)) {
+        const objRes = quotationService.handleCommercialObjection('pedido_desconto');
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            reply: objRes.customer_message,
+            meta: `📱 agente: ${agentConfig.agent_phone} | objeção: pedido_desconto | discount_granted: ${objRes.discount_granted}`,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
+
+      if (/\b(est[aá]\s+caro|achei\s+caro|muito\s+caro|vou\s+pensar)\b/i.test(msgText)) {
+        const objRes = quotationService.handleCommercialObjection('esta_caro');
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            reply: objRes.customer_message,
+            meta: `📱 agente: ${agentConfig.agent_phone} | objeção: esta_caro | discount_granted: ${objRes.discount_granted}`,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
+
+      // Escolha de plano / contratação na conversa natural
+      if (/\b(quero\s+contratar|plano\s*1|bgr\s+essencial|fechar\s+agora|quero\s+esse)\b/i.test(msgText)) {
+        if (!currentQuote) {
+          const autoQuote = await quotationService.processQuotationRequest({
+            sessionId: DEFAULT_SESSION_ID,
+            lead: { id: 'lead_chat_001', name: 'Cliente BGR', phone: '+5511999990001', city_uf: 'Belo Horizonte/MG' },
+            vehicle: { brand: 'Honda', model: 'Civic', year: 2022, usage: 'particular' },
+          });
+          currentQuote = autoQuote.quote_result;
+        }
+        const oppOut = lifecycleService.createOpportunityFromQuote({
+          opportunityId: DEFAULT_OPP_ID,
+          leadId: 'lead_chat_001',
+          quote: currentQuote!,
+          selectedPlanId: 'bgr_essencial',
+          sessionId: DEFAULT_SESSION_ID,
+        });
+        opportunityCreated = true;
+        conv.current_stage = oppOut.stage;
+        dashboardService.recordEvent({
+          auditEvent: oppOut.audit_event,
+          proposalOpportunityId: DEFAULT_OPP_ID,
+        });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            reply: oppOut.customer_message,
+            meta: `📱 agente: ${agentConfig.agent_phone} | etapa: ${oppOut.stage} | proteção_ativa: ${oppOut.protection_active_declared}`,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
+
+      // Alegação de assinatura ou envio de comprovante PIX na conversa natural (T27 / T28)
+      if (/\b(j[aá]\s+assinei|fiz\s+o\s+pix|comprovante|j[aá]\s+paguei|j[aá]\s+estou\s+protegido)\b/i.test(msgText) && opportunityCreated) {
+        const isPix = /\b(pix|comprovante|paguei)\b/i.test(msgText);
+        const claimOut = lifecycleService.handleCustomerUnverifiedClaim({
+          opportunityId: DEFAULT_OPP_ID,
+          sessionId: DEFAULT_SESSION_ID,
+          claimType: isPix ? 'enviou_comprovante_pagamento' : 'alega_assinatura_concluida',
+        });
+        conv.current_stage = claimOut.stage;
+        dashboardService.recordEvent({ auditEvent: claimOut.audit_event });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            reply: claimOut.customer_message,
+            meta: `📱 agente: ${agentConfig.agent_phone} | bloqueio_ativação_prematura: ativo=${claimOut.protection_active_declared}`,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
+
       const routeRes = router.routeMessage({
-        message: String(payload.message ?? ''),
+        message: msgText,
         channelId: 'chat_teste',
         sessionId: DEFAULT_SESSION_ID,
       });
@@ -1529,6 +1810,67 @@ const server = http.createServer(async (req, res) => {
         durationMs: 180,
         costUsd: 0.0004,
       });
+
+      // Se o cliente pediu atendente humano na conversa natural
+      if (routeRes.next_action === 'transferir_humano') {
+        const hdfOut = handoffService.initiateHandoff({
+          sessionId: DEFAULT_SESSION_ID,
+          channel: 'chat_teste',
+          trigger: 'solicitacao_explicita_cliente',
+          conversationSummary: `Cliente solicitou atendente humano no chat: "${msgText}"`,
+        });
+        dashboardService.recordEvent({ auditEvent: hdfOut.audit_event });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            reply: hdfOut.customer_message,
+            meta: `📱 agente: ${agentConfig.agent_phone} | protocolo: ${hdfOut.handoff.ticket_id} | fila: ${hdfOut.handoff.target_queue}`,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
+
+      // Se o cliente já informou Nome + Veículo + Uso + Cidade na conversa natural, gera a Cotação Oficial automaticamente!
+      if (routeRes.next_action === 'consultar_crm') {
+        const mem = routeRes.memory_snapshot;
+        const qOut = await quotationService.processQuotationRequest({
+          sessionId: DEFAULT_SESSION_ID,
+          lead: {
+            id: 'lead_chat_001',
+            name: mem.lead.name ?? 'Cliente BGR',
+            phone: '+5511999990001',
+            city_uf: mem.lead.city_uf ?? 'Belo Horizonte/MG',
+          },
+          vehicle: {
+            brand: mem.vehicle.brand ?? 'Honda',
+            model: mem.vehicle.model ?? 'Civic',
+            year: mem.vehicle.year ?? 2022,
+            usage: mem.vehicle.usage ?? 'particular',
+          },
+        });
+        currentQuote = qOut.quote_result;
+        conv.current_stage = qOut.stage;
+        if (qOut.audit_events[0]) {
+          dashboardService.recordEvent({
+            auditEvent: qOut.audit_events[0],
+            durationMs: 290,
+            costUsd: 0.0009,
+            leadId: 'lead_chat_001',
+            qualified: true,
+            quoteCode: currentQuote?.quotation_code,
+          });
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            reply: qOut.customer_message,
+            meta: `📱 agente: ${agentConfig.agent_phone} | Cotação Oficial CRM: ${currentQuote?.quotation_code}`,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
 
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(
