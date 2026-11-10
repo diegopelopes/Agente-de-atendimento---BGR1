@@ -584,6 +584,20 @@ export class AgentRouterService {
     return created;
   }
 
+  syncSessionMemory(
+    sessionId: string,
+    channelId: string,
+    lead: Partial<Lead>,
+    vehicle: Partial<Vehicle>
+  ): SessionMemoryContext {
+    const session = this.getOrCreateSession(sessionId, channelId);
+    session.greeted = true;
+    session.lead = { ...lead };
+    session.vehicle = { ...vehicle };
+    session.expected_slot = this.computeNextQualificationStep(session).expectedSlot;
+    return session;
+  }
+
   private extractEntitiesFromText(text: string, session: SessionMemoryContext): void {
     const cleanText = text.trim();
     if (!cleanText) return;

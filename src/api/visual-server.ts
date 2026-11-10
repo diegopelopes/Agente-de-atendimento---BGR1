@@ -22,6 +22,10 @@ import {
 } from '../services/campaign-followup-service.ts';
 import { MetricsDashboardService } from '../observability/metrics-dashboard.ts';
 import { sanitizeForAudit } from '../observability/sanitizer.ts';
+import {
+  OpenAiCommercialAssistant,
+  SUPABASE_SQL_SCHEMA,
+} from '../integrations/openai/openai-assistant.ts';
 import type { AuditEvent, QuoteResult } from '../domain/contracts.ts';
 
 const PORT = Number(process.env.PORT || 3090);
@@ -51,7 +55,21 @@ export interface CadenceDispatchRecord {
 
 // Instâncias reais dos serviços do Agente Comercial BGR
 let router = new AgentRouterService({ environment: 'teste' });
-let crmAdapter = new PowerCrmAdapter({ mode: 'mock', baseUrl: 'https://api.powercrm.com.br/api/v1' });
+let openAiAssistant = new OpenAiCommercialAssistant();
+let powerCrmRuntimeConfig = {
+  mode: (process.env.POWERCRM_MODE === 'http' ? 'http' : 'mock') as 'mock' | 'http',
+  baseUrl: process.env.POWERCRM_BASE_URL || 'https://api.powercrm.com.br/api/v1',
+  bearerToken: process.env.POWERCRM_BEARER_TOKEN || '',
+};
+let supabaseRuntimeConfig = {
+  projectUrl: process.env.SUPABASE_URL || '',
+  apiKey: process.env.SUPABASE_KEY || '',
+};
+let crmAdapter = new PowerCrmAdapter({
+  mode: powerCrmRuntimeConfig.mode,
+  baseUrl: powerCrmRuntimeConfig.baseUrl,
+  bearerToken: powerCrmRuntimeConfig.bearerToken || undefined,
+});
 let quotationService = new QuotationService(crmAdapter);
 let lifecycleService = new ProposalLifecycleService({ environment: 'teste' });
 let handoffService = new HandoffService({ environment: 'teste' });
@@ -63,6 +81,7 @@ let campaignService = new CampaignFollowUpService({
   weekdaysOnly: false,
 });
 let dashboardService = new MetricsDashboardService();
+let chatHistoryLog: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
 let agentConfig: AgentRuntimeConfig = {
   agent_phone: '+55 31 99888-7766',
@@ -95,11 +114,29 @@ function buildCustomAuditEvent(eventType: string, summary: string, severity: 'LO
   };
 }
 
+function getMaskedSecret(raw: string, emptyLabel: string): string {
+  if (!raw || raw.trim().length < 8) return emptyLabel;
+  const clean = raw.trim();
+  return `${clean.slice(0, 6)}...${clean.slice(-4)}`;
+}
+
 function getFullState(sessionId = DEFAULT_SESSION_ID) {
   const conv = handoffService.getOrCreateConversation(sessionId, 'chat_teste');
   return {
     session_id: sessionId,
     agent_config: agentConfig,
+    integrations_status: {
+      openai_configured: openAiAssistant.isConfigured(),
+      openai_masked_key: openAiAssistant.getMaskedKey(),
+      openai_model: openAiAssistant.getModel(),
+      powercrm_mode: powerCrmRuntimeConfig.mode,
+      powercrm_base_url: powerCrmRuntimeConfig.baseUrl,
+      powercrm_token_masked: getMaskedSecret(powerCrmRuntimeConfig.bearerToken, 'Não configurado (Modo Mock)'),
+      supabase_configured: Boolean(supabaseRuntimeConfig.projectUrl && supabaseRuntimeConfig.apiKey),
+      supabase_url: supabaseRuntimeConfig.projectUrl || 'Não configurado (Memória Local)',
+      supabase_key_masked: getMaskedSecret(supabaseRuntimeConfig.apiKey, 'Não configurada'),
+      supabase_sql_schema: SUPABASE_SQL_SCHEMA,
+    },
     conversation: conv,
     current_quote: currentQuote,
     opportunity_created: opportunityCreated,
@@ -206,6 +243,7 @@ const HTML_PAGE = `<!DOCTYPE html>
     #view-regua.active { grid-template-columns: 1fr 1fr 380px; }
     #view-humanos.active { grid-template-columns: 430px 1fr; }
     #view-agente.active { grid-template-columns: 460px 1fr; }
+    #view-apis.active { grid-template-columns: 480px 1fr; }
     #view-kpis.active { grid-template-columns: 1fr 1fr; }
 
     .col {
@@ -334,6 +372,7 @@ const HTML_PAGE = `<!DOCTYPE html>
     </div>
 
     <div style="display: flex; gap: 8px; align-items: center;">
+      <button id="openai-status-badge" class="btn warn sm" onclick="switchView('apis')" title="Configurar Chave OpenAI, Power CRM e Supabase">🔑 APIs: Modo Local</button>
       <a href="/chat" target="_blank" class="btn success sm" style="text-decoration: none;">💬 Abrir Chat Cliente (Nova Aba)</a>
       <span id="mode-badge" class="badge">🤖 IA ATIVA</span>
       <span id="stage-badge" class="badge warn">📍 contato_iniciado</span>
@@ -359,6 +398,10 @@ const HTML_PAGE = `<!DOCTYPE html>
       <button id="nav-agente" class="nav-item" onclick="switchView('agente')">
         <span class="ico">📱</span>
         <span>Número do Agente</span>
+      </button>
+      <button id="nav-apis" class="nav-item" onclick="switchView('apis')">
+        <span class="ico">🔑</span>
+        <span>APIs & Supabase</span>
       </button>
       <button id="nav-kpis" class="nav-item" onclick="switchView('kpis')">
         <span class="ico">📊</span>
@@ -749,7 +792,104 @@ const HTML_PAGE = `<!DOCTYPE html>
       </section>
     </div>
 
-    <!-- ABA 4: PAINEL EXPANDIDO DE KPIS & AUDITORIA LGPD -->
+    <!-- ABA 5: CONEXÃO DE APIS (OPENAI, POWER CRM & SUPABASE) -->
+    <div id="view-apis" class="view-container">
+      <!-- Coluna 1: OpenAI API + Power CRM -->
+      <section class="col">
+        <div class="col-header">
+          <span>🔑 Conexão de APIs (OpenAI & Power CRM)</span>
+          <span id="api-openai-pill" class="badge warn">Modo NLU Local Ativo</span>
+        </div>
+        <div class="col-body">
+          <div class="form-box" style="gap: 10px;">
+            <div style="font-size: 13px; font-weight: 700; color: #93c5fd;">🤖 1. OpenAI API (GPT-4o-mini / GPT-4o)</div>
+            <div style="font-size: 12px; color: var(--muted); line-height: 1.45;">
+              Cole sua chave <code>sk-...</code> abaixo para ativar imediatamente a compreensão livre da OpenAI nas conversas do WhatsApp Web (mantendo todas as travas de segurança e cálculo oficial via Power CRM). Sua chave nunca sai do seu servidor local.
+            </div>
+            <div>
+              <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🔑 Chave da OpenAI (OPENAI_API_KEY)</label>
+              <input id="api-openai-key" type="password" placeholder="sk-proj-..." style="width: 100%; margin-top: 4px;" />
+              <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">
+                Status atual: <strong id="api-openai-masked" style="color: #6ee7b7;">Não configurada (Modo Local Ativo)</strong>
+              </div>
+            </div>
+            <div>
+              <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🧠 Modelo OpenAI</label>
+              <select id="api-openai-model" style="width: 100%; margin-top: 4px;" aria-label="Modelo OpenAI">
+                <option value="gpt-4o-mini">⚡ gpt-4o-mini (Recomendado — Rápido e Econômico)</option>
+                <option value="gpt-4o">🚀 gpt-4o (Máxima Inteligência Comercial)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-box" style="gap: 10px;">
+            <div style="font-size: 13px; font-weight: 700; color: #93c5fd;">🔌 2. Power CRM API (Cotações e Propostas Oficiais)</div>
+            <div style="font-size: 12px; color: var(--muted); line-height: 1.45;">
+              Por padrão o agente opera em <strong>Modo Homologação (Mock Seguro)</strong> com as tabelas BGR Essencial e BGR Completo. Para conectar na produção do Power CRM, altere para HTTP e informe o Bearer Token.
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div>
+                <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">⚙️ Modo de Operação</label>
+                <select id="api-crm-mode" style="width: 100%; margin-top: 4px;" aria-label="Modo Power CRM">
+                  <option value="mock">🧪 Mock Homologação (Local)</option>
+                  <option value="http">🌐 Produção HTTP (Power CRM Real)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🌐 Base URL Power CRM</label>
+                <input id="api-crm-url" type="text" value="https://api.powercrm.com.br/api/v1" style="width: 100%; margin-top: 4px;" />
+              </div>
+            </div>
+            <div>
+              <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🔐 Power CRM Bearer Token</label>
+              <input id="api-crm-token" type="password" placeholder="Bearer token oficial do Power CRM..." style="width: 100%; margin-top: 4px;" />
+              <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">
+                Token atual: <strong id="api-crm-masked">Não configurado (Modo Mock)</strong>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn primary" onclick="saveIntegrationsConfig()">💾 Salvar e Ativar Conexões (OpenAI + Power CRM)</button>
+        </div>
+      </section>
+
+      <!-- Coluna 2: Supabase (PostgreSQL de Produção) & Schema SQL -->
+      <section class="col">
+        <div class="col-header">
+          <span>🗄️ Banco de Dados Supabase (PostgreSQL Produção)</span>
+          <span id="api-supabase-pill" class="badge info">Memória Local + Schema Pronto</span>
+        </div>
+        <div class="col-body">
+          <div class="form-box" style="gap: 10px;">
+            <div style="font-size: 13px; font-weight: 700; color: #6ee7b7;">☁️ Conexão com Projeto Supabase (Opcional para Testes)</div>
+            <div style="font-size: 12px; color: var(--muted); line-height: 1.45;">
+              Você <strong>não precisa</strong> migrar para o Supabase para testar a OpenAI agora. Quando quiser persistir sessões, atendentes, régua e auditoria LGPD na nuvem, informe a URL e a Service Key do seu projeto Supabase:
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div>
+                <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🔗 SUPABASE_URL</label>
+                <input id="api-supabase-url" type="text" placeholder="https://xyzcompany.supabase.co" style="width: 100%; margin-top: 4px;" />
+              </div>
+              <div>
+                <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🔑 SUPABASE_SERVICE_ROLE_KEY</label>
+                <input id="api-supabase-key" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR..." style="width: 100%; margin-top: 4px;" />
+              </div>
+            </div>
+            <button class="btn success sm" onclick="saveIntegrationsConfig()" style="justify-content: center;">
+              ☁️ Salvar Credenciais Supabase
+            </button>
+          </div>
+
+          <div class="section-label" style="justify-content: space-between;">
+            <span>📜 Script SQL Oficial para o Supabase SQL Editor</span>
+            <button class="btn sm" onclick="copySupabaseSchema()">📋 Copiar SQL</button>
+          </div>
+          <textarea id="supabase-sql-box" class="cadence-textarea" style="min-height: 250px; font-family: Consolas, monospace; font-size: 11.5px;" readonly></textarea>
+        </div>
+      </section>
+    </div>
+
+    <!-- ABA 6: PAINEL EXPANDIDO DE KPIS & AUDITORIA LGPD -->
     <div id="view-kpis" class="view-container">
       <section class="col">
         <div class="col-header">
@@ -790,7 +930,7 @@ const HTML_PAGE = `<!DOCTYPE html>
     }
 
     function switchView(viewName) {
-      for (const v of ['atendimento', 'regua', 'humanos', 'agente', 'kpis']) {
+      for (const v of ['atendimento', 'regua', 'humanos', 'agente', 'apis', 'kpis']) {
         document.getElementById('view-' + v).classList.toggle('active', v === viewName);
         document.getElementById('nav-' + v).classList.toggle('active', v === viewName);
       }
@@ -902,6 +1042,37 @@ const HTML_PAGE = `<!DOCTYPE html>
         document.getElementById('status-agent-updated').textContent = new Date(state.agent_config.updated_at).toLocaleTimeString('pt-BR');
       }
 
+      if (state.integrations_status) {
+        const ig = state.integrations_status;
+        const headerBadge = document.getElementById('openai-status-badge');
+        const pill = document.getElementById('api-openai-pill');
+        if (ig.openai_configured) {
+          headerBadge.textContent = '🟢 OpenAI Ativa (' + ig.openai_model + ')';
+          headerBadge.className = 'btn success sm';
+          pill.textContent = '🟢 OpenAI Conectada (' + ig.openai_model + ')';
+          pill.className = 'badge';
+        } else {
+          headerBadge.textContent = '🔑 APIs: Modo Local';
+          headerBadge.className = 'btn warn sm';
+          pill.textContent = 'Modo NLU Local Ativo';
+          pill.className = 'badge warn';
+        }
+        document.getElementById('api-openai-masked').textContent = ig.openai_masked_key;
+        document.getElementById('api-openai-model').value = ig.openai_model || 'gpt-4o-mini';
+        document.getElementById('api-crm-mode').value = ig.powercrm_mode || 'mock';
+        document.getElementById('api-crm-url').value = ig.powercrm_base_url || 'https://api.powercrm.com.br/api/v1';
+        document.getElementById('api-crm-masked').textContent = ig.powercrm_token_masked;
+        const sqlBox = document.getElementById('supabase-sql-box');
+        if (sqlBox && !sqlBox.value) {
+          sqlBox.value = ig.supabase_sql_schema || '';
+        }
+        const supaPill = document.getElementById('api-supabase-pill');
+        if (supaPill) {
+          supaPill.textContent = ig.supabase_configured ? '🟢 Supabase Configurado' : 'Memória Local + Schema Pronto';
+          supaPill.className = ig.supabase_configured ? 'badge' : 'badge info';
+        }
+      }
+
       const modeEl = document.getElementById('mode-badge');
       const mode = state.conversation.attendance_mode;
       modeEl.textContent = (mode === 'ia_ativa' ? '🤖 ' : '👨‍💼 ') + mode.toUpperCase();
@@ -1011,6 +1182,44 @@ const HTML_PAGE = `<!DOCTYPE html>
       document.getElementById('cfg-agent-name').value = name;
       document.getElementById('cfg-agent-waba').value = waba;
       await saveFullAgentConfig();
+    }
+
+    async function saveIntegrationsConfig() {
+      const openai_api_key = document.getElementById('api-openai-key').value.trim();
+      const openai_model = document.getElementById('api-openai-model').value;
+      const powercrm_mode = document.getElementById('api-crm-mode').value;
+      const powercrm_base_url = document.getElementById('api-crm-url').value.trim();
+      const powercrm_bearer_token = document.getElementById('api-crm-token').value.trim();
+      const supabase_url = document.getElementById('api-supabase-url').value.trim();
+      const supabase_key = document.getElementById('api-supabase-key').value.trim();
+
+      const res = await fetch('/api/integrations/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          openai_api_key: openai_api_key || undefined,
+          openai_model,
+          powercrm_mode,
+          powercrm_base_url,
+          powercrm_bearer_token: powercrm_bearer_token || undefined,
+          supabase_url: supabase_url || undefined,
+          supabase_key: supabase_key || undefined
+        })
+      });
+      const data = await res.json();
+      document.getElementById('api-openai-key').value = '';
+      document.getElementById('api-crm-token').value = '';
+      document.getElementById('api-supabase-key').value = '';
+      if (data.system_note) appendMessage('system', data.system_note);
+      updateDashboard(data.state);
+      showToast('Conexões de API (OpenAI / Power CRM / Supabase) salvas!');
+    }
+
+    function copySupabaseSchema() {
+      const sqlBox = document.getElementById('supabase-sql-box');
+      if (!sqlBox) return;
+      navigator.clipboard.writeText(sqlBox.value);
+      showToast('Script SQL do Supabase copiado para a área de transferência!');
     }
 
     async function toggleCadenceStep(stepId, enabled) {
@@ -1270,10 +1479,17 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
         </div>
       </div>
       <div style="display: flex; gap: 8px; align-items: center;">
+        <button class="wa-btn" id="wa-openai-btn" onclick="toggleKeyBar()">🔑 Conectar OpenAI</button>
         <span class="wa-status-pill" id="wa-mode">🤖 IA ATIVA</span>
         <button class="wa-btn" onclick="resetChat()">↺ Nova Conversa</button>
         <a href="/" class="wa-btn">⚙️ Painel Completo</a>
       </div>
+    </div>
+
+    <div id="wa-key-bar" style="display: none; background: #182229; padding: 10px 20px; border-bottom: 1px solid #2a3942; align-items: center; gap: 10px;">
+      <span style="font-size: 12.5px; color: #93c5fd; font-weight: 600;">🔑 Chave OpenAI (sk-...):</span>
+      <input id="wa-openai-input" type="password" placeholder="Cole sua OPENAI_API_KEY (sk-proj-...) aqui para ativar o GPT-4o-mini ao vivo" style="flex: 1; background: #111b21; border: 1px solid #3b4a54; color: #fff; padding: 7px 12px; border-radius: 7px; font-size: 13px;" />
+      <button class="wa-btn" style="background: #00a884; color: #111b21; border-color: #00a884;" onclick="saveQuickOpenAiKey()">💾 Ativar OpenAI</button>
     </div>
 
     <div id="wa-messages">
@@ -1323,6 +1539,36 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
         const m = state.conversation.attendance_mode;
         document.getElementById('wa-mode').textContent = (m === 'ia_ativa' ? '🤖 ' : '👨‍💼 ') + m.toUpperCase();
       }
+      if (state.integrations_status) {
+        const btn = document.getElementById('wa-openai-btn');
+        if (state.integrations_status.openai_configured) {
+          btn.textContent = '🟢 OpenAI (' + state.integrations_status.openai_model + ')';
+          btn.style.borderColor = '#00a884';
+          btn.style.color = '#00a884';
+        } else {
+          btn.textContent = '🔑 Conectar OpenAI';
+        }
+      }
+    }
+
+    function toggleKeyBar() {
+      const bar = document.getElementById('wa-key-bar');
+      bar.style.display = bar.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    async function saveQuickOpenAiKey() {
+      const key = document.getElementById('wa-openai-input').value.trim();
+      if (!key) return;
+      const res = await fetch('/api/integrations/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ openai_api_key: key })
+      });
+      const data = await res.json();
+      document.getElementById('wa-openai-input').value = '';
+      document.getElementById('wa-key-bar').style.display = 'none';
+      if (data.system_note) addBubble('system', data.system_note);
+      syncHeader(data.state);
     }
 
     async function sendQuick(text) {
@@ -1381,7 +1627,11 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && req.url === '/api/reset') {
       router = new AgentRouterService({ environment: 'teste' });
-      crmAdapter = new PowerCrmAdapter({ mode: 'mock', baseUrl: 'https://api.powercrm.com.br/api/v1' });
+      crmAdapter = new PowerCrmAdapter({
+        mode: powerCrmRuntimeConfig.mode,
+        baseUrl: powerCrmRuntimeConfig.baseUrl,
+        bearerToken: powerCrmRuntimeConfig.bearerToken || undefined,
+      });
       quotationService = new QuotationService(crmAdapter);
       lifecycleService = new ProposalLifecycleService({ environment: 'teste' });
       handoffService = new HandoffService({ environment: 'teste' });
@@ -1394,6 +1644,7 @@ const server = http.createServer(async (req, res) => {
       });
       dashboardService = new MetricsDashboardService();
       cadenceDispatchHistory = [];
+      chatHistoryLog = [];
       currentQuote = null;
       opportunityCreated = false;
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -1407,6 +1658,55 @@ const server = http.createServer(async (req, res) => {
     }
     const bodyText = Buffer.concat(bodyChunks).toString('utf-8');
     const payload = bodyText ? JSON.parse(bodyText) : {};
+
+    // Endpoint 0.5: Configurar APIs (OpenAI, Power CRM e Supabase) sem expor segredos
+    if (req.method === 'POST' && req.url === '/api/integrations/config') {
+      if (typeof payload.openai_api_key === 'string' && payload.openai_api_key.trim()) {
+        openAiAssistant.configure({ apiKey: payload.openai_api_key.trim() });
+      }
+      if (typeof payload.openai_model === 'string' && payload.openai_model.trim()) {
+        openAiAssistant.configure({ model: payload.openai_model.trim() });
+      }
+      if (payload.powercrm_mode === 'mock' || payload.powercrm_mode === 'http') {
+        powerCrmRuntimeConfig.mode = payload.powercrm_mode;
+      }
+      if (typeof payload.powercrm_base_url === 'string' && payload.powercrm_base_url.trim()) {
+        powerCrmRuntimeConfig.baseUrl = payload.powercrm_base_url.trim();
+      }
+      if (typeof payload.powercrm_bearer_token === 'string' && payload.powercrm_bearer_token.trim()) {
+        powerCrmRuntimeConfig.bearerToken = payload.powercrm_bearer_token.trim();
+      }
+      if (typeof payload.supabase_url === 'string' && payload.supabase_url.trim()) {
+        supabaseRuntimeConfig.projectUrl = payload.supabase_url.trim();
+      }
+      if (typeof payload.supabase_key === 'string' && payload.supabase_key.trim()) {
+        supabaseRuntimeConfig.apiKey = payload.supabase_key.trim();
+      }
+
+      crmAdapter = new PowerCrmAdapter({
+        mode: powerCrmRuntimeConfig.mode,
+        baseUrl: powerCrmRuntimeConfig.baseUrl,
+        bearerToken: powerCrmRuntimeConfig.bearerToken || undefined,
+      });
+      quotationService = new QuotationService(crmAdapter);
+
+      const auditEv = buildCustomAuditEvent(
+        'integrations_config_updated',
+        `APIs atualizadas: OpenAI=${openAiAssistant.isConfigured() ? openAiAssistant.getModel() : 'local'} | PowerCRM=${powerCrmRuntimeConfig.mode} | Supabase=${Boolean(supabaseRuntimeConfig.projectUrl)}`,
+        'LOW'
+      );
+      dashboardService.recordEvent({ auditEvent: auditEv });
+
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          ok: true,
+          system_note: `🔑 Conexões atualizadas! OpenAI: ${openAiAssistant.isConfigured() ? `ATIVA (${openAiAssistant.getModel()})` : 'Modo NLU Local'} | Power CRM: ${powerCrmRuntimeConfig.mode.toUpperCase()}`,
+          state: getFullState(),
+        })
+      );
+      return;
+    }
 
     // Endpoint 1: Troca livre do Número do Agente Comercial
     if (req.method === 'POST' && req.url === '/api/agent-config') {
@@ -1822,20 +2122,76 @@ const server = http.createServer(async (req, res) => {
         costUsd: 0.0004,
       });
 
+      // Se a mensagem foi bloqueada pelos Guardrails de Segurança (Prompt Injection / Extração de Credenciais), responde imediatamente
+      if (routeRes.security_blocked) {
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            reply: routeRes.response,
+            meta: `📱 agente: ${agentConfig.agent_phone} | intenção: ${routeRes.intent} | ação: ${routeRes.next_action} | bloqueio: true`,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
+
+      let finalReply = routeRes.response;
+      let finalNextAction = routeRes.next_action;
+      let finalLead = { ...routeRes.memory_snapshot.lead };
+      let finalVehicle = { ...routeRes.memory_snapshot.vehicle };
+      let engineLabel = 'NLU Local';
+
+      // Se a chave da OpenAI estiver configurada, utiliza o GPT-4o-mini / GPT-4o em tempo real!
+      if (openAiAssistant.isConfigured()) {
+        try {
+          const aiOut = await openAiAssistant.processCustomerTurn({
+            userMessage: msgText,
+            sessionMemory: {
+              lead: finalLead,
+              vehicle: finalVehicle,
+              currentStage: conv.current_stage,
+              hasOfficialQuote: currentQuote !== null,
+              officialQuoteSummary: currentQuote
+                ? currentQuote.plans.map((p) => `${p.plan_name}: R$ ${p.monthly_fee_brl.toFixed(2)}/mês`).join(' | ')
+                : undefined,
+            },
+            conversationHistory: chatHistoryLog,
+          });
+
+          finalReply = aiOut.replyText;
+          finalLead = aiOut.extractedLead;
+          finalVehicle = aiOut.extractedVehicle;
+          engineLabel = `OpenAI ${aiOut.modelUsed}`;
+
+          router.syncSessionMemory(DEFAULT_SESSION_ID, 'chat_teste', finalLead, finalVehicle);
+
+          if (aiOut.wantsHumanHandoff) {
+            finalNextAction = 'transferir_humano';
+          } else if (aiOut.readyForCrmQuote) {
+            finalNextAction = 'consultar_crm';
+          }
+        } catch {
+          engineLabel = 'NLU Local (Fallback)';
+        }
+      }
+
+      chatHistoryLog.push({ role: 'user', content: msgText });
+
       // Se o cliente pediu atendente humano na conversa natural
-      if (routeRes.next_action === 'transferir_humano') {
+      if (finalNextAction === 'transferir_humano') {
         const hdfOut = handoffService.initiateHandoff({
           sessionId: DEFAULT_SESSION_ID,
           channel: 'chat_teste',
           trigger: 'solicitacao_explicita_cliente',
           conversationSummary: `Cliente solicitou atendente humano no chat: "${msgText}"`,
         });
+        chatHistoryLog.push({ role: 'assistant', content: hdfOut.customer_message });
         dashboardService.recordEvent({ auditEvent: hdfOut.audit_event });
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(
           JSON.stringify({
             reply: hdfOut.customer_message,
-            meta: `📱 agente: ${agentConfig.agent_phone} | protocolo: ${hdfOut.handoff.ticket_id} | fila: ${hdfOut.handoff.target_queue}`,
+            meta: `📱 agente: ${agentConfig.agent_phone} | motor: ${engineLabel} | protocolo: ${hdfOut.handoff.ticket_id} | fila: ${hdfOut.handoff.target_queue}`,
             state: getFullState(),
           })
         );
@@ -1843,25 +2199,25 @@ const server = http.createServer(async (req, res) => {
       }
 
       // Se o cliente já informou Nome + Veículo + Uso + Cidade na conversa natural, gera a Cotação Oficial automaticamente!
-      if (routeRes.next_action === 'consultar_crm') {
-        const mem = routeRes.memory_snapshot;
+      if (finalNextAction === 'consultar_crm') {
         const qOut = await quotationService.processQuotationRequest({
           sessionId: DEFAULT_SESSION_ID,
           lead: {
             id: 'lead_chat_001',
-            name: mem.lead.name ?? 'Cliente BGR',
+            name: finalLead.name ?? 'Cliente BGR',
             phone: '+5511999990001',
-            city_uf: mem.lead.city_uf ?? 'Belo Horizonte/MG',
+            city_uf: finalLead.city_uf ?? 'Belo Horizonte/MG',
           },
           vehicle: {
-            brand: mem.vehicle.brand ?? 'Honda',
-            model: mem.vehicle.model ?? 'Civic',
-            year: mem.vehicle.year ?? 2022,
-            usage: mem.vehicle.usage ?? 'particular',
+            brand: finalVehicle.brand ?? 'Honda',
+            model: finalVehicle.model ?? 'Civic',
+            year: finalVehicle.year ?? 2022,
+            usage: finalVehicle.usage ?? 'particular',
           },
         });
         currentQuote = qOut.quote_result;
         conv.current_stage = qOut.stage;
+        chatHistoryLog.push({ role: 'assistant', content: qOut.customer_message });
         if (qOut.audit_events[0]) {
           dashboardService.recordEvent({
             auditEvent: qOut.audit_events[0],
@@ -1876,18 +2232,19 @@ const server = http.createServer(async (req, res) => {
         res.end(
           JSON.stringify({
             reply: qOut.customer_message,
-            meta: `📱 agente: ${agentConfig.agent_phone} | Cotação Oficial CRM: ${currentQuote?.quotation_code}`,
+            meta: `📱 agente: ${agentConfig.agent_phone} | motor: ${engineLabel} | Cotação Oficial CRM: ${currentQuote?.quotation_code}`,
             state: getFullState(),
           })
         );
         return;
       }
 
+      chatHistoryLog.push({ role: 'assistant', content: finalReply });
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(
         JSON.stringify({
-          reply: routeRes.response,
-          meta: `📱 agente: ${agentConfig.agent_phone} | intenção: ${routeRes.intent} | ação: ${routeRes.next_action} | bloqueio: ${routeRes.security_blocked}`,
+          reply: finalReply,
+          meta: `📱 agente: ${agentConfig.agent_phone} | motor: ${engineLabel} | intenção: ${routeRes.intent} | ação: ${finalNextAction}`,
           state: getFullState(),
         })
       );
