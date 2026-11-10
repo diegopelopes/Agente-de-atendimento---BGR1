@@ -291,17 +291,87 @@ const HTML_PAGE = `<!DOCTYPE html>
       margin-top: 6px; font-weight: 700; display: flex; align-items: center; gap: 6px;
     }
 
-    /* Chat */
-    #chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-    .msg { max-width: 85%; padding: 12px 14px; border-radius: 12px; font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; }
-    .msg.user { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 2px; }
-    .msg.agent { align-self: flex-start; background: var(--card); border: 1px solid var(--border); border-bottom-left-radius: 2px; }
-    .msg.system { align-self: center; max-width: 96%; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4); color: #fcd34d; font-size: 12px; }
-    .msg-meta { font-size: 11px; opacity: 0.75; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
-    .chat-input-bar { padding: 12px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: rgba(6, 11, 22, 0.5); }
-    .chat-input-bar input {
-      flex: 1; background: var(--card); border: 1px solid #475569; color: white; padding: 10px 14px; border-radius: 8px; font-size: 14px;
+    /* Chat estilo WhatsApp Oficial */
+    .wa-col { background: #0b141a; border-color: #222e35; }
+    .wa-chat-header {
+      padding: 10px 16px; background: #202c33; border-bottom: 1px solid #2a3942;
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
     }
+    .wa-contact-info { display: flex; align-items: center; gap: 11px; }
+    .wa-contact-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, #00a884, #0284c7);
+      display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative;
+    }
+    .wa-online-dot {
+      position: absolute; bottom: 0; right: 0; width: 11px; height: 11px;
+      background: #00a884; border: 2px solid #202c33; border-radius: 50%;
+    }
+    #chat-messages {
+      flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;
+      background-color: #0b141a;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 0);
+      background-size: 22px 22px;
+    }
+    .wa-date-Divider {
+      align-self: center; background: #182229; color: #8696a0; font-size: 11px; font-weight: 600;
+      padding: 4px 12px; border-radius: 8px; margin: 4px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    .msg {
+      max-width: 82%; padding: 8px 11px 6px 11px; border-radius: 8px; font-size: 13.5px;
+      line-height: 1.42; white-space: pre-wrap; position: relative; box-shadow: 0 1px 1.5px rgba(0,0,0,0.35);
+      color: #e9edef;
+    }
+    .msg.user {
+      align-self: flex-end; background: #005c4b; color: #e9edef; border-top-right-radius: 0;
+    }
+    .msg.user::after {
+      content: ''; position: absolute; top: 0; right: -8px; width: 0; height: 0;
+      border-top: 0px solid transparent; border-bottom: 10px solid transparent; border-left: 8px solid #005c4b;
+    }
+    .msg.agent {
+      align-self: flex-start; background: #202c33; color: #e9edef; border-top-left-radius: 0;
+    }
+    .msg.agent::before {
+      content: ''; position: absolute; top: 0; left: -8px; width: 0; height: 0;
+      border-top: 0px solid transparent; border-bottom: 10px solid transparent; border-right: 8px solid #202c33;
+    }
+    .msg-sender-name {
+      font-size: 11.5px; font-weight: 700; color: #00a884; margin-bottom: 3px; display: flex; align-items: center; gap: 4px;
+    }
+    .msg.system {
+      align-self: center; max-width: 92%; background: #182229; border: 1px solid rgba(255, 210, 121, 0.2);
+      color: #ffd279; font-size: 11.5px; text-align: center; border-radius: 8px; padding: 7px 14px;
+    }
+    .msg-footer {
+      display: flex; justify-content: flex-end; align-items: center; gap: 4px;
+      font-size: 10.5px; color: rgba(233, 237, 239, 0.65); margin-top: 3px;
+    }
+    .wa-ticks { color: #53bdeb; font-size: 12px; font-weight: 900; letter-spacing: -2px; margin-left: 2px; }
+    .msg-meta {
+      font-size: 10.5px; color: #8696a0; margin-top: 5px; padding-top: 4px;
+      border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 6px;
+    }
+    .chat-input-bar {
+      padding: 10px 14px; background: #202c33; border-top: 1px solid #2a3942;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .wa-icon-btn {
+      background: transparent; border: none; color: #8696a0; font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; padding: 4px;
+    }
+    .wa-icon-btn:hover { color: #d1d7db; }
+    .chat-input-bar input {
+      flex: 1; background: #2a3942; border: none; color: #e9edef; padding: 10px 14px;
+      border-radius: 8px; font-size: 14px; outline: none;
+    }
+    .chat-input-bar input::placeholder { color: #8696a0; }
+    .wa-send-circle {
+      width: 40px; height: 40px; border-radius: 50%; background: #00a884; border: none;
+      color: #111b21; font-size: 17px; font-weight: 800; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.12s;
+    }
+    .wa-send-circle:hover { background: #06cf9c; transform: scale(1.04); }
 
     /* KPIs & Logs */
     .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -524,21 +594,42 @@ const HTML_PAGE = `<!DOCTYPE html>
         </div>
       </section>
 
-      <!-- Coluna 2: Simulador de Chat WhatsApp -->
-      <section class="col">
-        <div class="col-header">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span>💬 Simulador WhatsApp — Agente BGR</span>
-            <span id="chat-agent-phone-pill" class="badge info">📱 +55 31 99888-7766</span>
+      <!-- Coluna 2: Simulador de Chat WhatsApp Oficial -->
+      <section class="col wa-col">
+        <div class="wa-chat-header">
+          <div class="wa-contact-info">
+            <div class="wa-contact-avatar">
+              🚗
+              <span class="wa-online-dot"></span>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 14.5px; color: #e9edef; display: flex; align-items: center; gap: 6px;">
+                <span id="wa-inline-name">Consultor Digital BGR Benefícios</span>
+                <span title="Conta Comercial Oficial Verificada" style="color: #00a884; font-size: 14px;">✔️</span>
+              </div>
+              <div style="font-size: 11.5px; color: #8696a0; display: flex; align-items: center; gap: 6px;">
+                <span style="color: #00a884; font-weight: 600;">online</span>
+                <span>•</span>
+                <span id="chat-agent-phone-pill">📱 +55 31 99888-7766</span>
+              </div>
+            </div>
           </div>
-          <span style="font-size: 11.5px; color: var(--muted);">Sessão: <code id="sess-label">sess_visual_001</code></span>
+          <div style="display: flex; align-items: center; gap: 10px; color: #aebac1; font-size: 16px;">
+            <span title="Chamada de Vídeo" style="cursor:pointer;">📹</span>
+            <span title="Chamada de Voz" style="cursor:pointer;">📞</span>
+            <span title="Pesquisar na conversa" style="cursor:pointer;">🔍</span>
+            <a href="/chat" target="_blank" class="btn sm" style="background:#00a884; color:#111b21; border:none; font-weight:700; text-decoration:none;">↗ Tela Cheia</a>
+          </div>
         </div>
         <div id="chat-messages">
-          <div class="msg system">✨ Console Visual v2.0 carregado! Use os cartões de ícones à esquerda, troque o número do agente no topo ou acesse a aba 📅 Régua de Vendas & Cobrança na barra lateral.</div>
+          <div class="wa-date-Divider">HOJE</div>
+          <div class="msg system">🔒 As mensagens e as ligações são protegidas com a criptografia de ponta a ponta e conectadas ao Agente Comercial BGR Benefícios.</div>
         </div>
         <form class="chat-input-bar" onsubmit="handleFormSubmit(event)">
-          <input id="chat-input" type="text" placeholder="Digite uma mensagem para o Agente BGR..." autocomplete="off" />
-          <button type="submit" class="btn primary">📤 Enviar</button>
+          <button type="button" class="wa-icon-btn" title="Emojis" onclick="document.getElementById('chat-input').value += ' 😊'; document.getElementById('chat-input').focus();">😊</button>
+          <button type="button" class="wa-icon-btn" title="Anexar Comprovante / Documento" onclick="runScenario('t28_envia_comprovante')">📎</button>
+          <input id="chat-input" type="text" placeholder="Digite uma mensagem" autocomplete="off" />
+          <button type="submit" class="wa-send-circle" title="Enviar mensagem">➤</button>
         </form>
       </section>
 
@@ -986,13 +1077,34 @@ const HTML_PAGE = `<!DOCTYPE html>
       const container = document.getElementById('chat-messages');
       const div = document.createElement('div');
       div.className = 'msg ' + role;
-      div.textContent = text;
+      const nowTime = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      if (role === 'agent') {
+        const sender = document.createElement('div');
+        sender.className = 'msg-sender-name';
+        const agName = (latestState && latestState.agent_config) ? latestState.agent_config.agent_display_name : 'Consultor Digital BGR';
+        sender.textContent = '🚗 ' + agName;
+        div.appendChild(sender);
+      }
+
+      const bodySpan = document.createElement('div');
+      bodySpan.textContent = text;
+      div.appendChild(bodySpan);
+
       if (meta) {
         const m = document.createElement('div');
         m.className = 'msg-meta';
         m.textContent = meta;
         div.appendChild(m);
       }
+
+      if (role === 'user' || role === 'agent') {
+        const foot = document.createElement('div');
+        foot.className = 'msg-footer';
+        foot.innerHTML = \`<span>\${nowTime}</span>\` + (role === 'user' ? '<span class="wa-ticks">✓✓</span>' : '');
+        div.appendChild(foot);
+      }
+
       container.appendChild(div);
       container.scrollTop = container.scrollHeight;
     }
@@ -1032,6 +1144,8 @@ const HTML_PAGE = `<!DOCTYPE html>
         const phone = state.agent_config.agent_phone;
         document.getElementById('header-agent-phone').value = phone;
         document.getElementById('chat-agent-phone-pill').textContent = '📱 ' + phone;
+        const inlineNameEl = document.getElementById('wa-inline-name');
+        if (inlineNameEl) inlineNameEl.textContent = state.agent_config.agent_display_name;
         document.getElementById('regua-vendas-phone-lbl').textContent = phone;
         document.getElementById('cfg-agent-phone').value = phone;
         document.getElementById('cfg-agent-name').value = state.agent_config.agent_display_name;
@@ -1405,111 +1519,347 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WhatsApp Web — Atendimento BGR Benefícios</title>
+  <title>WhatsApp Web — BGR Benefícios</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-    body { background: #0b141a; color: #e9edef; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .wa-shell {
-      width: 100%; max-width: 920px; height: 94vh; background: #111b21;
-      border: 1px solid #222e35; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; }
+    body {
+      background: #111b21;
+      color: #e9edef;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Faixa superior verde clássica do WhatsApp Web */
+    .wa-top-strip {
+      height: 4px;
+      background: #00a884;
+      width: 100%;
+      flex-shrink: 0;
+    }
+    .wa-app {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      overflow: hidden;
+      background: #111b21;
+    }
+    @media (max-width: 820px) {
+      .wa-app { grid-template-columns: 1fr; }
+      .wa-sidebar { display: none !important; }
+    }
+
+    /* Barra Lateral Esquerda (Lista de Conversas do WhatsApp Web) */
+    .wa-sidebar {
+      background: #111b21;
+      border-right: 1px solid #222e35;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .wa-sidebar-header {
+      height: 60px;
+      background: #202c33;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #222e35;
+    }
+    .wa-user-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #2a3942; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; cursor: pointer;
+    }
+    .wa-sidebar-icons {
+      display: flex; align-items: center; gap: 18px; color: #aebac1; font-size: 18px;
+    }
+    .wa-sidebar-icons span { cursor: pointer; }
+    .wa-search-box {
+      padding: 8px 12px; background: #111b21; border-bottom: 1px solid #222e35;
+    }
+    .wa-search-inner {
+      background: #202c33; border-radius: 8px; padding: 7px 14px;
+      display: flex; align-items: center; gap: 12px; color: #8696a0; font-size: 13.5px;
+    }
+    .wa-search-inner input {
+      background: transparent; border: none; color: #e9edef; outline: none; width: 100%; font-size: 13.5px;
+    }
+    .wa-filter-bar {
+      padding: 8px 12px; display: flex; gap: 6px; border-bottom: 1px solid #222e35;
+    }
+    .wa-filter-pill {
+      padding: 5px 12px; border-radius: 999px; font-size: 12.5px; background: #202c33; color: #8696a0; cursor: pointer;
+    }
+    .wa-filter-pill.active { background: #0a332c; color: #00a884; font-weight: 600; }
+
+    .wa-chat-list { flex: 1; overflow-y: auto; }
+    .wa-chat-item {
+      display: flex; align-items: center; gap: 13px; padding: 12px 15px;
+      cursor: pointer; border-bottom: 1px solid #222e35; transition: background 0.12s;
+    }
+    .wa-chat-item:hover { background: #202c33; }
+    .wa-chat-item.active { background: #2a3942; }
+    .wa-chat-item-avatar {
+      width: 49px; height: 49px; border-radius: 50%;
+      background: linear-gradient(135deg, #00a884, #0284c7);
+      display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; position: relative;
+    }
+    .wa-chat-item-body { flex: 1; min-width: 0; }
+    .wa-chat-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .wa-chat-item-title { font-size: 15.5px; font-weight: 500; color: #e9edef; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 5px; }
+    .wa-chat-item-time { font-size: 12px; color: #00a884; font-weight: 500; }
+    .wa-chat-item-sub { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #8696a0; }
+    .wa-chat-item-preview { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+    .wa-unread-badge {
+      background: #00a884; color: #111b21; font-size: 11px; font-weight: 800;
+      padding: 2px 6px; border-radius: 999px;
+    }
+
+    /* Painel Principal de Conversa (Direita) */
+    .wa-main {
+      display: flex; flex-direction: column; overflow: hidden; height: 100%; position: relative;
+      background-color: #0b141a;
     }
     .wa-header {
-      background: #202c33; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;
-      border-bottom: 1px solid #2a3942;
+      height: 60px; background: #202c33; padding: 10px 18px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #2a3942; z-index: 10;
     }
-    .wa-profile { display: flex; align-items: center; gap: 12px; }
+    .wa-profile { display: flex; align-items: center; gap: 13px; cursor: pointer; }
     .wa-avatar {
-      width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #00a884, #2563eb);
-      display: flex; align-items: center; justify-content: center; font-size: 22px;
+      width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #00a884, #0284c7);
+      display: flex; align-items: center; justify-content: center; font-size: 21px; position: relative;
+    }
+    .wa-avatar-dot {
+      position: absolute; bottom: 0; right: 0; width: 11px; height: 11px;
+      background: #00a884; border: 2px solid #202c33; border-radius: 50%;
     }
     .wa-status-pill {
-      padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
-      background: rgba(0, 168, 132, 0.2); color: #00a884; border: 1px solid rgba(0, 168, 132, 0.4);
+      padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+      background: rgba(0, 168, 132, 0.18); color: #00a884; border: 1px solid rgba(0, 168, 132, 0.4);
     }
     .wa-btn {
-      background: #2a3942; color: #e9edef; border: 1px solid #3b4a54; padding: 7px 12px;
+      background: #2a3942; color: #e9edef; border: 1px solid #3b4a54; padding: 6px 11px;
       border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 5px;
     }
     .wa-btn:hover { background: #00a884; color: #111b21; border-color: #00a884; }
+
+    /* Área de Mensagens com Papel de Parede Oficial Escuro */
     #wa-messages {
-      flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px;
-      background: radial-gradient(circle at center, #0f1920 0%, #0b141a 100%);
+      flex: 1; overflow-y: auto; padding: 18px 7%; display: flex; flex-direction: column; gap: 8px;
+      background-color: #0b141a;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0);
+      background-size: 24px 24px;
+    }
+    .wa-day-badge {
+      align-self: center; background: #182229; color: #8696a0; font-size: 11.5px; font-weight: 600;
+      padding: 5px 12px; border-radius: 8px; margin: 4px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.35);
     }
     .bubble {
-      max-width: 78%; padding: 11px 15px; border-radius: 12px; font-size: 14.5px; line-height: 1.45; white-space: pre-wrap;
-      position: relative;
+      max-width: 68%; padding: 8px 12px 6px 12px; border-radius: 8px; font-size: 14.2px;
+      line-height: 1.42; white-space: pre-wrap; position: relative;
+      box-shadow: 0 1px 1.5px rgba(0,0,0,0.35);
     }
-    .bubble.user { align-self: flex-end; background: #005c4b; color: #e9edef; border-top-right-radius: 2px; }
-    .bubble.agent { align-self: flex-start; background: #202c33; color: #e9edef; border-top-left-radius: 2px; border: 1px solid #2a3942; }
-    .bubble.system { align-self: center; max-width: 90%; background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.35); color: #fcd34d; font-size: 12.5px; text-align: center; }
-    .bubble-meta { font-size: 11px; color: #8696a0; margin-top: 6px; }
+    .bubble.user {
+      align-self: flex-end; background: #005c4b; color: #e9edef; border-top-right-radius: 0;
+    }
+    .bubble.user::after {
+      content: ''; position: absolute; top: 0; right: -8px; width: 0; height: 0;
+      border-top: 0px solid transparent; border-bottom: 11px solid transparent; border-left: 8px solid #005c4b;
+    }
+    .bubble.agent {
+      align-self: flex-start; background: #202c33; color: #e9edef; border-top-left-radius: 0;
+    }
+    .bubble.agent::before {
+      content: ''; position: absolute; top: 0; left: -8px; width: 0; height: 0;
+      border-top: 0px solid transparent; border-bottom: 11px solid transparent; border-right: 8px solid #202c33;
+    }
+    .bubble-sender {
+      font-size: 12px; font-weight: 700; color: #00a884; margin-bottom: 3px;
+    }
+    .bubble.system {
+      align-self: center; max-width: 82%; background: #182229; border: 1px solid rgba(255, 210, 121, 0.18);
+      color: #ffd279; font-size: 12px; text-align: center; border-radius: 8px; padding: 8px 16px; margin: 4px 0;
+    }
+    .bubble-footer {
+      display: flex; justify-content: flex-end; align-items: center; gap: 4px;
+      font-size: 11px; color: rgba(233, 237, 239, 0.65); margin-top: 3px;
+    }
+    .bubble-ticks { color: #53bdeb; font-size: 13px; font-weight: 900; letter-spacing: -2px; margin-left: 2px; }
+    .bubble-meta {
+      font-size: 10.5px; color: #8696a0; margin-top: 5px; padding-top: 4px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* Atalhos Rápidos discretos estilo Respostas Rápidas do WhatsApp Business */
     .quick-chips {
-      background: #182229; padding: 8px 16px; display: flex; gap: 8px; overflow-x: auto; border-top: 1px solid #222e35;
+      background: #182229; padding: 7px 16px; display: flex; gap: 7px; overflow-x: auto; border-top: 1px solid #222e35;
     }
     .chip {
-      background: #202c33; color: #d1d7db; border: 1px solid #2a3942; padding: 6px 12px;
+      background: #202c33; color: #d1d7db; border: 1px solid #2a3942; padding: 5px 12px;
       border-radius: 999px; font-size: 12px; cursor: pointer; white-space: nowrap; transition: all 0.15s;
     }
     .chip:hover { background: #00a884; color: #111b21; border-color: #00a884; font-weight: 600; }
+
+    /* Barra Inferior Oficial do WhatsApp Web */
     .wa-input-bar {
-      background: #202c33; padding: 12px 16px; display: flex; gap: 10px; align-items: center;
+      background: #202c33; padding: 10px 16px; display: flex; gap: 12px; align-items: center;
     }
+    .wa-bar-ico {
+      background: transparent; border: none; color: #8696a0; font-size: 22px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .wa-bar-ico:hover { color: #d1d7db; }
     .wa-input-bar input {
-      flex: 1; background: #2a3942; border: none; color: #e9edef; padding: 12px 16px;
-      border-radius: 10px; font-size: 15px; outline: none;
+      flex: 1; background: #2a3942; border: none; color: #e9edef; padding: 11px 16px;
+      border-radius: 8px; font-size: 15px; outline: none;
     }
+    .wa-input-bar input::placeholder { color: #8696a0; }
     .wa-send {
-      background: #00a884; color: #111b21; border: none; padding: 12px 20px;
-      border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer;
+      width: 42px; height: 42px; border-radius: 50%; background: #00a884; color: #111b21;
+      border: none; font-weight: 900; font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .wa-send:hover { background: #06cf9c; }
   </style>
 </head>
 <body>
-  <div class="wa-shell">
-    <div class="wa-header">
-      <div class="wa-profile">
-        <div class="wa-avatar">🚗</div>
-        <div>
-          <div style="font-weight: 700; font-size: 16px;" id="wa-agent-name">Consultor Digital BGR Benefícios</div>
-          <div style="font-size: 12px; color: #8696a0;">
-            WhatsApp Oficial: <strong id="wa-agent-phone" style="color: #00a884;">+55 31 99888-7766</strong> • <span id="wa-stage">contato_iniciado</span>
+  <div class="wa-top-strip"></div>
+  <div class="wa-app">
+    <!-- Coluna Esquerda: Lista de Conversas WhatsApp Web -->
+    <aside class="wa-sidebar">
+      <div class="wa-sidebar-header">
+        <div class="wa-user-avatar" title="Seu Perfil (Cliente)">🧑</div>
+        <div class="wa-sidebar-icons">
+          <span title="Comunidades">👥</span>
+          <span title="Status">⭕</span>
+          <span title="Canais">📢</span>
+          <span title="Nova conversa" onclick="resetChat()">💬</span>
+          <span title="Configurações">⋮</span>
+        </div>
+      </div>
+      <div class="wa-search-box">
+        <div class="wa-search-inner">
+          <span>🔍</span>
+          <input type="text" placeholder="Pesquisar ou começar uma nova conversa" readonly />
+        </div>
+      </div>
+      <div class="wa-filter-bar">
+        <span class="wa-filter-pill active">Tudo</span>
+        <span class="wa-filter-pill">Não lidas</span>
+        <span class="wa-filter-pill">Favoritas</span>
+        <span class="wa-filter-pill">BGR Oficial</span>
+      </div>
+      <div class="wa-chat-list">
+        <!-- Conversa Ativa: Agente Comercial BGR -->
+        <div class="wa-chat-item active">
+          <div class="wa-chat-item-avatar">🚗</div>
+          <div class="wa-chat-item-body">
+            <div class="wa-chat-item-top">
+              <div class="wa-chat-item-title">
+                <span id="sidebar-agent-name">Consultor Digital BGR Benefícios</span>
+                <span style="color:#00a884; font-size:13px;" title="Conta Comercial Verificada">✔️</span>
+              </div>
+              <span class="wa-chat-item-time" id="sidebar-last-time">Agora</span>
+            </div>
+            <div class="wa-chat-item-sub">
+              <span class="wa-chat-item-preview" id="sidebar-last-preview">🤖 Proteção Veicular 24h • Cotação Oficial</span>
+              <span class="wa-unread-badge">IA</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Canal Secundário: Assistência 24h -->
+        <div class="wa-chat-item" onclick="sendQuick('Preciso de guincho / assistência 24h')">
+          <div class="wa-chat-item-avatar" style="background: linear-gradient(135deg, #dc2626, #ea580c);">🚨</div>
+          <div class="wa-chat-item-body">
+            <div class="wa-chat-item-top">
+              <div class="wa-chat-item-title">BGR Assistência 24h & Sinistros</div>
+              <span class="wa-chat-item-time" style="color:#8696a0;">24h</span>
+            </div>
+            <div class="wa-chat-item-sub">
+              <span class="wa-chat-item-preview">Guincho, Reboque, Socorro Mecânico e Chaveiro</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Canal Secundário: Financeiro e Boletos -->
+        <div class="wa-chat-item" onclick="sendQuick('Como funciona a proteção sem consulta ao SPC/Serasa?')">
+          <div class="wa-chat-item-avatar" style="background: linear-gradient(135deg, #ca8a04, #16a34a);">💳</div>
+          <div class="wa-chat-item-body">
+            <div class="wa-chat-item-top">
+              <div class="wa-chat-item-title">BGR Central de Benefícios</div>
+              <span class="wa-chat-item-time" style="color:#8696a0;">Oficial</span>
+            </div>
+            <div class="wa-chat-item-sub">
+              <span class="wa-chat-item-preview">Coberturas 100% FIPE • Sem perfil de condutor</span>
+            </div>
           </div>
         </div>
       </div>
-      <div style="display: flex; gap: 8px; align-items: center;">
-        <button class="wa-btn" id="wa-openai-btn" onclick="toggleKeyBar()">🔑 Conectar OpenAI</button>
-        <span class="wa-status-pill" id="wa-mode">🤖 IA ATIVA</span>
-        <button class="wa-btn" onclick="resetChat()">↺ Nova Conversa</button>
-        <a href="/" class="wa-btn">⚙️ Painel Completo</a>
+    </aside>
+
+    <!-- Coluna Direita: Janela Principal da Conversa -->
+    <main class="wa-main">
+      <div class="wa-header">
+        <div class="wa-profile">
+          <div class="wa-avatar">
+            🚗
+            <span class="wa-avatar-dot"></span>
+          </div>
+          <div>
+            <div style="font-weight: 600; font-size: 15.5px; display: flex; align-items: center; gap: 6px;">
+              <span id="wa-agent-name">Consultor Digital BGR Benefícios</span>
+              <span style="color: #00a884; font-size: 14px;" title="Conta Comercial Oficial Verificada">✔️</span>
+            </div>
+            <div style="font-size: 12px; color: #8696a0; display: flex; align-items: center; gap: 6px;">
+              <span id="wa-online-status" style="color: #00a884; font-weight: 500;">online</span>
+              <span>•</span>
+              <strong id="wa-agent-phone" style="color: #d1d7db; font-weight: 500;">+55 31 99888-7766</strong>
+              <span>•</span>
+              <span id="wa-stage">contato_iniciado</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="wa-btn" id="wa-openai-btn" onclick="toggleKeyBar()">🔑 Conectar OpenAI</button>
+          <span class="wa-status-pill" id="wa-mode">🤖 IA ATIVA</span>
+          <button class="wa-btn" onclick="resetChat()" title="Limpar e reiniciar conversa">↺ Limpar</button>
+          <a href="/" class="wa-btn" title="Voltar para o Console Administrativo">⚙️ Console</a>
+        </div>
       </div>
-    </div>
 
-    <div id="wa-key-bar" style="display: none; background: #182229; padding: 10px 20px; border-bottom: 1px solid #2a3942; align-items: center; gap: 10px;">
-      <span style="font-size: 12.5px; color: #93c5fd; font-weight: 600;">🔑 Chave OpenAI (sk-...):</span>
-      <input id="wa-openai-input" type="password" placeholder="Cole sua OPENAI_API_KEY (sk-proj-...) aqui para ativar o GPT-4o-mini ao vivo" style="flex: 1; background: #111b21; border: 1px solid #3b4a54; color: #fff; padding: 7px 12px; border-radius: 7px; font-size: 13px;" />
-      <button class="wa-btn" style="background: #00a884; color: #111b21; border-color: #00a884;" onclick="saveQuickOpenAiKey()">💾 Ativar OpenAI</button>
-    </div>
+      <div id="wa-key-bar" style="display: none; background: #182229; padding: 10px 20px; border-bottom: 1px solid #2a3942; align-items: center; gap: 10px;">
+        <span style="font-size: 12.5px; color: #00a884; font-weight: 600;">🔑 Chave OpenAI (sk-...):</span>
+        <input id="wa-openai-input" type="password" placeholder="Cole sua OPENAI_API_KEY (sk-proj-...) aqui para ativar o GPT-4o-mini ao vivo" style="flex: 1; background: #111b21; border: 1px solid #3b4a54; color: #fff; padding: 7px 12px; border-radius: 7px; font-size: 13px;" />
+        <button class="wa-btn" style="background: #00a884; color: #111b21; border-color: #00a884;" onclick="saveQuickOpenAiKey()">💾 Ativar OpenAI</button>
+      </div>
 
-    <div id="wa-messages">
-      <div class="bubble system">🔒 As mensagens desta conversa são protegidas e conectadas em tempo real ao Agente Comercial BGR Benefícios. Digite sua mensagem abaixo ou clique nas sugestões rápidas!</div>
-    </div>
+      <div id="wa-messages">
+        <div class="wa-day-badge">HOJE</div>
+        <div class="bubble system">🔒 As mensagens e as ligações são protegidas com a criptografia de ponta a ponta. Esta conversa utiliza uma conta comercial oficial da <strong>BGR Benefícios</strong>.</div>
+      </div>
 
-    <div class="quick-chips">
-      <button class="chip" onclick="sendQuick('Olá, gostaria de fazer uma cotação!')">👋 Olá, quero cotação</button>
-      <button class="chip" onclick="sendQuick('Meu nome é Diego Gomes')">🪪 Meu nome é Diego</button>
-      <button class="chip" onclick="sendQuick('Tenho um Honda Civic 2022 uso particular em Belo Horizonte')">🚘 Civic 2022 Particular BH</button>
-      <button class="chip" onclick="sendQuick('Achei um pouco caro, tem desconto?')">💬 Achei caro / Desconto</button>
-      <button class="chip" onclick="sendQuick('Quero contratar o plano 1 BGR Essencial')">📝 Quero contratar Plano 1</button>
-      <button class="chip" onclick="sendQuick('Já assinei o contrato e fiz o PIX, já estou protegido?')">⏳ Já assinei / Fiz PIX</button>
-      <button class="chip" onclick="sendQuick('Quero falar com um atendente humano')">👨‍💼 Falar com Humano</button>
-    </div>
+      <div class="quick-chips">
+        <button class="chip" onclick="sendQuick('Olá, gostaria de fazer uma cotação!')">👋 Olá, quero cotação</button>
+        <button class="chip" onclick="sendQuick('Meu nome é Diego Gomes')">🪪 Meu nome é Diego</button>
+        <button class="chip" onclick="sendQuick('Ainda não escolhi o veículo')">🤔 Não escolhi o veículo</button>
+        <button class="chip" onclick="sendQuick('Tenho um Honda Civic 2022 uso particular em Belo Horizonte')">🚘 Civic 2022 Particular BH</button>
+        <button class="chip" onclick="sendQuick('Achei um pouco caro, tem desconto?')">💬 Achei caro / Desconto</button>
+        <button class="chip" onclick="sendQuick('Quero contratar o plano 1 BGR Essencial')">📝 Contratar Plano 1</button>
+        <button class="chip" onclick="sendQuick('Quero falar com um atendente humano')">👨‍💼 Falar com Humano</button>
+      </div>
 
-    <form class="wa-input-bar" onsubmit="handleSubmit(event)">
-      <input id="wa-input" type="text" placeholder="Digite uma mensagem para conversar com o Agente BGR..." autocomplete="off" autofocus />
-      <button type="submit" class="wa-send">Enviar ➤</button>
-    </form>
+      <form class="wa-input-bar" onsubmit="handleSubmit(event)">
+        <button type="button" class="wa-bar-ico" title="Emojis" onclick="document.getElementById('wa-input').value += ' 😊'; document.getElementById('wa-input').focus();">😊</button>
+        <button type="button" class="wa-bar-ico" title="Anexar Arquivo / Comprovante" onclick="sendQuick('Acabei de fazer o PIX da adesão, segue o comprovante!')">➕</button>
+        <input id="wa-input" type="text" placeholder="Digite uma mensagem" autocomplete="off" autofocus />
+        <button type="submit" class="wa-send" title="Enviar">➤</button>
+      </form>
+    </main>
   </div>
 
   <script>
@@ -1517,13 +1867,38 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
       const box = document.getElementById('wa-messages');
       const div = document.createElement('div');
       div.className = 'bubble ' + role;
-      div.textContent = text;
+      const nowTime = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      if (role === 'agent') {
+        const sender = document.createElement('div');
+        sender.className = 'bubble-sender';
+        sender.textContent = document.getElementById('wa-agent-name').textContent || 'Consultor Digital BGR';
+        div.appendChild(sender);
+      }
+
+      const contentDiv = document.createElement('div');
+      contentDiv.textContent = text;
+      div.appendChild(contentDiv);
+
       if (meta) {
         const m = document.createElement('div');
         m.className = 'bubble-meta';
         m.textContent = meta;
         div.appendChild(m);
       }
+
+      if (role === 'user' || role === 'agent') {
+        const foot = document.createElement('div');
+        foot.className = 'bubble-footer';
+        foot.innerHTML = \`<span>\${nowTime}</span>\` + (role === 'user' ? '<span class="bubble-ticks">✓✓</span>' : '');
+        div.appendChild(foot);
+
+        const prevEl = document.getElementById('sidebar-last-preview');
+        const timeEl = document.getElementById('sidebar-last-time');
+        if (prevEl) prevEl.textContent = (role === 'user' ? '✓✓ ' : '') + text.slice(0, 42);
+        if (timeEl) timeEl.textContent = nowTime;
+      }
+
       box.appendChild(div);
       box.scrollTop = box.scrollHeight;
     }
@@ -1533,9 +1908,11 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
       if (state.agent_config) {
         document.getElementById('wa-agent-phone').textContent = state.agent_config.agent_phone;
         document.getElementById('wa-agent-name').textContent = state.agent_config.agent_display_name;
+        const sbName = document.getElementById('sidebar-agent-name');
+        if (sbName) sbName.textContent = state.agent_config.agent_display_name;
       }
       if (state.conversation) {
-        document.getElementById('wa-stage').textContent = 'Etapa: ' + state.conversation.current_stage;
+        document.getElementById('wa-stage').textContent = state.conversation.current_stage;
         const m = state.conversation.attendance_mode;
         document.getElementById('wa-mode').textContent = (m === 'ia_ativa' ? '🤖 ' : '👨‍💼 ') + m.toUpperCase();
       }
@@ -1573,12 +1950,15 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
 
     async function sendQuick(text) {
       addBubble('user', text);
+      const statusEl = document.getElementById('wa-online-status');
+      if (statusEl) statusEl.textContent = 'digitando...';
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text })
       });
       const data = await res.json();
+      if (statusEl) statusEl.textContent = 'online';
       if (data.reply) addBubble('agent', data.reply, data.meta || '');
       if (data.silent_note) addBubble('system', data.silent_note);
       syncHeader(data.state);
@@ -1596,7 +1976,7 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
     async function resetChat() {
       const res = await fetch('/api/reset', { method: 'POST' });
       const data = await res.json();
-      document.getElementById('wa-messages').innerHTML = '<div class="bubble system">✨ Nova conversa iniciada! Digite "Olá" abaixo para começar o atendimento com o Agente BGR.</div>';
+      document.getElementById('wa-messages').innerHTML = '<div class="wa-day-badge">HOJE</div><div class="bubble system">🔒 Conversa reiniciada! As mensagens são protegidas com criptografia de ponta a ponta. Digite "Olá" abaixo para começar.</div>';
       syncHeader(data.state);
     }
 
