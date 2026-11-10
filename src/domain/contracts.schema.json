@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgrbeneficios.com.br/schemas/contracts.schema.json",
+  "title": "BGR Benefícios - Contratos de Domínio do Agente Comercial IA",
+  "version": "1.0.0",
+  "$defs": {
+    "Lead": {
+      "type": "object",
+      "required": ["id", "name", "phone", "origin", "created_at", "updated_at"],
+      "properties": {
+        "id": { "type": "string", "minLength": 3 },
+        "external_crm_id": { "type": ["string", "null"] },
+        "name": { "type": "string", "minLength": 2 },
+        "phone": { "type": "string", "pattern": "^\\+?[0-9]{10,15}$" },
+        "email": { "type": ["string", "null"] },
+        "document_masked": { "type": ["string", "null"] },
+        "city_uf": { "type": ["string", "null"] },
+        "origin": { "type": "string", "enum": ["chat_teste", "whatsapp_ia", "campanha_reativacao", "organico"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "Vehicle": {
+      "type": "object",
+      "required": ["brand", "model", "year", "usage"],
+      "properties": {
+        "brand": { "type": "string", "minLength": 2 },
+        "model": { "type": "string", "minLength": 1 },
+        "year": { "type": "integer", "minimum": 1980, "maximum": 2028 },
+        "usage": { "type": "string", "enum": ["particular", "aplicativo", "comercial", "taxi"] },
+        "plate_masked": { "type": ["string", "null"] },
+        "fipe_code": { "type": ["string", "null"] },
+        "is_auction": { "type": "boolean", "default": false },
+        "is_modified": { "type": "boolean", "default": false }
+      },
+      "additionalProperties": false
+    },
+    "QuoteRequest": {
+      "type": "object",
+      "required": ["idempotency_key", "correlation_id", "session_id", "lead", "vehicle", "requested_at"],
+      "properties": {
+        "idempotency_key": { "type": "string", "minLength": 8 },
+        "correlation_id": { "type": "string", "minLength": 8 },
+        "session_id": { "type": "string", "minLength": 3 },
+        "lead": { "$ref": "#/$defs/Lead" },
+        "vehicle": { "$ref": "#/$defs/Vehicle" },
+        "requested_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "QuotePlanOption": {
+      "type": "object",
+      "required": ["plan_id", "plan_name", "monthly_fee_brl", "enrollment_fee_brl", "deductible_description", "coverages"],
+      "properties": {
+        "plan_id": { "type": "string", "minLength": 1 },
+        "plan_name": { "type": "string", "minLength": 2 },
+        "monthly_fee_brl": { "type": "number", "exclusiveMinimum": 0 },
+        "enrollment_fee_brl": { "type": "number", "minimum": 0 },
+        "deductible_description": { "type": "string", "minLength": 2 },
+        "coverages": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuoteResult": {
+      "type": "object",
+      "required": ["quote_id", "quotation_code", "correlation_id", "status", "source", "plans", "valid_until", "fetched_at"],
+      "properties": {
+        "quote_id": { "type": "string", "minLength": 3 },
+        "quotation_code": { "type": "string", "minLength": 3 },
+        "correlation_id": { "type": "string", "minLength": 8 },
+        "status": {
+          "type": "string",
+          "enum": ["oficial_calculada", "pendente_analise_humana", "inelegivel", "nao_encontrada", "erro_integracao"]
+        },
+        "source": {
+          "type": "string",
+          "enum": ["powercrm_oficial", "mock_homologacao"]
+        },
+        "plans": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/QuotePlanOption" }
+        },
+        "valid_until": { "type": "string", "format": "date-time" },
+        "fetched_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "Conversation": {
+      "type": "object",
+      "required": ["session_id", "channel", "attendance_mode", "current_stage", "started_at", "last_interaction_at"],
+      "properties": {
+        "session_id": { "type": "string", "minLength": 3 },
+        "channel": { "type": "string", "enum": ["chat_teste", "whatsapp_oficial"] },
+        "attendance_mode": { "type": "string", "enum": ["ia_ativa", "aguardando_humano", "humano_ativo"] },
+        "current_stage": {
+          "type": "string",
+          "enum": [
+            "novo_lead",
+            "contato_iniciado",
+            "qualificacao",
+            "cotacao_preparada",
+            "cotacao_enviada",
+            "cliente_interessado",
+            "cliente_indeciso",
+            "aguardando_assinatura",
+            "aguardando_pagamento",
+            "contratacao_confirmada",
+            "oportunidade_perdida",
+            "atendimento_humano"
+          ]
+        },
+        "started_at": { "type": "string", "format": "date-time" },
+        "last_interaction_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "Consent": {
+      "type": "object",
+      "required": ["contact_id", "phone_hash", "opt_in_status", "legal_basis", "opt_out_requested", "updated_at"],
+      "properties": {
+        "contact_id": { "type": "string", "minLength": 3 },
+        "phone_hash": { "type": "string", "minLength": 16 },
+        "opt_in_status": { "type": "string", "enum": ["granted", "revoked", "unknown"] },
+        "legal_basis": { "type": "string", "enum": ["execucao_contrato", "consentimento_explicito", "legitimo_interesse", "nenhuma"] },
+        "opt_out_requested": { "type": "boolean" },
+        "consent_source": { "type": ["string", "null"] },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "Opportunity": {
+      "type": "object",
+      "required": [
+        "opportunity_id",
+        "lead_id",
+        "quote_id",
+        "stage",
+        "signature_verified",
+        "payment_verified",
+        "inspection_verified",
+        "activation_confirmed",
+        "updated_at"
+      ],
+      "properties": {
+        "opportunity_id": { "type": "string", "minLength": 3 },
+        "lead_id": { "type": "string", "minLength": 3 },
+        "quote_id": { "type": "string", "minLength": 3 },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "cotacao_enviada",
+            "aguardando_assinatura",
+            "aguardando_pagamento",
+            "aguardando_vistoria",
+            "contratacao_confirmada",
+            "oportunidade_perdida"
+          ]
+        },
+        "signature_verified": { "type": "boolean" },
+        "payment_verified": { "type": "boolean" },
+        "inspection_verified": { "type": "boolean" },
+        "activation_confirmed": { "type": "boolean" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "Handoff": {
+      "type": "object",
+      "required": [
+        "ticket_id",
+        "idempotency_key",
+        "session_id",
+        "target_queue",
+        "priority",
+        "reason",
+        "conversation_summary",
+        "acknowledgment_status",
+        "created_at"
+      ],
+      "properties": {
+        "ticket_id": { "type": "string", "minLength": 3 },
+        "idempotency_key": { "type": "string", "minLength": 8 },
+        "session_id": { "type": "string", "minLength": 3 },
+        "target_queue": {
+          "type": "string",
+          "enum": ["comercial", "suporte", "sinistros", "financeiro", "retencao", "ouvidoria"]
+        },
+        "priority": { "type": "string", "enum": ["BAIXA", "MEDIA", "ALTA", "CRITICA"] },
+        "reason": { "type": "string", "minLength": 5 },
+        "conversation_summary": { "type": "string", "minLength": 10 },
+        "acknowledgment_status": {
+          "type": "string",
+          "enum": ["aguardando_confirmacao", "confirmado", "falha"]
+        },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "PaymentStatus": {
+      "type": "object",
+      "required": ["payment_id", "opportunity_id", "status", "verified_by_system", "updated_at"],
+      "properties": {
+        "payment_id": { "type": "string", "minLength": 3 },
+        "opportunity_id": { "type": "string", "minLength": 3 },
+        "status": {
+          "type": "string",
+          "enum": [
+            "nao_iniciado",
+            "aguardando_pagamento",
+            "comprovante_enviado_nao_validado",
+            "confirmado_oficial",
+            "vencido",
+            "estornado"
+          ]
+        },
+        "verified_by_system": { "type": "boolean" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "AuditEvent": {
+      "type": "object",
+      "required": [
+        "event_id",
+        "idempotency_key",
+        "correlation_id",
+        "timestamp",
+        "environment",
+        "company_id",
+        "session_id",
+        "event_type",
+        "severity",
+        "status",
+        "safe_summary"
+      ],
+      "properties": {
+        "event_id": { "type": "string", "minLength": 3 },
+        "idempotency_key": { "type": "string", "minLength": 8 },
+        "correlation_id": { "type": "string", "minLength": 8 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "environment": { "type": "string", "enum": ["teste", "homologacao", "producao"] },
+        "company_id": { "type": "string", "minLength": 2 },
+        "session_id": { "type": "string", "minLength": 3 },
+        "event_type": { "type": "string", "minLength": 3 },
+        "severity": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+        "status": { "type": "string", "enum": ["sucesso", "pendente", "erro", "bloqueado"] },
+        "http_code": { "type": ["integer", "null"] },
+        "safe_summary": { "type": "string", "minLength": 3 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

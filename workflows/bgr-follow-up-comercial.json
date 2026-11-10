@@ -1,0 +1,578 @@
+{
+  "name": "BGR - Follow-up Comercial - v1.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 12,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-fu-001",
+      "name": "Agendamento Diário 9h BRT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 400],
+      "disabled": true,
+      "notesInFlow": true,
+      "notes": "Executa diariamente às 9h BRT (12h UTC). Ajuste o fuso horário conforme configuração do servidor n8n."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.powercrm.com.br/api/v1/leads",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "open"
+            },
+            {
+              "name": "updated_since",
+              "value": "={{ $now.minus({days: 7}).toISO() }}"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "buscar-leads-fu-001",
+      "name": "Buscar Leads Abertos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 400],
+      "disabled": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Power CRM API - BGR"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Busca leads abertos dos últimos 7 dias no Power CRM. Ajuste os parâmetros conforme a API."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "filter-has-data",
+              "leftValue": "={{ $json.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filtrar-leads-fu-001",
+      "name": "Filtrar Leads com Dados",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [660, 400],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "rightValue": "cotacao_enviada",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Cotação Enviada"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "rightValue": "aguardando_assinatura",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Aguardando Assinatura"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "rightValue": "primeiro_contato",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Primeiro Contato"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "rightValue": "negociacao",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Em Negociação"
+            }
+          ],
+          "fallbackOutput": {
+            "name": "Outros"
+          }
+        },
+        "options": {
+          "allMatchingOutputs": false
+        }
+      },
+      "id": "switch-estagio-fu-001",
+      "name": "Separar por Estágio",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [880, 400],
+      "disabled": true,
+      "notesInFlow": true,
+      "notes": "Separa leads por estágio do funil para diferentes ações de follow-up."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_WHATSAPP_API_URL/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"followup_cotacao_enviada\",\n    \"language\": {\n      \"code\": \"pt_BR\"\n    },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"{{ $json.name }}\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"{{ $json.vehicle_model || 'seu veículo' }}\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "enviar-followup-cotacao-001",
+      "name": "Follow-up Cotação Enviada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1160, 200],
+      "disabled": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "WhatsApp Business API - BGR"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Envia template de follow-up para leads com cotação enviada. Configure a URL e template corretos."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_WHATSAPP_API_URL/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"followup_aguardando_assinatura\",\n    \"language\": {\n      \"code\": \"pt_BR\"\n    },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"{{ $json.name }}\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "enviar-followup-assinatura-001",
+      "name": "Follow-up Aguardando Assinatura",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1160, 400],
+      "disabled": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "WhatsApp Business API - BGR"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Envia template de follow-up para leads aguardando assinatura."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_WHATSAPP_API_URL/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"followup_primeiro_contato\",\n    \"language\": {\n      \"code\": \"pt_BR\"\n    },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"{{ $json.name }}\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "enviar-followup-primeiro-contato-001",
+      "name": "Follow-up Primeiro Contato",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1160, 600],
+      "disabled": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "WhatsApp Business API - BGR"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Envia template de follow-up para leads de primeiro contato."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_WHATSAPP_API_URL/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"followup_negociacao\",\n    \"language\": {\n      \"code\": \"pt_BR\"\n    },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"{{ $json.name }}\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "enviar-followup-negociacao-001",
+      "name": "Follow-up Em Negociação",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1160, 800],
+      "disabled": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "WhatsApp Business API - BGR"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Envia template de follow-up para leads em negociação."
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.powercrm.com.br/api/v1/leads/{{ $json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"last_followup_at\": \"{{ $now.toISO() }}\",\n  \"followup_count\": {{ ($json.followup_count || 0) + 1 }},\n  \"notes\": \"Follow-up automático enviado via WhatsApp em {{ $now.format('dd/MM/yyyy HH:mm') }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "atualizar-status-crm-001",
+      "name": "Atualizar Status no CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 400],
+      "disabled": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Power CRM API - BGR"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Atualiza a data do último follow-up e incrementa o contador no CRM."
+    },
+    {
+      "parameters": {},
+      "id": "tratamento-erros-fu-001",
+      "name": "Tratamento de Erros Follow-up",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1440, 700],
+      "disabled": true,
+      "notesInFlow": true,
+      "notes": "Captura erros do processo de follow-up. Adicione notificações (email, Slack, etc.) para alertar a equipe sobre falhas."
+    }
+  ],
+  "connections": {
+    "Agendamento Diário 9h BRT": {
+      "main": [
+        [
+          {
+            "node": "Buscar Leads Abertos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Leads Abertos": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Leads com Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Leads com Dados": {
+      "main": [
+        [
+          {
+            "node": "Separar por Estágio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar por Estágio": {
+      "main": [
+        [
+          {
+            "node": "Follow-up Cotação Enviada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Follow-up Aguardando Assinatura",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Follow-up Primeiro Contato",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Follow-up Em Negociação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Follow-up Cotação Enviada": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Status no CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Follow-up Aguardando Assinatura": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Status no CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Follow-up Primeiro Contato": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Status no CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Follow-up Em Negociação": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Status no CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "BGR Benefícios",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "Follow-up",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "Automação",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "bgr-followup-comercial-v1"
+}

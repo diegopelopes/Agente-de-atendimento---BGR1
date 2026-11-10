@@ -1,0 +1,14 @@
+{
+  "name": "bgr-agente-comercial",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Agente Comercial de IA — BGR Benefícios (Orquestração n8n + Domínio e Adapter Power CRM)",
+  "scripts": {
+    "test": "node --test tests/unit/contracts.test.ts",
+    "test:ps": "powershell -NoProfile -ExecutionPolicy Bypass -File ./tests/unit/run-unit-tests.ps1"
+  },
+  "engines": {
+    "node": ">=22.6.0"
+  }
+}

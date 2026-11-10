@@ -1,0 +1,402 @@
+{
+  "name": "BGR - Agente Comercial IA - v1.0",
+  "nodes": [
+    {
+      "parameters": {
+        "public": false,
+        "initialMessages": "Olá! Seja bem-vindo à BGR Benefícios! 🚗\nSou o assistente virtual comercial. Como posso ajudar?",
+        "options": {
+          "title": "BGR Benefícios - Assistente Comercial",
+          "subtitle": "Proteção Veicular",
+          "inputPlaceholder": "Digite sua mensagem..."
+        }
+      },
+      "id": "chat-trigger-001",
+      "name": "Chat de Teste",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 400],
+      "webhookId": "bgr-chat-teste-001"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bgr-whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-whatsapp-001",
+      "name": "Webhook WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 700],
+      "disabled": true,
+      "webhookId": "bgr-whatsapp-webhook-001"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput || $json.body.entry[0].changes[0].value.messages[0].text.body || '' }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "Você é o Assistente Comercial Virtual da BGR Benefícios, especializado em proteção veicular.\n\n## IDENTIDADE\n- Você é um assistente virtual com inteligência artificial da BGR Benefícios.\n- Seu papel é atuar como consultor comercial digital, ajudando clientes a conhecer e contratar a proteção veicular.\n- Fale sempre em português brasileiro, de forma clara, educada, profissional e objetiva.\n- Seja proativo e prestativo, mas nunca insistente ou agressivo comercialmente.\n\n## SAUDAÇÃO INICIAL\nNa PRIMEIRA mensagem de cada conversa, use:\n\"Olá! Seja bem-vindo à BGR Benefícios! Sou o assistente virtual comercial da BGR. Vou te ajudar a conhecer nossa proteção veicular e encontrar a melhor opção para seu veículo. Qual é o seu nome?\"\nNÃO repita essa saudação nas mensagens seguintes.\n\n## REGRAS FUNDAMENTAIS\n1. NUNCA invente preços, valores, coberturas, condições ou informações que não foram fornecidas pelo sistema.\n2. NUNCA declare que uma operação foi concluída sem confirmação do sistema oficial.\n3. NUNCA diga que o cliente está protegido apenas porque recebeu uma cotação ou assinou uma proposta.\n4. NUNCA armazene ou solicite dados de cartão de crédito/débito no chat.\n5. NUNCA ofereça descontos sem autorização expressa do sistema.\n6. NUNCA revele credenciais, tokens ou informações internas do sistema.\n7. Se não souber uma informação, diga honestamente e ofereça consultar ou transferir para um atendente humano.\n\n## FLUXO DE ATENDIMENTO\nIdentifique a intenção do cliente:\n- **Nova cotação**: Coletar nome, modelo do veículo, ano/modelo, e quando necessário versão e cidade/região.\n- **Dúvida sobre proteção**: Responder com base na base de conhecimento.\n- **Continuação de proposta**: Verificar o status no sistema.\n- **Contratação**: Guiar pelo processo oficial.\n- **Reativação**: Verificar elegibilidade e condições.\n- **Atendimento a associado**: Direcionar ao setor correto.\n- **Segunda via de boleto**: Orientar o procedimento.\n- **Assistência 24h**: Fornecer contatos de emergência.\n- **Sinistro**: Orientar procedimentos iniciais e direcionar ao setor.\n- **Cancelamento**: Registrar e direcionar ao setor responsável.\n- **Atendimento humano**: Transferir imediatamente com resumo.\n\n## COLETA DE DADOS\n- Faça perguntas uma de cada vez, de forma natural e progressiva.\n- Não repita perguntas já respondidas na conversa.\n- Dados mínimos para cotação: nome do cliente, modelo do veículo, ano/modelo.\n- Dados adicionais quando necessários: versão do veículo, cidade/região, placa (opcional).\n- NÃO solicite informações desnecessárias.\n\n## QUANDO USAR FERRAMENTAS\n- Use a ferramenta \"consultar_cotacao\" quando tiver os dados do veículo e precisar buscar valores.\n- Use a ferramenta \"consultar_lead\" quando precisar verificar um lead existente.\n- Use a ferramenta \"criar_lead\" quando tiver dados suficientes para registrar um novo interessado.\n- Sempre informe ao cliente que está consultando o sistema antes de usar uma ferramenta.\n\n## NEGOCIAÇÃO E OBJEÇÕES\nAo ouvir objeções como \"está caro\", \"vou pensar\", \"outra empresa é mais barata\":\n- Destaque os diferenciais da BGR: atendimento 24h, rede credenciada, agilidade nos processos.\n- Compare valor vs. benefício, não preço vs. preço.\n- Respeite a decisão do cliente sem pressão indevida.\n- Use apenas argumentos aprovados, nunca invente vantagens.\n\n## TRANSFERÊNCIA PARA HUMANO\nTransfira quando:\n- O cliente solicitar explicitamente.\n- Não for possível responder com segurança.\n- Houver conflito de informações.\n- A situação exigir autorização humana.\n- Houver reclamação sensível.\n- A integração apresentar falha.\n\nAo transferir:\n- Informe que está encaminhando para um especialista.\n- NÃO diga que a transferência foi realizada até receber confirmação.\n- Forneça um resumo do atendimento para o próximo atendente.\n\n## SOBRE A BGR BENEFÍCIOS\nA BGR Benefícios é uma associação de proteção veicular que oferece:\n- Proteção contra roubo, furto e colisão\n- Assistência 24 horas\n- Carro reserva (conforme plano)\n- Proteção para terceiros\n- Rastreamento veicular (conforme plano)\n- Cobertura para vidros e retrovisores (conforme plano)\n\nOs valores, coberturas específicas e condições devem ser consultados no sistema oficial."
+        }
+      },
+      "id": "agente-comercial-001",
+      "name": "Agente Comercial BGR",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [560, 400]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.4,
+          "maxTokens": 1024
+        }
+      },
+      "id": "modelo-openai-001",
+      "name": "Modelo OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [360, 620],
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "OpenAI API - BGR"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "fromInput",
+        "windowSize": 20
+      },
+      "id": "memoria-conversa-001",
+      "name": "Memória da Conversa",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [540, 620]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Consulta uma cotação existente no Power CRM usando o código da cotação. Use quando o cliente fornecer um código de cotação ou quando precisar verificar uma cotação já criada.",
+        "method": "GET",
+        "url": "https://api.powercrm.com.br/api/v1/quotations/{quotation_code}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "quotation_code",
+              "description": "Código da cotação no Power CRM",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "tool-consultar-cotacao-001",
+      "name": "Consultar Cotação Power CRM",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [680, 620],
+      "disabled": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Power CRM API - BGR"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Consulta um lead existente no Power CRM pelo telefone ou documento. Use quando precisar verificar se já existe cadastro do cliente.",
+        "method": "GET",
+        "url": "https://api.powercrm.com.br/api/v1/leads",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "parametersQuery": {
+          "values": [
+            {
+              "name": "phone",
+              "value": "{phone}",
+              "description": "Telefone do cliente para busca"
+            },
+            {
+              "name": "document",
+              "value": "{document}",
+              "description": "CPF ou CNPJ do cliente para busca"
+            }
+          ]
+        },
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "phone",
+              "description": "Telefone do cliente (opcional, formato: DDD + número)",
+              "type": "string"
+            },
+            {
+              "name": "document",
+              "description": "CPF ou CNPJ do cliente (opcional, apenas números)",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "tool-consultar-lead-001",
+      "name": "Consultar Lead Power CRM",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [840, 620],
+      "disabled": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Power CRM API - BGR"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Cria um novo lead no Power CRM com os dados do cliente interessado em proteção veicular. Use após coletar nome, telefone e dados do veículo do cliente.",
+        "method": "POST",
+        "url": "https://api.powercrm.com.br/api/v1/leads",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"name\": \"{name}\",\n  \"phone\": \"{phone}\",\n  \"email\": \"{email}\",\n  \"vehicle\": {\n    \"brand\": \"{vehicle_brand}\",\n    \"model\": \"{vehicle_model}\",\n    \"year\": \"{vehicle_year}\",\n    \"plate\": \"{vehicle_plate}\"\n  },\n  \"origin\": \"whatsapp_ia\"\n}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "name",
+              "description": "Nome completo do cliente",
+              "type": "string"
+            },
+            {
+              "name": "phone",
+              "description": "Telefone do cliente com DDD",
+              "type": "string"
+            },
+            {
+              "name": "email",
+              "description": "Email do cliente (opcional, pode ser vazio)",
+              "type": "string"
+            },
+            {
+              "name": "vehicle_brand",
+              "description": "Marca do veículo (ex: Volkswagen, Fiat, Chevrolet)",
+              "type": "string"
+            },
+            {
+              "name": "vehicle_model",
+              "description": "Modelo do veículo (ex: Gol, Onix, HB20)",
+              "type": "string"
+            },
+            {
+              "name": "vehicle_year",
+              "description": "Ano/modelo do veículo (ex: 2023/2024)",
+              "type": "string"
+            },
+            {
+              "name": "vehicle_plate",
+              "description": "Placa do veículo (opcional)",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "tool-criar-lead-001",
+      "name": "Criar Lead Power CRM",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [1000, 620],
+      "disabled": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Power CRM API - BGR"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"messaging_product\": \"whatsapp\", \"to\": $json.body.entry[0].changes[0].value.messages[0].from, \"type\": \"text\", \"text\": { \"body\": $json.output } } }}",
+        "options": {}
+      },
+      "id": "responder-whatsapp-001",
+      "name": "Responder WhatsApp",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 400],
+      "disabled": true
+    },
+    {
+      "parameters": {},
+      "id": "tratamento-erros-001",
+      "name": "Tratamento de Erros",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [900, 200],
+      "notesInFlow": true,
+      "notes": "Captura erros do Agente Comercial. Adicione lógica de tratamento conforme necessário (notificações, logs, fallback)."
+    }
+  ],
+  "connections": {
+    "Chat de Teste": {
+      "main": [
+        [
+          {
+            "node": "Agente Comercial BGR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Agente Comercial BGR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo OpenAI": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente Comercial BGR",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória da Conversa": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente Comercial BGR",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Cotação Power CRM": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Comercial BGR",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Lead Power CRM": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Comercial BGR",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Lead Power CRM": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Comercial BGR",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente Comercial BGR": {
+      "main": [
+        [
+          {
+            "node": "Responder WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tratamento de Erros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "BGR Benefícios",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "Agente Comercial",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "IA",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "bgr-agente-comercial-v1"
+}

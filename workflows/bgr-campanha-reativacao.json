@@ -1,0 +1,507 @@
+{
+  "name": "BGR - Campanha Reativação Ex-Associados - v1.0",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Iniciar Campanha",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Importar Lista de Contatos",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [
+        60,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Lê arquivos CSV/XLSX com colunas:\nid_cliente, nome, telefone, status_anterior,\ndata_ultima_associacao, motivo_saida,\nhistorico_comercial, autorizacao_contato,\ndata_autorizacao, origem_autorizacao"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "condition-auth-sim",
+              "leftValue": "={{ $json.autorizacao_contato }}",
+              "rightValue": "sim",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "condition-auth-true",
+              "leftValue": "={{ $json.autorizacao_contato }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Filtrar Autorizados",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        320,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "LGPD: Filtra apenas contatos com autorização explícita.\nautorizacao_contato == 'sim' ou 'true'"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "condition-optout",
+              "leftValue": "={{ $json.telefone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Verificar Descadastro",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        580,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "PLACEHOLDER: Verificar se o contato está na lista de opt-out.\nImplementar consulta à lista interna de descadastro.\nRemover contatos que solicitaram exclusão."
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        },
+        "batchSize": 10
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Controle de Lotes",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        840,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Processa 10 contatos por lote para respeitar\nos limites de envio do WhatsApp Business Platform."
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "Intervalo entre Envios",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Aguarda 30 segundos entre lotes para\nnão exceder limites da API do WhatsApp."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/{PHONE_NUMBER_ID}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.telefone }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"bgr_reativacao\",\n    \"language\": {\n      \"code\": \"pt_BR\"\n    },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"{{ $json.nome }}\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "a1b2c3d4-0007-4000-8000-000000000007",
+      "name": "Enviar Mensagem Template",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1360,
+        300
+      ],
+      "disabled": true,
+      "notesInFlow": true,
+      "notes": "⚠️ DESABILITADO: Ativar somente após:\n1. Template 'bgr_reativacao' aprovado pela Meta\n2. Credenciais configuradas no n8n\n3. PHONE_NUMBER_ID substituído na URL\n4. Validação jurídica LGPD concluída",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://{POWER_CRM_API_URL}/api/v1/leads",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"id_cliente\": \"{{ $json.id_cliente }}\",\n  \"nome\": \"{{ $json.nome }}\",\n  \"telefone\": \"{{ $json.telefone }}\",\n  \"status\": \"Campanha Enviada\",\n  \"campanha\": \"BGR - Reativação Ex-Associados\",\n  \"data_envio\": \"{{ $now.toISO() }}\",\n  \"canal\": \"whatsapp\",\n  \"motivo_saida_original\": \"{{ $json.motivo_saida }}\",\n  \"data_ultima_associacao\": \"{{ $json.data_ultima_associacao }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "a1b2c3d4-0008-4000-8000-000000000008",
+      "name": "Registrar Envio no CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1620,
+        300
+      ],
+      "disabled": true,
+      "notesInFlow": true,
+      "notes": "⚠️ DESABILITADO: Configurar endpoint do Power CRM.\nSubstituir {POWER_CRM_API_URL} pela URL real.\nConfigurar credenciais de autenticação.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-nome",
+              "name": "contato_nome",
+              "value": "={{ $json.nome }}",
+              "type": "string"
+            },
+            {
+              "id": "field-telefone",
+              "name": "contato_telefone",
+              "value": "={{ $json.telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "field-campanha",
+              "name": "campanha",
+              "value": "BGR - Reativação Ex-Associados v1.0",
+              "type": "string"
+            },
+            {
+              "id": "field-data-envio",
+              "name": "data_envio",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "field-status",
+              "name": "status_envio",
+              "value": "enviado",
+              "type": "string"
+            },
+            {
+              "id": "field-id-cliente",
+              "name": "id_cliente",
+              "value": "={{ $json.id_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "field-motivo-saida",
+              "name": "motivo_saida",
+              "value": "={{ $json.motivo_saida }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0009-4000-8000-000000000009",
+      "name": "Registro de Campanha",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1880,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Registra log de cada envio com:\nnome, telefone, campanha, data, status"
+    },
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0010-4000-8000-000000000010",
+      "name": "Tratamento de Erros de Envio",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1620,
+        560
+      ],
+      "notesInFlow": true,
+      "notes": "Captura erros dos nós HTTP.\nImplementar lógica de retry ou\nnotificação de falha conforme necessidade."
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ LGPD - Base Legal\n\nVerificar base legal antes de ativar a campanha de reativação.\n\n**Requisitos obrigatórios:**\n- Consentimento explícito do ex-associado (Art. 7º, I da LGPD)\n- Registro de autorização com data e origem\n- Canal de opt-out disponível e funcional\n- Política de privacidade atualizada\n\n**Colunas obrigatórias na planilha:**\n- `autorizacao_contato`: deve ser \"sim\" ou \"true\"\n- `data_autorizacao`: data do consentimento\n- `origem_autorizacao`: como foi obtido o consentimento",
+        "height": 420,
+        "width": 380,
+        "color": 5
+      },
+      "id": "a1b2c3d4-0011-4000-8000-000000000011",
+      "name": "Nota LGPD",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ META - Templates WhatsApp\n\nOs templates de mensagem devem ser aprovados pela Meta antes do envio.\n\n**Template necessário:**\n- Nome: `bgr_reativacao`\n- Idioma: `pt_BR`\n- Categoria: Marketing\n- Componentes: body com parâmetro {{1}} para nome\n\n**Passos:**\n1. Criar template no Meta Business Manager\n2. Aguardar aprovação (até 24h)\n3. Testar com número de teste\n4. Habilitar nó 'Enviar Mensagem Template'",
+        "height": 380,
+        "width": 380,
+        "color": 6
+      },
+      "id": "a1b2c3d4-0012-4000-8000-000000000012",
+      "name": "Nota Meta Templates",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ LIMITES - WhatsApp Business Platform\n\nRespeitar os limites de envio da plataforma WhatsApp Business.\n\n**Limites por tier:**\n- Tier 1: 1.000 conversas/24h\n- Tier 2: 10.000 conversas/24h\n- Tier 3: 100.000 conversas/24h\n- Tier 4: Ilimitado\n\n**Configuração atual:**\n- Lote: 10 contatos por vez\n- Intervalo: 30 segundos entre lotes\n- ~1.200 mensagens/hora (máx. teórico)\n\nAjustar batchSize e intervalo conforme o tier da conta.",
+        "height": 400,
+        "width": 380,
+        "color": 4
+      },
+      "id": "a1b2c3d4-0013-4000-8000-000000000013",
+      "name": "Nota Limites",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        640,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ CREDENCIAIS - Configuração Necessária\n\nConfigurar os seguintes tokens no gerenciador de credenciais do n8n:\n\n**WhatsApp Cloud API:**\n- Tipo: Header Auth\n- Nome do Header: `Authorization`\n- Valor: `Bearer {WHATSAPP_TOKEN}`\n- Obter em: Meta Business Manager > WhatsApp > API Setup\n\n**Power CRM:**\n- Tipo: Header Auth\n- Nome do Header: `Authorization`\n- Valor: Token de API do Power CRM\n- Obter com o suporte do Power CRM\n\n**Variáveis a substituir:**\n- `{PHONE_NUMBER_ID}` → ID do número no WhatsApp\n- `{POWER_CRM_API_URL}` → URL base da API do CRM",
+        "height": 440,
+        "width": 380,
+        "color": 3
+      },
+      "id": "a1b2c3d4-0014-4000-8000-000000000014",
+      "name": "Nota Credenciais",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        -200
+      ]
+    }
+  ],
+  "connections": {
+    "Iniciar Campanha": {
+      "main": [
+        [
+          {
+            "node": "Importar Lista de Contatos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Importar Lista de Contatos": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Autorizados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Autorizados": {
+      "main": [
+        [
+          {
+            "node": "Verificar Descadastro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Descadastro": {
+      "main": [
+        [
+          {
+            "node": "Controle de Lotes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Controle de Lotes": {
+      "main": [
+        [
+          {
+            "node": "Intervalo entre Envios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intervalo entre Envios": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mensagem Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Mensagem Template": {
+      "main": [
+        [
+          {
+            "node": "Registrar Envio no CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tratamento de Erros de Envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Envio no CRM": {
+      "main": [
+        [
+          {
+            "node": "Registro de Campanha",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tratamento de Erros de Envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registro de Campanha": {
+      "main": [
+        [
+          {
+            "node": "Controle de Lotes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "BGR Benefícios",
+      "id": "tag-bgr-beneficios"
+    },
+    {
+      "name": "Campanha",
+      "id": "tag-campanha"
+    },
+    {
+      "name": "WhatsApp",
+      "id": "tag-whatsapp"
+    },
+    {
+      "name": "Reativação",
+      "id": "tag-reativacao"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-11-09T20:00:00.000Z",
+  "versionId": "1.0.0"
+}
