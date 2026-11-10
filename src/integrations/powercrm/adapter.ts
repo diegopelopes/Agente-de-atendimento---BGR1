@@ -10,7 +10,8 @@
  * - Sanitização automática de trilha de auditoria (LGPD e proteção de Bearer Token)
  */
 
-import type { AuditEvent, Lead, QuotePlanOption, QuoteResult } from '../../domain/contracts.ts';
+import type { AuditEvent, Lead, QuotePlanOption, QuoteRequest, QuoteResult } from '../../domain/contracts.ts';
+import { evaluateQualification } from '../../domain/contracts.ts';
 import { sanitizeForAudit } from '../../observability/sanitizer.ts';
 
 export type PowerCrmErrorCode =
@@ -119,6 +120,8 @@ export class PowerCrmAdapter {
     >
   > &
     Pick<PowerCrmAdapterConfig, 'bearerToken' | 'fetchImpl'>;
+
+  private readonly idempotencyStore = new Map<string, PowerCrmAdapterResponse<QuoteResult>>();
 
   constructor(config: PowerCrmAdapterConfig) {
     this.config = {
@@ -311,6 +314,286 @@ export class PowerCrmAdapter {
         };
       },
     });
+  }
+
+  /**
+   * Cria uma nova cotação no Power CRM (Fase 3) garantindo:
+   * 1. Todos os campos obrigatórios de qualificação estão presentes (T07/T08)
+   * 2. Idempotência por idempotency_key (evita duplicidade de cotações no CRM - Seção 13)
+   * 3. Cálculo exclusivamente retornado pelo CRM / Mock oficial (nunca inventa preços - T10/T14)
+   */
+  async createQuotation(request: QuoteRequest): Promise<PowerCrmAdapterResponse<QuoteResult>> {
+    const { idempotency_key: idemKey, correlation_id: correlationId, session_id: sessionId, lead, vehicle } = request;
+
+    if (!idemKey || idemKey.trim().length < 8) {
+      return this.buildResponse<QuoteResult>({
+        status: 'error',
+        data: null,
+        errorCode: 'ERR_INVALID_INPUT',
+        httpCode: 400,
+        correlationId,
+        sessionId,
+        attempts: 0,
+        fallbackHumanRequired: false,
+        userSafeMessage: 'Não foi possível validar o identificador único da solicitação de cotação.',
+        eventType: 'powercrm_create_quotation_missing_idempotency',
+        severity: 'MEDIUM',
+        rawAuditSummary: `Tentativa de criar cotação sem idempotency_key válida na sessão ${sessionId}`,
+      });
+    }
+
+    // Verifica cache de idempotência para evitar duplicidade
+    const cached = this.idempotencyStore.get(idemKey);
+    if (cached) {
+      return cached;
+    }
+
+    const qualification = evaluateQualification(lead, vehicle);
+    if (!qualification.ready_for_quote) {
+      return this.buildResponse<QuoteResult>({
+        status: 'error',
+        data: null,
+        errorCode: 'ERR_INVALID_INPUT',
+        httpCode: 400,
+        correlationId,
+        sessionId,
+        attempts: 0,
+        fallbackHumanRequired: false,
+        userSafeMessage: `Ainda faltam dados obrigatórios para calcular sua cotação oficial: ${qualification.missing_fields.join(', ')}.`,
+        eventType: 'powercrm_create_quotation_incomplete_fields',
+        severity: 'LOW',
+        rawAuditSummary: `Bloqueada criação de cotação com campos incompletos (${qualification.missing_fields.join(', ')}) na sessão ${sessionId}`,
+      });
+    }
+
+    if (qualification.requires_human_review) {
+      return this.buildResponse<QuoteResult>({
+        status: 'error',
+        data: null,
+        errorCode: 'ERR_CRM_EMPTY_PRICE',
+        httpCode: 200,
+        correlationId,
+        sessionId,
+        attempts: 0,
+        fallbackHumanRequired: true,
+        userSafeMessage:
+          qualification.human_review_reason ??
+          'Este perfil de veículo requer análise personalizada de um consultor da BGR Benefícios.',
+        eventType: 'powercrm_create_quotation_human_review_required',
+        severity: 'MEDIUM',
+        rawAuditSummary: `Veículo ${vehicle.brand} ${vehicle.model} (${vehicle.year}) requer análise humana (leilão/modificado).`,
+      });
+    }
+
+    if (this.config.mode === 'mock') {
+      const basePlans = MOCK_QUOTATIONS['COT-10001'].plans.map((p) => ({
+        ...p,
+        monthly_fee_brl:
+          vehicle.usage === 'aplicativo' || vehicle.usage === 'comercial'
+            ? Number((p.monthly_fee_brl * 1.15).toFixed(2))
+            : p.monthly_fee_brl,
+      }));
+
+      const generatedCode = `COT-${idemKey.slice(-6).toUpperCase()}`;
+      const result: QuoteResult = {
+        quote_id: `quo_${idemKey.slice(-8)}`,
+        quotation_code: generatedCode,
+        correlation_id: correlationId,
+        status: 'oficial_calculada',
+        source: 'mock_homologacao',
+        plans: basePlans,
+        valid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
+        fetched_at: new Date().toISOString(),
+      };
+
+      const response = this.buildResponse<QuoteResult>({
+        status: 'success',
+        data: result,
+        errorCode: null,
+        httpCode: 201,
+        correlationId,
+        sessionId,
+        attempts: 1,
+        fallbackHumanRequired: false,
+        userSafeMessage: `Cotação ${generatedCode} calculada com sucesso no sistema.`,
+        eventType: 'powercrm_create_quotation_success',
+        severity: 'LOW',
+        rawAuditSummary: `Cotação ${generatedCode} criada para ${lead.name} (${lead.phone}) veículo ${vehicle.brand} ${vehicle.model} ${vehicle.year}.`,
+      });
+
+      this.idempotencyStore.set(idemKey, response);
+      return response;
+    }
+
+    // Modo HTTP: executa POST único (sem retry automático em timeout para evitar duplicidade) com X-Idempotency-Key
+    if (!this.config.bearerToken || this.config.bearerToken.trim().length < 8) {
+      return this.buildResponse<QuoteResult>({
+        status: 'error',
+        data: null,
+        errorCode: 'ERR_CRM_AUTH',
+        httpCode: 401,
+        correlationId,
+        sessionId,
+        attempts: 0,
+        fallbackHumanRequired: true,
+        userSafeMessage:
+          'Nosso sistema de cálculo está temporariamente indisponível. Posso encaminhar você para um consultor da BGR concluir sua cotação?',
+        eventType: 'powercrm_create_quotation_missing_token',
+        severity: 'CRITICAL',
+        rawAuditSummary: 'Credencial Power CRM - Bearer ausente ao tentar POST /quotations',
+      });
+    }
+
+    const url = `${this.config.baseUrl}/quotations`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.config.timeoutMs);
+
+    try {
+      const httpRes = await this.config.fetchImpl!(url, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.config.bearerToken}`,
+          'X-Correlation-Id': correlationId,
+          'X-Idempotency-Key': idemKey,
+        },
+        body: JSON.stringify({
+          client: {
+            name: lead.name,
+            phone: lead.phone,
+            email: lead.email ?? null,
+            city_uf: lead.city_uf ?? null,
+          },
+          vehicle: {
+            brand: vehicle.brand,
+            model: vehicle.model,
+            year: vehicle.year,
+            usage: vehicle.usage,
+          },
+          origin: lead.origin,
+          idempotency_key: idemKey,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (httpRes.status === 401 || httpRes.status === 403) {
+        return this.buildResponse<QuoteResult>({
+          status: 'error',
+          data: null,
+          errorCode: 'ERR_CRM_AUTH',
+          httpCode: httpRes.status,
+          correlationId,
+          sessionId,
+          attempts: 1,
+          fallbackHumanRequired: true,
+          userSafeMessage:
+            'Estamos com uma instabilidade na conexão com o sistema de cálculo. Vou encaminhar seu atendimento para um consultor humano.',
+          eventType: 'powercrm_create_quotation_auth_error',
+          severity: 'CRITICAL',
+          rawAuditSummary: `Erro de autenticação HTTP ${httpRes.status} em POST ${url} com Bearer ${this.config.bearerToken}`,
+        });
+      }
+
+      if (httpRes.status >= 400) {
+        return this.buildResponse<QuoteResult>({
+          status: 'error',
+          data: null,
+          errorCode: httpRes.status === 429 ? 'ERR_CRM_RATE_LIMIT' : 'ERR_CRM_UNAVAILABLE',
+          httpCode: httpRes.status,
+          correlationId,
+          sessionId,
+          attempts: 1,
+          fallbackHumanRequired: true,
+          userSafeMessage:
+            'Não foi possível concluir o cálculo automático neste instante. Vou transferir seus dados para um consultor da BGR finalizar sua cotação.',
+          eventType: 'powercrm_create_quotation_http_error',
+          severity: 'HIGH',
+          rawAuditSummary: `Falha HTTP ${httpRes.status} em POST ${url}`,
+        });
+      }
+
+      const rawJson = (await httpRes.json()) as Record<string, unknown>;
+      const rawPlans = Array.isArray(rawJson.plans) ? rawJson.plans : [];
+      const validPlans: QuotePlanOption[] = rawPlans
+        .filter(
+          (p: Record<string, unknown>) =>
+            typeof p?.monthly_fee_brl === 'number' && (p.monthly_fee_brl as number) > 0
+        )
+        .map((p: Record<string, unknown>) => ({
+          plan_id: String(p.plan_id ?? p.id ?? 'plano_bgr'),
+          plan_name: String(p.plan_name ?? p.name ?? 'Plano BGR'),
+          monthly_fee_brl: Number(p.monthly_fee_brl),
+          enrollment_fee_brl: Number(p.enrollment_fee_brl ?? 0),
+          deductible_description: String(p.deductible_description ?? 'Conforme regulamento BGR'),
+          coverages: Array.isArray(p.coverages) ? p.coverages.map(String) : ['Cobertura conforme regulamento'],
+        }));
+
+      if (validPlans.length === 0) {
+        return this.buildResponse<QuoteResult>({
+          status: 'error',
+          data: null,
+          errorCode: 'ERR_CRM_EMPTY_PRICE',
+          httpCode: httpRes.status,
+          correlationId,
+          sessionId,
+          attempts: 1,
+          fallbackHumanRequired: true,
+          userSafeMessage:
+            'Recebi seu cadastro, mas os valores para este veículo precisam ser confirmados diretamente por um consultor humano da BGR.',
+          eventType: 'powercrm_create_quotation_empty_price',
+          severity: 'MEDIUM',
+          rawAuditSummary: `POST ${url} retornou sem planos com valor > 0 (T14).`,
+        });
+      }
+
+      const quoteResult: QuoteResult = {
+        quote_id: String(rawJson.quote_id ?? rawJson.id ?? `quo_${Date.now()}`),
+        quotation_code: String(rawJson.quotation_code ?? rawJson.code ?? `COT-${Date.now()}`),
+        correlation_id: correlationId,
+        status: 'oficial_calculada',
+        source: 'powercrm_oficial',
+        plans: validPlans,
+        valid_until: String(rawJson.valid_until ?? new Date(Date.now() + 7 * 86400000).toISOString()),
+        fetched_at: new Date().toISOString(),
+      };
+
+      const successRes = this.buildResponse<QuoteResult>({
+        status: 'success',
+        data: quoteResult,
+        errorCode: null,
+        httpCode: httpRes.status,
+        correlationId,
+        sessionId,
+        attempts: 1,
+        fallbackHumanRequired: false,
+        userSafeMessage: `Cotação ${quoteResult.quotation_code} gerada com sucesso.`,
+        eventType: 'powercrm_create_quotation_success',
+        severity: 'LOW',
+        rawAuditSummary: `Cotação oficial ${quoteResult.quotation_code} criada para ${lead.phone}.`,
+      });
+
+      this.idempotencyStore.set(idemKey, successRes);
+      return successRes;
+    } catch {
+      clearTimeout(timeoutId);
+      return this.buildResponse<QuoteResult>({
+        status: 'error',
+        data: null,
+        errorCode: 'ERR_CRM_TIMEOUT',
+        httpCode: null,
+        correlationId,
+        sessionId,
+        attempts: 1,
+        fallbackHumanRequired: true,
+        userSafeMessage:
+          'O cálculo demorou mais que o esperado. Vou encaminhar seus dados para um consultor da BGR concluir o envio.',
+        eventType: 'powercrm_create_quotation_timeout',
+        severity: 'HIGH',
+        rawAuditSummary: `Timeout/erro de rede em POST ${url} (sem retry para preservar idempotência).`,
+      });
+    }
   }
 
   private getQuotationFromMock(
