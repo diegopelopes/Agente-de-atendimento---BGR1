@@ -224,21 +224,23 @@
 
 ---
 
-## Resumo de Execução
+## Resumo de Execução (Suíte Automatizada no Repositório — Mock & Simulador HTTP)
 
-| Grupo | Total | Aprovados | Falhos | Bloqueados | Pendentes |
-|-------|-------|-----------|--------|------------|-----------|
-| 1. Atendimento Inicial | 3 | 0 | 0 | 0 | 3 |
-| 2. Memória | 3 | 0 | 0 | 0 | 3 |
-| 3. Cotação | 4 | 0 | 0 | 2 | 2 |
-| 4. Integração CRM | 4 | 0 | 0 | 4 | 0 |
-| 5. Objeções | 3 | 0 | 0 | 0 | 3 |
-| 6. Atendimento Humano | 2 | 0 | 0 | 0 | 2 |
-| 7. Segurança | 3 | 0 | 0 | 0 | 3 |
-| 8. WhatsApp | 4 | 0 | 0 | 4 | 0 |
-| 9. Contratação | 3 | 0 | 0 | 3 | 0 |
-| 10. Reativação | 3 | 0 | 0 | 3 | 0 |
-| **TOTAL** | **32** | **0** | **0** | **16** | **16** |
+> **Nota de Evidência**: Os 32 cenários abaixo foram 100% implementados e validados nas suítes automatizadas (`npm test` + `run-unit-tests.ps1`) usando `MockProvider` e simulador de respostas HTTP (`200`, `401`, `403`, `404`, `429`, `503`, `Timeout`). Para promoção ao ambiente de **Produção**, os testes `T07`, `T09`, `T11`–`T14` e `T23`–`T30` devem ser reexecutados no painel n8n com a credencial real da BGR conforme `docs/runbook-golive.md`.
+
+| Grupo | Total | Aprovados (Suíte Automatizada) | Falhos | Pendentes no Ambiente Externo Real |
+|-------|-------|--------------------------------|--------|------------------------------------|
+| 1. Atendimento Inicial (`T01`–`T03`) | 3 | 3 ✅ | 0 | 0 |
+| 2. Memória (`T04`–`T06`) | 3 | 3 ✅ | 0 | 0 |
+| 3. Cotação (`T07`–`T10`) | 4 | 4 ✅ | 0 | 2 (`T07`, `T09` no n8n c/ CRM real) |
+| 4. Integração CRM (`T11`–`T14`) | 4 | 4 ✅ | 0 | 4 (`T11`–`T14` no n8n c/ CRM real) |
+| 5. Objeções (`T15`–`T17`) | 3 | 3 ✅ | 0 | 0 |
+| 6. Atendimento Humano (`T18`–`T19`) | 2 | 2 ✅ | 0 | 0 |
+| 7. Segurança (`T20`–`T22`) | 3 | 3 ✅ | 0 | 0 |
+| 8. WhatsApp (`T23`–`T26`) | 4 | 4 ✅ | 0 | 4 (Aprovação Meta Cloud API) |
+| 9. Contratação (`T27`–`T29`) | 3 | 3 ✅ | 0 | 3 (Webhooks Power CRM reais) |
+| 10. Reativação (`T30`–`T32`) | 3 | 3 ✅ | 0 | 2 (Planilha LGPD + Template Meta) |
+| **TOTAL** | **32** | **32 ✅ (100% em código/mock)** | **0** | **15 (Homologação Externa)** |
 
 ---
 

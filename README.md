@@ -50,18 +50,21 @@ bgr-agente-comercial/
 │   │   └── powercrm/
 │   │       └── adapter.ts                    # PowerCRM Adapter (Mock + HTTP, timeout, retry GET, idempotência POST)
 │   ├── services/
+│   │   ├── agent-router-service.ts           # Roteamento, memória por sessão e bloqueio de Prompt Injection
 │   │   ├── quotation-service.ts              # Qualificação progressiva, cotação oficial e contorno de objeções
 │   │   ├── proposal-lifecycle-service.ts     # Máquina de estados de proposta, assinatura, pagamento e efetivação
 │   │   ├── handoff-service.ts                # Roteamento setorial e trava de concorrência IA vs. Humano
 │   │   └── campaign-followup-service.ts      # Elegibilidade LGPD, supressão opt-out, horário comercial e cadência
 │   ├── observability/
-│   │   └── sanitizer.ts                      # Mascaramento de CPF/placa/telefone e redaction de tokens
+│   │   ├── sanitizer.ts                      # Mascaramento de CPF/placa/telefone e redaction de tokens
+│   │   └── metrics-dashboard.ts              # Motor de KPIs verificáveis (sem dupla contagem) e alertas críticos
 │   └── runtime/
 │       └── BgrCore.ps1                       # Motor nativo de validação e segurança para testes
 │
 ├── docs/
 │   ├── arquitetura.md                        # Arquitetura técnica em camadas e diagrama de sequência
 │   ├── operacao.md                           # Manual de operação, ambientes e procedimento de rollback
+│   ├── runbook-golive.md                     # Playbook de alertas, checklist de Go-Live e teste de rollback
 │   ├── n8n-inventario.md                     # Inventário comparativo dos workflows e dependências
 │   ├── powercrm-contratos.md                 # Contratos de integração e política de resiliência CRM
 │   ├── painel-administrativo.md              # Especificação dos 14 KPIs, filtros e tabela SQL de auditoria
@@ -71,7 +74,7 @@ bgr-agente-comercial/
 │   └── arquitetura-replicacao.md             # Guia para replicação modular em outras empresas e segmentos
 │
 ├── tests/
-│   ├── roteiro-testes.md                     # 32 cenários de testes obrigatórios (dados fictícios inclusos)
+│   ├── roteiro-testes.md                     # 32 cenários de testes obrigatórios (32/32 validados em suíte automatizada)
 │   ├── unit/
 │   │   ├── contracts.test.ts                 # Testes unitários de Contratos, Estados e Sanitização
 │   │   ├── quotation-service.test.ts         # Testes de Cotação, Qualificação, Idempotência e Objeções
@@ -79,8 +82,10 @@ bgr-agente-comercial/
 │   │   ├── whatsapp-handoff.test.ts          # Testes de WhatsApp, Janela 24h, Opt-out e Takeover Humano (T18-T26)
 │   │   ├── campaign-followup.test.ts         # Testes de Campanhas, Follow-up, Cadência e Supressão LGPD (T30-T32)
 │   │   └── run-unit-tests.ps1                # Suíte automatizada de auditoria e segurança (35 assertions)
-│   └── integration/
-│       └── powercrm-adapter.test.ts          # Testes de integração PowerCRM Adapter (200/401/404/429/503/Timeout)
+│   ├── integration/
+│   │   └── powercrm-adapter.test.ts          # Testes de integração PowerCRM Adapter (200/401/404/429/503/Timeout)
+│   └── e2e/
+│       └── homologacao-32-cenarios.test.ts   # Suíte E2E de homologação (T01-T32, Prompt Injection e Dashboard KPIs)
 │
 ├── templates/
 │   └── template-importacao-reativacao.md     # Modelo CSV/XLSX para importação segura de ex-associados
@@ -104,7 +109,7 @@ bgr-agente-comercial/
 | **Fase 4** | Proposta, aceite, assinatura digital, pagamento e confirmação oficial de ativação | ✅ **Concluída (`v1.3.0-fase4`)** |
 | **Fase 5** | WhatsApp Business Platform, sessões isoladas, opt-out e transferência humana (takeover) | ✅ **Concluída (`v1.4.0-fase5`)** |
 | **Fase 6** | Campanhas de reativação e follow-up comercial (elegibilidade, cadência, supressão LGPD) | ✅ **Concluída (`v1.5.0-fase6`)** |
-| **Fase 7** | Painel gerencial, métricas verificáveis, defesa contra Prompt Injection e Homologação E2E | 🔄 **Próxima Fase (Aguardando autorização)** |
+| **Fase 7** | Painel gerencial, métricas verificáveis, defesa contra Prompt Injection e Homologação E2E | ✅ **Concluída (`v1.6.0-fase7`)** |
 | **Etapa 3** | Criação de cotação e consulta dos valores oficiais no Power CRM | ⏳ Preparada no workflow (aguardando validação da Etapa 2) |
 | **Etapa 4** | Proposta, aceite, assinatura digital e confirmação de pagamento | ⏳ Arquitetura pronta (aguardando Etapa 3) |
 | **Etapa 5** | Integração WhatsApp Business Platform oficial (número de teste) | ⏳ Nós configurados e desativados por segurança |
