@@ -1095,7 +1095,7 @@ const HTML_PAGE = `<!DOCTYPE html>
     function speakTextPtBr(text) {
       if (!('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
-      const clean = text.replace(/[*_#`]/g, '');
+      const clean = text.replace(/[*_#]/g, '');
       const u = new SpeechSynthesisUtterance(clean);
       u.lang = 'pt-BR';
       u.rate = 1.05;
@@ -2038,7 +2038,7 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
     function speakWaText(text) {
       if (!('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
-      const clean = text.replace(/[*_#`]/g, '');
+      const clean = text.replace(/[*_#]/g, '');
       const u = new SpeechSynthesisUtterance(clean);
       u.lang = 'pt-BR';
       u.rate = 1.05;
