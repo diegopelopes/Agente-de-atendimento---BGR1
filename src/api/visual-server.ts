@@ -103,6 +103,7 @@ function getFullState(sessionId = DEFAULT_SESSION_ID) {
     conversation: conv,
     current_quote: currentQuote,
     opportunity_created: opportunityCreated,
+    human_attendants: handoffService.listHumanAttendants(),
     cadence_rules: {
       vendas: campaignService.getCadenceRules('vendas'),
       cobranca: campaignService.getCadenceRules('cobranca'),
@@ -203,6 +204,7 @@ const HTML_PAGE = `<!DOCTYPE html>
     .view-container.active { display: grid; }
     #view-atendimento.active { grid-template-columns: 350px 1fr 370px; }
     #view-regua.active { grid-template-columns: 1fr 1fr 380px; }
+    #view-humanos.active { grid-template-columns: 430px 1fr; }
     #view-agente.active { grid-template-columns: 460px 1fr; }
     #view-kpis.active { grid-template-columns: 1fr 1fr; }
 
@@ -349,6 +351,10 @@ const HTML_PAGE = `<!DOCTYPE html>
         <span class="ico">📅</span>
         <span>Régua Vendas & Cobrança</span>
       </button>
+      <button id="nav-humanos" class="nav-item" onclick="switchView('humanos')">
+        <span class="ico">👨‍💼</span>
+        <span>Atendentes Humanos</span>
+      </button>
       <button id="nav-agente" class="nav-item" onclick="switchView('agente')">
         <span class="ico">📱</span>
         <span>Número do Agente</span>
@@ -468,6 +474,9 @@ const HTML_PAGE = `<!DOCTYPE html>
               <div><div class="lbl">Opt-Out "PARAR"</div><span class="sub">T31: Supressão LGPD</span></div>
             </button>
           </div>
+          <button class="btn warn sm" onclick="switchView('humanos')" style="width: 100%; justify-content: center;">
+            👨‍💼 Abrir Área de Cadastro de Atendentes Humanos
+          </button>
         </div>
       </section>
 
@@ -584,6 +593,95 @@ const HTML_PAGE = `<!DOCTYPE html>
       </section>
     </div>
 
+    <!-- ABA 2.5: ÁREA DE CADASTRO E GESTÃO DE ATENDENTES HUMANOS -->
+    <div id="view-humanos" class="view-container">
+      <!-- Coluna 1: Formulário de Cadastro de Atendente Humano -->
+      <section class="col">
+        <div class="col-header">
+          <span>👨‍💼 Cadastro de Atendente Humano (BGR)</span>
+          <span class="badge info">Transbordo / Handoff</span>
+        </div>
+        <div class="col-body">
+          <div class="form-box" style="gap: 10px;">
+            <div style="font-size: 12.5px; color: var(--muted);">
+              Cadastre consultores e especialistas humanos por fila setorial (Comercial, Retenção, Sinistros 24h e Ouvidoria) para receberem transbordos da IA com trava de concorrência.
+            </div>
+            <div>
+              <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">👤 Nome Completo do Atendente</label>
+              <input id="att-name" type="text" placeholder="Ex: Rafael Mendes" style="width: 100%; margin-top: 4px;" />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div>
+                <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">📧 E-mail / Login CRM</label>
+                <input id="att-email" type="email" placeholder="rafael@bgrbeneficios.com.br" style="width: 100%; margin-top: 4px;" />
+              </div>
+              <div>
+                <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">📱 WhatsApp / Ramal</label>
+                <input id="att-phone" type="text" placeholder="+55 31 99555-7788" style="width: 100%; margin-top: 4px;" />
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div>
+                <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🏢 Fila / Setor de Destino</label>
+                <select id="att-queue" style="width: 100%; margin-top: 4px;" aria-label="Fila do Atendente">
+                  <option value="comercial">💼 Comercial & Fechamento</option>
+                  <option value="retencao">🤝 Retenção & Negociação</option>
+                  <option value="sinistros">🚨 Assistência & Sinistros 24h</option>
+                  <option value="ouvidoria">⚖️ Ouvidoria & Qualidade</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🟢 Status Inicial</label>
+                <select id="att-status" style="width: 100%; margin-top: 4px;" aria-label="Status Inicial">
+                  <option value="online">🟢 Online / Disponível</option>
+                  <option value="pausa">🟡 Em Pausa</option>
+                  <option value="ocupado">🔴 Ocupado</option>
+                  <option value="offline">⚫ Offline</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div>
+                <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🎖️ Cargo / Especialidade</label>
+                <input id="att-role" type="text" placeholder="Consultor Comercial Pleno" value="Consultor Comercial Pleno" style="width: 100%; margin-top: 4px;" />
+              </div>
+              <div>
+                <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">⏰ Turno de Trabalho</label>
+                <input id="att-shift" type="text" placeholder="08:00 às 18:00" value="08:00 às 18:00" style="width: 100%; margin-top: 4px;" />
+              </div>
+            </div>
+            <button class="btn primary" onclick="registerHumanAttendantUI()">➕ Cadastrar Atendente Humano</button>
+          </div>
+
+          <div class="section-label">📊 Resumo da Equipe Humana</div>
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-ico">👥</div>
+              <div><div class="kpi-val" id="att-total-count">0</div><div class="kpi-lbl">Cadastrados</div></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-ico">🟢</div>
+              <div><div class="kpi-val" id="att-online-count" style="color: #10b981;">0</div><div class="kpi-lbl">Online Agora</div></div>
+            </div>
+          </div>
+          <button class="btn success sm" onclick="runScenario('devolver_para_ia')" style="width: 100%; justify-content: center;">
+            🤖 Encerrar Atendimento Humano e Devolver Sessão para IA
+          </button>
+        </div>
+      </section>
+
+      <!-- Coluna 2: Lista de Atendentes Humanos Cadastrados e Ações de Takeover -->
+      <section class="col">
+        <div class="col-header">
+          <span>👥 Equipe de Atendentes Cadastrados & Filas de Transbordo</span>
+          <span class="badge">Trava IA vs. Humano Integrada</span>
+        </div>
+        <div class="col-body">
+          <div id="human-attendants-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
+        </div>
+      </section>
+    </div>
+
     <!-- ABA 3: CONFIGURAÇÃO E TROCA LIVRE DO NÚMERO DO AGENTE -->
     <div id="view-agente" class="view-container">
       <section class="col">
@@ -691,10 +789,56 @@ const HTML_PAGE = `<!DOCTYPE html>
     }
 
     function switchView(viewName) {
-      for (const v of ['atendimento', 'regua', 'agente', 'kpis']) {
+      for (const v of ['atendimento', 'regua', 'humanos', 'agente', 'kpis']) {
         document.getElementById('view-' + v).classList.toggle('active', v === viewName);
         document.getElementById('nav-' + v).classList.toggle('active', v === viewName);
       }
+    }
+
+    function renderHumanAttendantCard(att) {
+      const statusMap = {
+        online: { label: '🟢 ONLINE', cls: '' },
+        pausa: { label: '🟡 PAUSA', cls: 'warn' },
+        ocupado: { label: '🔴 OCUPADO', cls: 'danger' },
+        offline: { label: '⚫ OFFLINE', cls: 'danger' }
+      };
+      const queueMap = {
+        comercial: '💼 COMERCIAL',
+        retencao: '🤝 RETENÇÃO',
+        sinistros: '🚨 SINISTROS 24H',
+        ouvidoria: '⚖️ OUVIDORIA'
+      };
+      const st = statusMap[att.status] || statusMap.online;
+      const qLabel = queueMap[att.queue] || att.queue.toUpperCase();
+      const nextStatus = att.status === 'online' ? 'pausa' : 'online';
+      return \`
+        <div class="cadence-step-card" id="att-card-\${att.attendant_id}">
+          <div class="cadence-top">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">👨‍💼</span>
+              <div>
+                <div style="font-weight:700; font-size:13.5px;">\${att.name}</div>
+                <div style="font-size:11px; color:var(--muted);">\${att.role_title}</div>
+              </div>
+            </div>
+            <span class="badge \${st.cls}">\${st.label}</span>
+          </div>
+          <div style="font-size:12px; color:var(--text); line-height:1.5; background:#060b16; padding:8px 10px; border-radius:7px; border:1px solid var(--border);">
+            <div><strong>Fila:</strong> <span style="color:#93c5fd;">\${qLabel}</span> • <strong>Turno:</strong> \${att.shift_hours}</div>
+            <div><strong>E-mail:</strong> \${att.email}</div>
+            <div><strong>WhatsApp:</strong> \${att.whatsapp_phone} • <strong>Atendimentos Ativos:</strong> \${att.active_sessions_count}</div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-top:2px;">
+            <button class="btn primary sm" onclick="assignHumanToSession('\${att.attendant_id}')" style="flex:1;">
+              🎧 Assumir Conversa Atual
+            </button>
+            <button class="btn sm" onclick="cycleAttendantStatus('\${att.attendant_id}', '\${nextStatus}')">
+              🔄 \${att.status === 'online' ? 'Pausar' : 'Ficar Online'}
+            </button>
+            <button class="btn danger sm" onclick="deleteHumanAttendant('\${att.attendant_id}')">🗑️</button>
+          </div>
+        </div>
+      \`;
     }
 
     function appendMessage(role, text, meta = '') {
@@ -787,6 +931,18 @@ const HTML_PAGE = `<!DOCTYPE html>
           state.cadence_rules.vendas.map(renderCadenceStepCard).join('');
         document.getElementById('cadence-cobranca-list').innerHTML =
           state.cadence_rules.cobranca.map(renderCadenceStepCard).join('');
+      }
+
+      // Renderiza Atendentes Humanos Cadastrados
+      if (state.human_attendants) {
+        const listEl = document.getElementById('human-attendants-list');
+        if (listEl) {
+          listEl.innerHTML = state.human_attendants.map(renderHumanAttendantCard).join('');
+        }
+        const totalEl = document.getElementById('att-total-count');
+        const onlineEl = document.getElementById('att-online-count');
+        if (totalEl) totalEl.textContent = state.human_attendants.length;
+        if (onlineEl) onlineEl.textContent = state.human_attendants.filter(a => a.status === 'online').length;
       }
 
       // Renderiza Histórico de Disparos da Régua
@@ -921,6 +1077,66 @@ const HTML_PAGE = `<!DOCTYPE html>
       if (data.chat_preview) appendMessage('agent', data.chat_preview, data.meta || '');
       updateDashboard(data.state);
       showToast('Régua de ' + (category === 'cobranca' ? 'Cobrança Geral' : 'Campanhas de Venda') + ' executada!');
+    }
+
+    async function registerHumanAttendantUI() {
+      const name = document.getElementById('att-name').value.trim();
+      const email = document.getElementById('att-email').value.trim();
+      const whatsapp_phone = document.getElementById('att-phone').value.trim();
+      const queue = document.getElementById('att-queue').value;
+      const status = document.getElementById('att-status').value;
+      const role_title = document.getElementById('att-role').value.trim();
+      const shift_hours = document.getElementById('att-shift').value.trim();
+      if (!name) {
+        showToast('Informe o nome completo do atendente humano!');
+        return;
+      }
+      const res = await fetch('/api/attendants/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, whatsapp_phone, queue, status, role_title, shift_hours })
+      });
+      const data = await res.json();
+      document.getElementById('att-name').value = '';
+      document.getElementById('att-email').value = '';
+      document.getElementById('att-phone').value = '';
+      appendMessage('system', '👨‍💼 Novo atendente humano cadastrado: ' + data.created.name + ' (' + data.created.queue.toUpperCase() + ')');
+      updateDashboard(data.state);
+      showToast('Atendente ' + data.created.name + ' cadastrado com sucesso!');
+    }
+
+    async function cycleAttendantStatus(attendantId, nextStatus) {
+      const res = await fetch('/api/attendants/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendant_id: attendantId, status: nextStatus })
+      });
+      const data = await res.json();
+      updateDashboard(data.state);
+      showToast('Status do atendente atualizado para ' + nextStatus.toUpperCase() + '!');
+    }
+
+    async function assignHumanToSession(attendantId) {
+      const res = await fetch('/api/attendants/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendant_id: attendantId })
+      });
+      const data = await res.json();
+      if (data.system_note) appendMessage('system', data.system_note);
+      updateDashboard(data.state);
+      showToast('Atendimento assumido por ' + data.attendant.name + ' (IA Silenciada)!');
+    }
+
+    async function deleteHumanAttendant(attendantId) {
+      const res = await fetch('/api/attendants/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendant_id: attendantId })
+      });
+      const data = await res.json();
+      updateDashboard(data.state);
+      showToast('Atendente removido da equipe!');
     }
 
     async function sendChat(messageText) {
@@ -1079,6 +1295,72 @@ const server = http.createServer(async (req, res) => {
 
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ ok: true, created, state: getFullState() }));
+      return;
+    }
+
+    // Endpoint 3.5: Cadastro e Gestão de Atendentes Humanos (HandoffService)
+    if (req.method === 'POST' && req.url === '/api/attendants/register') {
+      const created = handoffService.registerHumanAttendant({
+        name: String(payload.name ?? ''),
+        email: String(payload.email ?? ''),
+        whatsapp_phone: String(payload.whatsapp_phone ?? ''),
+        queue: payload.queue ?? 'comercial',
+        role_title: String(payload.role_title ?? ''),
+        shift_hours: String(payload.shift_hours ?? ''),
+        status: payload.status ?? 'online',
+      });
+      const auditEv = buildCustomAuditEvent(
+        'human_attendant_registered',
+        `Atendente humano cadastrado: ${created.name} na fila ${created.queue} (${created.status})`,
+        'LOW'
+      );
+      dashboardService.recordEvent({ auditEvent: auditEv });
+
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ ok: true, created, state: getFullState() }));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/api/attendants/status') {
+      const updated = handoffService.updateHumanAttendantStatus(
+        String(payload.attendant_id ?? ''),
+        payload.status ?? 'online'
+      );
+      const auditEv = buildCustomAuditEvent(
+        'human_attendant_status_changed',
+        `Status do atendente ${updated?.name ?? payload.attendant_id} alterado para ${updated?.status}`,
+        'LOW'
+      );
+      dashboardService.recordEvent({ auditEvent: auditEv });
+
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ ok: true, updated, state: getFullState() }));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/api/attendants/assign') {
+      const assigned = handoffService.assignSessionToHumanAttendant(
+        DEFAULT_SESSION_ID,
+        String(payload.attendant_id ?? '')
+      );
+      dashboardService.recordEvent({ auditEvent: assigned.audit_event });
+
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          ok: true,
+          attendant: assigned.attendant,
+          system_note: `🎧 Atendimento da sessão assumido pelo especialista humano ${assigned.attendant.name} (${assigned.attendant.queue.toUpperCase()}). Sessão em modo "humano_ativo" (IA silenciada).`,
+          state: getFullState(),
+        })
+      );
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/api/attendants/delete') {
+      handoffService.removeHumanAttendant(String(payload.attendant_id ?? ''));
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ ok: true, state: getFullState() }));
       return;
     }
 
@@ -1508,6 +1790,18 @@ const server = http.createServer(async (req, res) => {
             })
           );
         }
+        return;
+      }
+
+      if (sc === 'devolver_para_ia') {
+        handoffService.releaseSessionToAi(DEFAULT_SESSION_ID);
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            system_note: '🤖 Atendente humano encerrou o ticket e devolveu a sessão para "ia_ativa".',
+            state: getFullState(),
+          })
+        );
         return;
       }
 

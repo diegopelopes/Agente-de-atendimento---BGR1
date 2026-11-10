@@ -201,4 +201,41 @@ describe('Fase 5 — WhatsApp Business Platform, Sessões Isoladas, Opt-out e Tr
     assert.equal(blockedAttempt.allowed, false);
     assert.equal(blockedAttempt.blocked_reason, 'OPT_OUT_ACTIVE');
   });
+
+  test('Cadastro e Gestão de Atendentes Humanos (Consultores BGR + Takeover Direto)', () => {
+    const handoffService = new HandoffService();
+
+    const initialList = handoffService.listHumanAttendants();
+    assert.equal(initialList.length, 4);
+
+    // Cadastra novo atendente humano
+    const created = handoffService.registerHumanAttendant({
+      name: 'Rafael Mendes',
+      email: 'rafael.mendes@bgrbeneficios.com.br',
+      whatsapp_phone: '+55 31 99555-7788',
+      queue: 'comercial',
+      role_title: 'Consultor Fechamento Digital',
+      shift_hours: '08:00 às 18:00',
+      status: 'online',
+    });
+
+    assert.equal(handoffService.listHumanAttendants().length, 5);
+    assert.equal(created.name, 'Rafael Mendes');
+    assert.equal(created.queue, 'comercial');
+
+    // Atribui sessão de atendimento diretamente ao atendente recém-cadastrado
+    const assigned = handoffService.assignSessionToHumanAttendant('sess_rafael_01', created.attendant_id);
+    assert.equal(assigned.conversation.attendance_mode, 'humano_ativo');
+    assert.equal(assigned.handoff.acknowledgment_status, 'confirmado');
+    assert.equal(assigned.attendant.active_sessions_count, 1);
+    assert.equal(assigned.attendant.status, 'ocupado');
+
+    // Altera status para pausa e remove
+    const paused = handoffService.updateHumanAttendantStatus(created.attendant_id, 'pausa');
+    assert.equal(paused?.status, 'pausa');
+
+    const removed = handoffService.removeHumanAttendant(created.attendant_id);
+    assert.equal(removed, true);
+    assert.equal(handoffService.listHumanAttendants().length, 4);
+  });
 });

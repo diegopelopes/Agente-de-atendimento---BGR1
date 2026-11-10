@@ -55,9 +55,74 @@ export interface IncomingMessageGateResult {
   auto_reply_message: string | null;
 }
 
+export interface HumanAttendantProfile {
+  attendant_id: string;
+  name: string;
+  email: string;
+  whatsapp_phone: string;
+  queue: Handoff['target_queue'];
+  role_title: string;
+  shift_hours: string;
+  status: 'online' | 'pausa' | 'ocupado' | 'offline';
+  active_sessions_count: number;
+  created_at: string;
+}
+
+export const DEFAULT_HUMAN_ATTENDANTS: HumanAttendantProfile[] = [
+  {
+    attendant_id: 'atd_lucas_01',
+    name: 'Lucas Martins',
+    email: 'lucas.martins@bgrbeneficios.com.br',
+    whatsapp_phone: '+55 31 99111-2233',
+    queue: 'comercial',
+    role_title: 'Consultor Comercial Sênior',
+    shift_hours: '08:00 às 18:00',
+    status: 'online',
+    active_sessions_count: 0,
+    created_at: '2026-11-10T08:00:00.000Z',
+  },
+  {
+    attendant_id: 'atd_mariana_02',
+    name: 'Mariana Costa',
+    email: 'mariana.costa@bgrbeneficios.com.br',
+    whatsapp_phone: '+55 31 99222-3344',
+    queue: 'retencao',
+    role_title: 'Especialista de Retenção & Negociação',
+    shift_hours: '09:00 às 19:00',
+    status: 'online',
+    active_sessions_count: 0,
+    created_at: '2026-11-10T08:00:00.000Z',
+  },
+  {
+    attendant_id: 'atd_ricardo_03',
+    name: 'Ricardo Oliveira',
+    email: 'ricardo.plantao@bgrbeneficios.com.br',
+    whatsapp_phone: '+55 31 99333-4455',
+    queue: 'sinistros',
+    role_title: 'Plantão Assistência & Sinistros 24h',
+    shift_hours: 'Plantão 24h',
+    status: 'online',
+    active_sessions_count: 0,
+    created_at: '2026-11-10T08:00:00.000Z',
+  },
+  {
+    attendant_id: 'atd_patricia_04',
+    name: 'Patrícia Souza',
+    email: 'patricia.ouvidoria@bgrbeneficios.com.br',
+    whatsapp_phone: '+55 31 99444-5566',
+    queue: 'ouvidoria',
+    role_title: 'Analista de Ouvidoria & Qualidade',
+    shift_hours: '09:00 às 18:00',
+    status: 'pausa',
+    active_sessions_count: 0,
+    created_at: '2026-11-10T08:00:00.000Z',
+  },
+];
+
 export class HandoffService {
   private readonly conversations = new Map<string, Conversation>();
   private readonly handoffsBySession = new Map<string, Handoff>();
+  private humanAttendants: HumanAttendantProfile[] = DEFAULT_HUMAN_ATTENDANTS.map((a) => ({ ...a }));
   private readonly environment: 'teste' | 'homologacao' | 'producao';
   private readonly companyId: string;
 
@@ -256,5 +321,99 @@ export class HandoffService {
     conv.last_interaction_at = new Date().toISOString();
     this.handoffsBySession.delete(sessionId);
     return { ...conv };
+  }
+
+  /**
+   * Lista todos os atendentes humanos cadastrados (opcionalmente filtrados por fila).
+   */
+  listHumanAttendants(queue?: Handoff['target_queue']): HumanAttendantProfile[] {
+    const list = queue
+      ? this.humanAttendants.filter((a) => a.queue === queue)
+      : this.humanAttendants;
+    return list.map((a) => ({ ...a }));
+  }
+
+  /**
+   * Cadastra um novo atendente humano na equipe da BGR Benefícios.
+   */
+  registerHumanAttendant(params: {
+    name: string;
+    email: string;
+    whatsapp_phone: string;
+    queue: Handoff['target_queue'];
+    role_title?: string;
+    shift_hours?: string;
+    status?: HumanAttendantProfile['status'];
+  }): HumanAttendantProfile {
+    const cleanName = params.name.trim() || 'Consultor BGR';
+    const profile: HumanAttendantProfile = {
+      attendant_id: `atd_${Date.now()}`,
+      name: cleanName,
+      email: params.email.trim() || 'consultor@bgrbeneficios.com.br',
+      whatsapp_phone: params.whatsapp_phone.trim() || '+55 31 99000-0000',
+      queue: params.queue || 'comercial',
+      role_title: params.role_title?.trim() || 'Consultor Especialista BGR',
+      shift_hours: params.shift_hours?.trim() || '08:00 às 18:00',
+      status: params.status || 'online',
+      active_sessions_count: 0,
+      created_at: new Date().toISOString(),
+    };
+    this.humanAttendants.unshift(profile);
+    return { ...profile };
+  }
+
+  /**
+   * Atualiza o status de disponibilidade de um atendente humano (online, pausa, ocupado, offline).
+   */
+  updateHumanAttendantStatus(
+    attendantId: string,
+    status: HumanAttendantProfile['status']
+  ): HumanAttendantProfile | null {
+    const found = this.humanAttendants.find((a) => a.attendant_id === attendantId);
+    if (!found) return null;
+    found.status = status;
+    return { ...found };
+  }
+
+  /**
+   * Remove um atendente humano da lista.
+   */
+  removeHumanAttendant(attendantId: string): boolean {
+    const before = this.humanAttendants.length;
+    this.humanAttendants = this.humanAttendants.filter((a) => a.attendant_id !== attendantId);
+    return this.humanAttendants.length < before;
+  }
+
+  /**
+   * Atribui imediatamente uma sessão de conversa a um atendente humano cadastrado (Takeover direto).
+   */
+  assignSessionToHumanAttendant(sessionId: string, attendantId: string): {
+    attendant: HumanAttendantProfile;
+    handoff: Handoff;
+    conversation: Conversation;
+    audit_event: AuditEvent;
+  } {
+    const attendant = this.humanAttendants.find((a) => a.attendant_id === attendantId);
+    if (!attendant) {
+      throw new Error(`Atendente humano '${attendantId}' não encontrado.`);
+    }
+
+    if (!this.handoffsBySession.has(sessionId)) {
+      this.initiateHandoff({
+        sessionId,
+        channel: 'chat_teste',
+        trigger: 'solicitacao_explicita_cliente',
+        conversationSummary: `Atendimento atribuído diretamente ao especialista humano ${attendant.name} (${attendant.queue}).`,
+      });
+    }
+
+    const ack = this.confirmHumanTakeover(sessionId, `${attendant.name} (${attendant.email})`);
+    attendant.active_sessions_count += 1;
+    attendant.status = 'ocupado';
+
+    return {
+      attendant: { ...attendant },
+      ...ack,
+    };
   }
 }
