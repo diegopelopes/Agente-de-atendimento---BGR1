@@ -1745,7 +1745,16 @@ const server = http.createServer(async (req, res) => {
       }
 
       // Escolha de plano / contratação na conversa natural
-      if (/\b(quero\s+contratar|plano\s*1|bgr\s+essencial|fechar\s+agora|quero\s+esse)\b/i.test(msgText)) {
+      const wantsPlan2 =
+        /\b(plano\s*2|op[cç][aã]o\s*2|bgr\s+completo|completo|segundo\s+plano)\b/i.test(msgText) ||
+        (currentQuote !== null && /^2$/.test(msgText));
+      const wantsPlan1 =
+        /\b(quero\s+contratar|plano\s*1|op[cç][aã]o\s*1|bgr\s+essencial|essencial|primeiro\s+plano|fechar\s+agora|quero\s+esse)\b/i.test(
+          msgText
+        ) ||
+        (currentQuote !== null && /^1$/.test(msgText));
+
+      if (wantsPlan1 || wantsPlan2) {
         if (!currentQuote) {
           const autoQuote = await quotationService.processQuotationRequest({
             sessionId: DEFAULT_SESSION_ID,
@@ -1754,11 +1763,13 @@ const server = http.createServer(async (req, res) => {
           });
           currentQuote = autoQuote.quote_result;
         }
+        const chosenPlanId =
+          wantsPlan2 && currentQuote!.plans[1] ? currentQuote!.plans[1].plan_id : currentQuote!.plans[0].plan_id;
         const oppOut = lifecycleService.createOpportunityFromQuote({
           opportunityId: DEFAULT_OPP_ID,
           leadId: 'lead_chat_001',
           quote: currentQuote!,
-          selectedPlanId: 'bgr_essencial',
+          selectedPlanId: chosenPlanId,
           sessionId: DEFAULT_SESSION_ID,
         });
         opportunityCreated = true;
@@ -1771,7 +1782,7 @@ const server = http.createServer(async (req, res) => {
         res.end(
           JSON.stringify({
             reply: oppOut.customer_message,
-            meta: `📱 agente: ${agentConfig.agent_phone} | etapa: ${oppOut.stage} | proteção_ativa: ${oppOut.protection_active_declared}`,
+            meta: `📱 agente: ${agentConfig.agent_phone} | plano: ${chosenPlanId} | etapa: ${oppOut.stage} | proteção_ativa: ${oppOut.protection_active_declared}`,
             state: getFullState(),
           })
         );

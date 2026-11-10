@@ -78,6 +78,48 @@ describe('Fase 7 — Homologação Completa E2E (32 Cenários Obrigatórios T01�
     assert.equal(t03.response.includes('assistente virtual com inteligência artificial'), true);
   });
 
+  test('NLU Contextual (Slot-Filling) & Catálogo FIPE: Entende respostas curtas, modelos sem marca/ano, dúvidas de cobertura e qualquer cidade', () => {
+    const router = new AgentRouterService();
+    const sessionId = 'e2e_sess_nlu_natural';
+
+    // 1. Cliente inicia com "Oi" -> Agente saúda e espera 'name'
+    const step1 = router.routeMessage({ message: 'Oi', channelId: 'chat_teste', sessionId });
+    assert.equal(step1.memory_snapshot.expected_slot, 'name');
+
+    // 2. Cliente responde apenas "Diego Gomes" -> Agente reconhece o nome e espera 'vehicle_model'
+    const step2 = router.routeMessage({ message: 'Diego Gomes', channelId: 'chat_teste', sessionId });
+    assert.equal(step2.memory_snapshot.lead.name, 'Diego Gomes');
+    assert.equal(step2.memory_snapshot.expected_slot, 'vehicle_model');
+
+    // 3. Cliente informa apenas o modelo sem marca e sem ano ("T-Cross") -> Agente infere Volkswagen T-Cross e pede apenas o ano ('vehicle_year')
+    const step3 = router.routeMessage({ message: 'T-Cross', channelId: 'chat_teste', sessionId });
+    assert.equal(step3.memory_snapshot.vehicle.brand, 'Volkswagen');
+    assert.equal(step3.memory_snapshot.vehicle.model, 'T-Cross');
+    assert.equal(step3.memory_snapshot.expected_slot, 'vehicle_year');
+    assert.equal(step3.response.includes('qual é o ano do seu Volkswagen T-Cross'), true);
+
+    // 4. Cliente faz uma dúvida no meio ("Tem consulta ao SPC e guincho 24h?") -> Agente responde a dúvida e mantém a pergunta do ano!
+    const stepFaq = router.routeMessage({ message: 'Tem consulta ao SPC?', channelId: 'chat_teste', sessionId });
+    assert.equal(stepFaq.intent, 'duvida_cobertura');
+    assert.equal(stepFaq.response.includes('Sem Burocracia'), true);
+    assert.equal(stepFaq.memory_snapshot.expected_slot, 'vehicle_year');
+
+    // 5. Cliente responde apenas o ano ("2023") -> Agente salva year=2023 e pede o tipo de uso ('vehicle_usage')
+    const step4 = router.routeMessage({ message: '2023', channelId: 'chat_teste', sessionId });
+    assert.equal(step4.memory_snapshot.vehicle.year, 2023);
+    assert.equal(step4.memory_snapshot.expected_slot, 'vehicle_usage');
+
+    // 6. Cliente responde coloquialmente ("uso no dia a dia / passeio") -> Agente salva usage='particular' e pede a cidade ('city_uf')
+    const step5 = router.routeMessage({ message: 'uso no dia a dia', channelId: 'chat_teste', sessionId });
+    assert.equal(step5.memory_snapshot.vehicle.usage, 'particular');
+    assert.equal(step5.memory_snapshot.expected_slot, 'city_uf');
+
+    // 7. Cliente informa qualquer cidade ("Moro em Sete Lagoas") -> Agente salva city_uf e avança para 'consultar_crm'!
+    const step6 = router.routeMessage({ message: 'Moro em Sete Lagoas', channelId: 'chat_teste', sessionId });
+    assert.equal(step6.memory_snapshot.lead.city_uf, 'Sete Lagoas');
+    assert.equal(step6.next_action, 'consultar_crm');
+  });
+
   test('GRUPO 7 (T20, T21, T22): Segurança — Bloqueio de Extração de Tokens, Prompt Injection e Desconto Não Autorizado', () => {
     const router = new AgentRouterService();
     const adapter = new PowerCrmAdapter({ mode: 'mock', baseUrl: 'https://api.powercrm.com.br/api/v1' });
