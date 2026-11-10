@@ -47,7 +47,8 @@ bgr-agente-comercial/
 │   │   └── powercrm/
 │   │       └── adapter.ts                    # PowerCRM Adapter (Mock + HTTP, timeout, retry GET, idempotência POST)
 │   ├── services/
-│   │   └── quotation-service.ts              # Qualificação progressiva, cotação oficial e contorno de objeções
+│   │   ├── quotation-service.ts              # Qualificação progressiva, cotação oficial e contorno de objeções
+│   │   └── proposal-lifecycle-service.ts     # Máquina de estados de proposta, assinatura, pagamento e efetivação
 │   ├── observability/
 │   │   └── sanitizer.ts                      # Mascaramento de CPF/placa/telefone e redaction de tokens
 │   └── runtime/
@@ -69,6 +70,7 @@ bgr-agente-comercial/
 │   ├── unit/
 │   │   ├── contracts.test.ts                 # Testes unitários de Contratos, Estados e Sanitização
 │   │   ├── quotation-service.test.ts         # Testes de Cotação, Qualificação, Idempotência e Objeções
+│   │   ├── proposal-lifecycle.test.ts        # Testes de Proposta, Assinatura, Pagamento e Efetivação (T27-T29)
 │   │   └── run-unit-tests.ps1                # Suíte automatizada de auditoria e segurança (35 assertions)
 │   └── integration/
 │       └── powercrm-adapter.test.ts          # Testes de integração PowerCRM Adapter (200/401/404/429/503/Timeout)
@@ -92,7 +94,8 @@ bgr-agente-comercial/
 | **Fase 1** | Fundação, `.env.example`, contratos tipados, sanitizador LGPD e testes unitários | ✅ **Concluída (`v1.0.0-fase1`)** |
 | **Fase 2** | Adapter Power CRM de leitura (`MockProvider` + `HttpProvider`), credencial segura e testes HTTP | ✅ **Concluída (`v1.1.0-fase2`)** |
 | **Fase 3** | Cotação validada, criação controlada no CRM, idempotência e apresentação de valores | ✅ **Concluída (`v1.2.0-fase3`)** |
-| **Fase 4** | Proposta, aceite, assinatura digital, pagamento e confirmação oficial de ativação | 🔄 **Próxima Fase (Aguardando autorização)** |
+| **Fase 4** | Proposta, aceite, assinatura digital, pagamento e confirmação oficial de ativação | ✅ **Concluída (`v1.3.0-fase4`)** |
+| **Fase 5** | WhatsApp Business Platform, sessões isoladas, opt-out e transferência humana (takeover) | 🔄 **Próxima Fase (Aguardando autorização)** |
 | **Etapa 3** | Criação de cotação e consulta dos valores oficiais no Power CRM | ⏳ Preparada no workflow (aguardando validação da Etapa 2) |
 | **Etapa 4** | Proposta, aceite, assinatura digital e confirmação de pagamento | ⏳ Arquitetura pronta (aguardando Etapa 3) |
 | **Etapa 5** | Integração WhatsApp Business Platform oficial (número de teste) | ⏳ Nós configurados e desativados por segurança |
