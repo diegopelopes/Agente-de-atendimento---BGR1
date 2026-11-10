@@ -190,4 +190,51 @@ describe('Fase 6 — Campanhas de Reativação e Follow-up Comercial (Elegibilid
       'Deve conter as 5 condições reais de telefone, opt_out (!= sim/true), data_autorizacao e origem_autorizacao'
     );
   });
+
+  test('Régua de Mensagens (Campanhas de Venda e Cobranças em Modo Geral) + Número Dinâmico do Agente', () => {
+    const service = new CampaignFollowUpService({
+      startHourBrt: 0,
+      endHourBrt: 24,
+      weekdaysOnly: false,
+    });
+
+    const vendasRules = service.getCadenceRules('vendas');
+    const cobrancaRules = service.getCadenceRules('cobranca');
+    assert.equal(vendasRules.length, 5);
+    assert.equal(cobrancaRules.length, 5);
+
+    // Dispara etapa de cobrança D0 com número customizado do agente
+    const dispCobranca = service.evaluateCadenceStepDispatch({
+      step_id: 'cobranca_d0_vencimento',
+      agent_phone: '+55 11 97777-5544',
+      contact: {
+        contact_id: 'cnt_fin_001',
+        phone: '+5531999991111',
+        name: 'Carlos Eduardo',
+        stage: 'contratacao_confirmada',
+        followup_count: 0,
+        consent_state: VALID_CONSENT,
+      },
+    });
+
+    assert.equal(dispCobranca.eligibility, true);
+    assert.ok(dispCobranca.rendered_message?.includes('Carlos Eduardo'));
+    assert.ok(dispCobranca.rendered_message?.includes('+55 11 97777-5544'));
+
+    // Pausa etapa e verifica bloqueio
+    service.updateCadenceStep({ step_id: 'cobranca_d0_vencimento', enabled: false });
+    const dispPaused = service.evaluateCadenceStepDispatch({
+      step_id: 'cobranca_d0_vencimento',
+      agent_phone: '+55 11 97777-5544',
+      contact: {
+        contact_id: 'cnt_fin_002',
+        phone: '+5531999992222',
+        name: 'Maria',
+        stage: 'contratacao_confirmada',
+        followup_count: 0,
+        consent_state: VALID_CONSENT,
+      },
+    });
+    assert.equal(dispPaused.eligibility, false);
+  });
 });

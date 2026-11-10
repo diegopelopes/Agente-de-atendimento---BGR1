@@ -23,7 +23,26 @@ export type FollowUpTemplateId =
   | 'followup_cotacao_enviada'
   | 'followup_negociacao'
   | 'followup_aguardando_assinatura'
-  | 'bgr_reativacao';
+  | 'bgr_reativacao'
+  | 'cobranca_lembrete_d_menos_3'
+  | 'cobranca_vencimento_hoje_d0'
+  | 'cobranca_aviso_atraso_d_mais_2'
+  | 'cobranca_regularizacao_d_mais_5'
+  | 'cobranca_negociacao_d_mais_10';
+
+export type CadenceCategory = 'vendas' | 'cobranca';
+
+export interface CadenceStepRule {
+  step_id: string;
+  category: CadenceCategory;
+  day_label: string;
+  day_offset: number;
+  title: string;
+  icon: string;
+  template_id: FollowUpTemplateId;
+  message_template: string;
+  enabled: boolean;
+}
 
 export type DeliveryStatus =
   | 'queued_for_delivery'
@@ -76,6 +95,132 @@ const STAGE_TO_TEMPLATE: Partial<Record<FunnelStage, FollowUpTemplateId>> = {
   aguardando_assinatura: 'followup_aguardando_assinatura',
 };
 
+export const DEFAULT_CADENCE_RULES: CadenceStepRule[] = [
+  // Régua de Campanhas de Venda & Follow-up Comercial
+  {
+    step_id: 'vendas_d1_qualificacao',
+    category: 'vendas',
+    day_label: 'D+1',
+    day_offset: 1,
+    title: 'Retomada de Qualificação (24h)',
+    icon: '👋',
+    template_id: 'followup_primeiro_contato',
+    message_template:
+      'Olá {{nome}}, tudo bem? Sou da BGR Benefícios ({{numero_agente}}). Vi que você iniciou o atendimento para proteger seu veículo. Posso concluir sua simulação agora?',
+    enabled: true,
+  },
+  {
+    step_id: 'vendas_d2_cotacao',
+    category: 'vendas',
+    day_label: 'D+2',
+    day_offset: 2,
+    title: 'Follow-up de Cotação Oficial (48h)',
+    icon: '📋',
+    template_id: 'followup_cotacao_enviada',
+    message_template:
+      'Olá {{nome}}! Sua cotação oficial BGR Benefícios continua reservada ({{numero_agente}}). Ficou alguma dúvida sobre cobertura de Roubo, Furto, Colisão e Assistência 24h?',
+    enabled: true,
+  },
+  {
+    step_id: 'vendas_d5_objecao',
+    category: 'vendas',
+    day_label: 'D+5',
+    day_offset: 5,
+    title: 'Destravamento de Objeção & Valor',
+    icon: '🛡️',
+    template_id: 'followup_negociacao',
+    message_template:
+      'Olá {{nome}}, passando para lembrar que na BGR Benefícios você conta com cobertura nacional e excelente custo-benefício sem perfil de condutor. Vamos ativar sua proposta hoje?',
+    enabled: true,
+  },
+  {
+    step_id: 'vendas_d7_assinatura',
+    category: 'vendas',
+    day_label: 'D+7',
+    day_offset: 7,
+    title: 'Lembrete de Assinatura Digital Pendente',
+    icon: '✍️',
+    template_id: 'followup_aguardando_assinatura',
+    message_template:
+      'Olá {{nome}}! Falta apenas concluir a assinatura digital do seu termo de adesão BGR ({{numero_agente}}) para liberarmos a vistoria do seu veículo.',
+    enabled: true,
+  },
+  {
+    step_id: 'vendas_d15_reativacao',
+    category: 'vendas',
+    day_label: 'D+15',
+    day_offset: 15,
+    title: 'Campanha de Reativação Comercial',
+    icon: '🚀',
+    template_id: 'bgr_reativacao',
+    message_template:
+      'Olá {{nome}}, temos condições atualizadas nos planos BGR Essencial, Plus e Total para o seu veículo! Responda SIM para atualizar sua cotação.',
+    enabled: true,
+  },
+
+  // Régua de Cobranças em Modo Geral
+  {
+    step_id: 'cobranca_dm3_preventivo',
+    category: 'cobranca',
+    day_label: 'D-3',
+    day_offset: -3,
+    title: 'Lembrete Preventivo de Vencimento',
+    icon: '🔔',
+    template_id: 'cobranca_lembrete_d_menos_3',
+    message_template:
+      'Olá {{nome}}! Lembrete amigável da BGR Benefícios ({{numero_agente}}): sua mensalidade vence em 3 dias. O boleto e o código PIX oficial já estão disponíveis.',
+    enabled: true,
+  },
+  {
+    step_id: 'cobranca_d0_vencimento',
+    category: 'cobranca',
+    day_label: 'D0',
+    day_offset: 0,
+    title: 'Aviso de Vencimento Hoje + PIX / 2ª Via',
+    icon: '💳',
+    template_id: 'cobranca_vencimento_hoje_d0',
+    message_template:
+      'Olá {{nome}}, sua contribuição mensal BGR Benefícios vence hoje! Utilize o código PIX oficial ou solicite a 2ª via por aqui ({{numero_agente}}) para manter seus benefícios em dia.',
+    enabled: true,
+  },
+  {
+    step_id: 'cobranca_dp2_atraso_amigavel',
+    category: 'cobranca',
+    day_label: 'D+2',
+    day_offset: 2,
+    title: 'Aviso Amigável de Pendência (48h)',
+    icon: '⚠️',
+    template_id: 'cobranca_aviso_atraso_d_mais_2',
+    message_template:
+      'Olá {{nome}}, ainda não identificamos a compensação da sua mensalidade BGR vencida há 2 dias. Caso já tenha pago, desconsidere; se precisar de 2ª via atualizada, responda 2VIA.',
+    enabled: true,
+  },
+  {
+    step_id: 'cobranca_dp5_regularizacao',
+    category: 'cobranca',
+    day_label: 'D+5',
+    day_offset: 5,
+    title: 'Alerta de Regularização de Cobertura',
+    icon: '🚨',
+    template_id: 'cobranca_regularizacao_d_mais_5',
+    message_template:
+      'Importante {{nome}}: identificamos pendência de 5 dias na sua mensalidade BGR Benefícios ({{numero_agente}}). Regularize via PIX oficial hoje para evitar suspensão da proteção veicular.',
+    enabled: true,
+  },
+  {
+    step_id: 'cobranca_dp10_negociacao',
+    category: 'cobranca',
+    day_label: 'D+10',
+    day_offset: 10,
+    title: 'Recuperação & Negociação Financeira',
+    icon: '🤝',
+    template_id: 'cobranca_negociacao_d_mais_10',
+    message_template:
+      'Olá {{nome}}, queremos ajudar você a manter seu veículo protegido na BGR Benefícios! Fale com nosso setor financeiro ({{numero_agente}}) para regularização assistida.',
+    enabled: true,
+  },
+];
+
 export interface CampaignFollowUpConfig {
   startHourBrt?: number; // padrão 9 (09:00 BRT)
   endHourBrt?: number; // padrão 18 (18:00 BRT)
@@ -92,6 +237,7 @@ export class CampaignFollowUpService {
   private readonly dispatchedIdempotencyKeys = new Set<string>();
   private readonly dailyCountsByDate = new Map<string, number>();
   private readonly config: Required<CampaignFollowUpConfig>;
+  private cadenceRules: CadenceStepRule[] = DEFAULT_CADENCE_RULES.map((r) => ({ ...r }));
 
   private readonly metrics: CampaignMetricsSummary = {
     total_evaluated: 0,
@@ -315,6 +461,108 @@ export class CampaignFollowUpService {
 
   getMetricsSummary(): CampaignMetricsSummary {
     return { ...this.metrics };
+  }
+
+  getCadenceRules(category?: CadenceCategory): CadenceStepRule[] {
+    const list = category
+      ? this.cadenceRules.filter((r) => r.category === category)
+      : this.cadenceRules;
+    return list.map((r) => ({ ...r }));
+  }
+
+  updateCadenceStep(params: {
+    step_id: string;
+    enabled?: boolean;
+    day_label?: string;
+    day_offset?: number;
+    title?: string;
+    message_template?: string;
+  }): CadenceStepRule | null {
+    const target = this.cadenceRules.find((r) => r.step_id === params.step_id);
+    if (!target) return null;
+    if (typeof params.enabled === 'boolean') target.enabled = params.enabled;
+    if (typeof params.day_label === 'string' && params.day_label.trim()) {
+      target.day_label = params.day_label.trim();
+    }
+    if (typeof params.day_offset === 'number' && !Number.isNaN(params.day_offset)) {
+      target.day_offset = params.day_offset;
+    }
+    if (typeof params.title === 'string' && params.title.trim()) {
+      target.title = params.title.trim();
+    }
+    if (typeof params.message_template === 'string' && params.message_template.trim()) {
+      target.message_template = params.message_template.trim();
+    }
+    return { ...target };
+  }
+
+  addCadenceStep(params: {
+    category: CadenceCategory;
+    day_label: string;
+    day_offset: number;
+    title: string;
+    icon?: string;
+    message_template: string;
+  }): CadenceStepRule {
+    const templateId: FollowUpTemplateId =
+      params.category === 'cobranca' ? 'cobranca_vencimento_hoje_d0' : 'followup_negociacao';
+    const newRule: CadenceStepRule = {
+      step_id: `${params.category}_custom_${Date.now()}`,
+      category: params.category,
+      day_label: params.day_label.trim() || 'D+1',
+      day_offset: Number.isNaN(params.day_offset) ? 1 : params.day_offset,
+      title: params.title.trim() || 'Nova Etapa Personalizada',
+      icon: params.icon?.trim() || (params.category === 'cobranca' ? '💳' : '💬'),
+      template_id: templateId,
+      message_template: params.message_template.trim(),
+      enabled: true,
+    };
+    this.cadenceRules.push(newRule);
+    return { ...newRule };
+  }
+
+  evaluateCadenceStepDispatch(params: {
+    step_id: string;
+    contact: FollowUpCandidateInput;
+    agent_phone: string;
+  }): CampaignEligibilityResult & { rendered_message: string | null; step_rule: CadenceStepRule | null } {
+    const rule = this.cadenceRules.find((r) => r.step_id === params.step_id) ?? null;
+    if (!rule || !rule.enabled) {
+      const dummyIdem = `idem_disabled_${params.step_id}_${params.contact.contact_id}`;
+      const res = this.buildResult({
+        input: params.contact,
+        eligibility: false,
+        templateId: null,
+        deliveryStatus: 'blocked_cadence_limit',
+        idempotencyKey: dummyIdem,
+        reason: `Etapa da régua '${params.step_id}' está desativada ou não existe.`,
+        severity: 'LOW',
+      });
+      return { ...res, rendered_message: null, step_rule: rule };
+    }
+
+    const evalRes = this.evaluateCandidate(
+      {
+        ...params.contact,
+        campaign_id: `regua_${rule.category}_${rule.step_id}`,
+      },
+      'campanha_reativacao'
+    );
+
+    if (!evalRes.eligibility) {
+      return { ...evalRes, rendered_message: null, step_rule: rule };
+    }
+
+    const rendered = rule.message_template
+      .replace(/\{\{nome\}\}/g, params.contact.name)
+      .replace(/\{\{numero_agente\}\}/g, params.agent_phone);
+
+    return {
+      ...evalRes,
+      template_id: rule.template_id,
+      rendered_message: rendered,
+      step_rule: rule,
+    };
   }
 
   private normalizePhone(phone: string): string {
