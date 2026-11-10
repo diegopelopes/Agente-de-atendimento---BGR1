@@ -141,7 +141,7 @@ const BRAZIL_VEHICLE_CATALOG: VehicleCatalogEntry[] = [
   { brand: 'Fiat', model: 'Palio', aliases: ['palio', 'pálio', 'palio fire', 'palio weekend', 'palio attractive'] },
   { brand: 'Fiat', model: 'Uno', aliases: ['uno', 'uno mille', 'uno vivace', 'uno way', 'novo uno'] },
   { brand: 'Fiat', model: 'Siena', aliases: ['siena', 'grand siena', 'siena el'] },
-  { brand: 'Fiat', model: 'Punto', aliases: ['punto', 'fiat punto', 'bravo', 'stilo', 'linea', 'idea', 'doblo', 'fiorino', 'ducato', 'titano', 'marea', 'tempra'] },
+  { brand: 'Fiat', model: 'Punto', aliases: ['fiat punto', 'punto', 'fiat bravo', 'fiat stilo', 'fiat linea', 'fiat idea', 'doblo', 'fiorino', 'ducato', 'titano', 'marea', 'tempra'] },
 
   // Volkswagen / VW
   { brand: 'Volkswagen', model: 'Gol', aliases: ['gol', 'gol g5', 'gol g6', 'gol g7', 'gol g4', 'gol trend'] },
@@ -193,7 +193,7 @@ const BRAZIL_VEHICLE_CATALOG: VehicleCatalogEntry[] = [
   { brand: 'Peugeot', model: '208', aliases: ['peugeot 208', '208', '2008', '3008', '207', '206', '307', '308', '408', 'partner', 'expert'] },
   { brand: 'Citroën', model: 'C3', aliases: ['c3', 'citroen c3', 'c4 cactus', 'cactus', 'c4 lounge', 'aircross', 'xsara', 'jumpy', 'jumper'] },
   { brand: 'Mitsubishi', model: 'L200 Triton', aliases: ['l200', 'triton', 'l200 triton', 'pajero', 'pajero tr4', 'asx', 'eclipse cross', 'outlander', 'lancer'] },
-  { brand: 'Yamaha', model: 'Fazer 250', aliases: ['fazer', 'fazer 250', 'fz25', 'fz15', 'fazer 150', 'factor 150', 'factor 125', 'lander 250', 'lander', 'crosser', 'nmax', 'xmax', 'mt-03', 'mt03'] },
+  { brand: 'Yamaha', model: 'Fazer 250', aliases: ['yamaha fazer', 'fazer 250', 'fz25', 'fz 25', 'fz15', 'fz 15', 'fazer 150', 'factor 150', 'factor 125', 'lander 250', 'xtz 250 lander', 'crosser 150', 'yamaha crosser', 'nmax', 'nmax 160', 'xmax', 'mt-03', 'mt03'] },
   { brand: 'Ram', model: 'Rampage', aliases: ['rampage', 'ram 1500', 'ram 2500'] },
   { brand: 'Kia', model: 'Sportage', aliases: ['sportage', 'cerato', 'picanto', 'soul', 'sorento', 'bongo'] },
   { brand: 'BMW', model: '320i', aliases: ['320i', 'bmw 320i', 'bmw x1', 'x1', 'x3', 'x5'] },
@@ -334,6 +334,51 @@ export class AgentRouterService {
         eventType: 'router_handoff_requested',
         severity: 'MEDIUM',
         rawSummary: `Roteamento para especialista humano acionado na sessão ${sessionId} (T18/T19).`,
+      });
+    }
+
+    // 5.5. Correção ou Indecisão de Veículo ("não escolhi o veículo ainda", "não é esse carro", "outro veículo", "estou pesquisando")
+    if (
+      /n[aã]o\s+escolhi|ainda\s+n[aã]o\s+(escolhi|comprei|tenho|sei\s+o\s+carro|sei\s+qual)|estou\s+(s[oó]\s+)?pesquisando|n[aã]o\s+[eé]\s+esse\s+(carro|ve[ií]culo|modelo)|n[aã]o\s+tenho\s+esse|outro\s+(carro|ve[ií]culo|modelo)|trocar\s+(o\s+)?(carro|ve[ií]culo)|ve[ií]culo\s+errado/i.test(
+        text
+      )
+    ) {
+      session.greeted = true;
+      session.vehicle = {};
+      session.expected_slot = 'vehicle_model';
+      const firstName = session.lead.name ? `, ${session.lead.name.split(' ')[0]}` : '';
+      return this.buildResult({
+        session,
+        intent: 'nova_cotacao',
+        confidence: 0.96,
+        nextAction: 'qualificar',
+        securityBlocked: false,
+        response: `Sem problema algum${firstName}! Como você ainda está pesquisando ou quer simular outro veículo, podemos fazer a cotação de qualquer modelo que você tenha em mente para comparar os valores (por exemplo: *Onix 2022*, *HB20 2021*, *Corolla 2023* ou *CG 160 2023*). Qual modelo e ano você gostaria de simular primeiro?`,
+        eventType: 'vehicle_selection_reset_or_undecided',
+        severity: 'LOW',
+        rawSummary: `Cliente informou que ainda não escolheu o veículo ou solicitou troca na sessão ${sessionId}.`,
+      });
+    }
+
+    // 5.6. Caso o cliente diga "não sei o ano" / "qualquer ano" quando o agente perguntou o ano do veículo
+    if (
+      session.expected_slot === 'vehicle_year' &&
+      session.vehicle.model &&
+      /n[aã]o\s+sei\s+o\s+ano|qualquer\s+ano|tanto\s+faz(\s+o\s+ano)?|ainda\s+n[aã]o\s+sei/i.test(text)
+    ) {
+      session.vehicle.year = 2022;
+      session.expected_slot = 'vehicle_usage';
+      const carLabel = `${session.vehicle.brand ? `${session.vehicle.brand} ` : ''}${session.vehicle.model} 2022`;
+      return this.buildResult({
+        session,
+        intent: 'nova_cotacao',
+        confidence: 0.95,
+        nextAction: 'qualificar',
+        securityBlocked: false,
+        response: `Combinado! Vou considerar o ano *2022* como referência para simular o seu ${carLabel}. Ele seria para uso particular (passeio/dia a dia) ou para aplicativo/comercial?`,
+        eventType: 'vehicle_reference_year_assumed',
+        severity: 'LOW',
+        rawSummary: `Ano de referência 2022 assumido para simulação na sessão ${sessionId}.`,
       });
     }
 
@@ -544,7 +589,14 @@ export class AgentRouterService {
     if (!cleanText) return;
 
     // 1. Extração de Veículo (Catálogo Nacional FIPE + Marcas Explícitas + Slot Contextual)
-    const foundCatalogVehicle = this.findVehicleInCatalog(cleanText);
+    // Só busca no catálogo na 1ª mensagem ou na pergunta de nome se o usuário falar explicitamente de veículo/marca/ano
+    const hasExplicitVehicleCue =
+      Boolean(session.lead.name) ||
+      session.expected_slot === 'vehicle_model' ||
+      KNOWN_BRANDS_REGEX.test(cleanText) ||
+      /\b(19[7-9]\d|20[0-2]\d|tenho\s+um|tenho\s+uma|meu\s+carro|minha\s+moto|meu\s+ve[ií]culo)\b/i.test(cleanText);
+
+    const foundCatalogVehicle = hasExplicitVehicleCue ? this.findVehicleInCatalog(cleanText) : null;
     if (foundCatalogVehicle) {
       session.vehicle.brand = foundCatalogVehicle.brand;
       session.vehicle.model = foundCatalogVehicle.model;

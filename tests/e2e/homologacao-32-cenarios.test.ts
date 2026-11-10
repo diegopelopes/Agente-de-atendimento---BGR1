@@ -120,6 +120,41 @@ describe('Fase 7 — Homologação Completa E2E (32 Cenários Obrigatórios T01�
     assert.equal(step6.next_action, 'consultar_crm');
   });
 
+  test('Regressão de Falso Positivo ("fazer cotação" vs Yamaha Fazer) e Indecisão de Veículo ("não escolhi o veículo ainda")', () => {
+    const router = new AgentRouterService();
+    const sessionId = 'e2e_sess_fazer_bug';
+
+    // 1. Cliente envia "Olá, gostaria de fazer uma cotação!" -> NÃO deve confundir o verbo "fazer" com a moto Yamaha Fazer 250!
+    const s1 = router.routeMessage({
+      message: 'Olá, gostaria de fazer uma cotação!',
+      channelId: 'chat_teste',
+      sessionId,
+    });
+    assert.equal(s1.memory_snapshot.vehicle.model, undefined);
+    assert.equal(s1.memory_snapshot.expected_slot, 'name');
+
+    // 2. Cliente responde "diego" -> Deve salvar o nome "Diego" e perguntar qual é o modelo e ano do veículo
+    const s2 = router.routeMessage({
+      message: 'diego',
+      channelId: 'chat_teste',
+      sessionId,
+    });
+    assert.equal(s2.memory_snapshot.lead.name, 'Diego');
+    assert.equal(s2.memory_snapshot.vehicle.model, undefined);
+    assert.equal(s2.memory_snapshot.expected_slot, 'vehicle_model');
+    assert.equal(s2.response.includes('Yamaha Fazer'), false);
+    assert.equal(s2.response.includes('qual é o modelo e o ano do seu veículo'), true);
+
+    // 3. Cliente responde "nao escolhi o veiculo ainda" -> Deve orientar amigavelmente a simular qualquer modelo de referência
+    const s3 = router.routeMessage({
+      message: 'nao escolhi o veiculo ainda',
+      channelId: 'chat_teste',
+      sessionId,
+    });
+    assert.equal(s3.response.includes('Sem problema algum, Diego!'), true);
+    assert.equal(s3.memory_snapshot.expected_slot, 'vehicle_model');
+  });
+
   test('GRUPO 7 (T20, T21, T22): Segurança — Bloqueio de Extração de Tokens, Prompt Injection e Desconto Não Autorizado', () => {
     const router = new AgentRouterService();
     const adapter = new PowerCrmAdapter({ mode: 'mock', baseUrl: 'https://api.powercrm.com.br/api/v1' });
