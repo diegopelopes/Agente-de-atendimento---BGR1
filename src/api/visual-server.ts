@@ -15,7 +15,10 @@ import path from 'node:path';
 import { AgentRouterService } from '../services/agent-router-service.ts';
 import { PowerCrmAdapter } from '../integrations/powercrm/adapter.ts';
 import { QuotationService } from '../services/quotation-service.ts';
-import { ProposalLifecycleService } from '../services/proposal-lifecycle-service.ts';
+import {
+  ProposalLifecycleService,
+  type PowerCrmWebhookEventType,
+} from '../services/proposal-lifecycle-service.ts';
 import { HandoffService } from '../services/handoff-service.ts';
 import { WhatsAppChannelService } from '../channels/whatsapp/channel-service.ts';
 import { MetaWhatsAppCloudClient } from '../channels/whatsapp/meta-cloud-client.ts';
@@ -1083,6 +1086,22 @@ const HTML_PAGE = `<!DOCTYPE html>
               </button>
             </div>
             <div id="diag-crm-box" class="log-item" style="display: none; font-size: 11.5px;"></div>
+
+            <div style="border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px;">
+              <div style="font-size: 12px; font-weight: 700; color: #6ee7b7; margin-bottom: 4px;">
+                🔔 Webhook Oficial Power CRM — Assinatura, Pagamento e Ativação (Prioridade 4)
+              </div>
+              <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px;">
+                URL para cadastrar no painel de Webhooks do Power CRM: <code>http://localhost:3090/webhooks/powercrm</code>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                <button type="button" class="btn sm" onclick="triggerPowerCrmOfficialWebhook('proposal.signed')">✍️ 1. proposal.signed</button>
+                <button type="button" class="btn sm" onclick="triggerPowerCrmOfficialWebhook('payment.confirmed')">💳 2. payment.confirmed</button>
+                <button type="button" class="btn sm" onclick="triggerPowerCrmOfficialWebhook('inspection.approved')">📸 3. inspection.approved</button>
+                <button type="button" class="btn sm success" onclick="triggerPowerCrmOfficialWebhook('member.activated')">✅ 4. member.activated (T29)</button>
+              </div>
+              <div id="diag-crm-webhook-box" class="log-item" style="display: none; font-size: 11.5px; margin-top: 6px;"></div>
+            </div>
           </div>
 
           <button class="btn primary" onclick="saveIntegrationsConfig()">💾 Salvar no Servidor (.env) e Ativar Conexões (OpenAI + Power CRM)</button>
@@ -1737,6 +1756,39 @@ const HTML_PAGE = `<!DOCTYPE html>
       }
       if (data.state) updateDashboard(data.state);
       showToast(data.title);
+    }
+
+    async function triggerPowerCrmOfficialWebhook(eventType) {
+      const box = document.getElementById('diag-crm-webhook-box');
+      if (box) {
+        box.style.display = 'block';
+        box.className = 'log-item';
+        box.innerHTML = '⏳ Enviando evento oficial <code>' + eventType + '</code> para POST /webhooks/powercrm...';
+      }
+      const eventId = 'wh_crm_' + eventType.replace('.', '_') + '_' + Date.now();
+      const res = await fetch('/webhooks/powercrm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-PowerCRM-Event-Id': eventId
+        },
+        body: JSON.stringify({
+          event_id: eventId,
+          event_type: eventType,
+          opportunity_id: 'opp_visual_001',
+          session_id: 'sess_visual_001',
+          occurred_at: new Date().toISOString()
+        })
+      });
+      const data = await res.json();
+      if (box) {
+        box.className = 'log-item ' + (data.ok ? '' : 'HIGH');
+        box.innerHTML = (data.ok ? '✅ ' : '⚠️ ') + '<strong>Webhook Power CRM (' + eventType + ' → Stage: ' + (data.stage || '-') + ')</strong><br/>' + (data.customer_message || data.error || '') + '<br/><span style="color:#93c5fd;">protection_active_declared: ' + Boolean(data.protection_active_declared) + '</span>';
+      }
+      if (data.system_note) appendMessage('system', data.system_note);
+      if (data.customer_message) appendMessage('agent', data.customer_message, data.meta || '');
+      if (data.state) updateDashboard(data.state);
+      showToast('Webhook Power CRM (' + eventType + ') processado!');
     }
 
     async function syncStateToSupabase() {
@@ -3093,6 +3145,91 @@ const server = http.createServer(async (req, res) => {
           inbound_text: lastInboundText,
           outbound_preview: lastOutboundPreview,
           outbound_wamid: lastOutboundWamid,
+          state: getFullState(),
+        })
+      );
+      return;
+    }
+
+    // Prioridade 4: Recebimento de Webhooks Oficiais do Power CRM (proposal.signed, payment.confirmed, inspection.approved, member.activated, opportunity.lost)
+    if (req.method === 'POST' && req.url?.startsWith('/webhooks/powercrm')) {
+      const headerEventId = req.headers['x-powercrm-event-id'];
+      const eventId =
+        typeof headerEventId === 'string' && headerEventId.trim()
+          ? headerEventId.trim()
+          : String(payload.event_id ?? `wh_crm_${Date.now()}`);
+      const eventType = String(payload.event_type ?? 'proposal.signed') as PowerCrmWebhookEventType;
+      const oppId = String(payload.opportunity_id ?? DEFAULT_OPP_ID);
+      const sessId = String(payload.session_id ?? DEFAULT_SESSION_ID);
+
+      // Garante que a oportunidade exista caso o webhook chegue diretamente do Power CRM
+      if (!opportunityCreated) {
+        if (!currentQuote) {
+          const qRes = await crmAdapter.getQuotationByCode('COT-10001');
+          currentQuote = qRes.quote;
+        }
+        if (currentQuote) {
+          lifecycleService.createOpportunityFromQuote({
+            opportunityId: oppId,
+            leadId: 'lead_webhook_crm',
+            quote: currentQuote,
+            selectedPlanId: currentQuote.options[0].plan_id,
+            sessionId: sessId,
+          });
+          opportunityCreated = true;
+        }
+      }
+
+      const stageOut = lifecycleService.processOfficialWebhookEvent({
+        event_id: eventId,
+        event_type: eventType,
+        opportunity_id: oppId,
+        session_id: sessId,
+        occurred_at: String(payload.occurred_at ?? new Date().toISOString()),
+        metadata: payload.metadata,
+      });
+
+      const conv = handoffService.getOrCreateConversation(sessId, 'chat_teste');
+      conv.current_stage = stageOut.stage;
+
+      if (stageOut.protection_active_declared) {
+        dashboardService.recordEvent({
+          auditEvent: stageOut.audit_event,
+          confirmedContract: {
+            opportunityId: oppId,
+            officialMonthlyFeeBrl: currentQuote?.options[0]?.monthly_fee_brl ?? 149.9,
+            signatureVerified: stageOut.opportunity.signature_verified,
+            paymentVerified: stageOut.opportunity.payment_verified,
+            activationConfirmed: stageOut.opportunity.activation_confirmed,
+          },
+        });
+      } else {
+        dashboardService.recordEvent({ auditEvent: stageOut.audit_event });
+      }
+
+      // Dispara também a notificação oficial no WhatsApp (via Meta Cloud Client)
+      const outDec = whatsappService.prepareOutboundMessage({
+        session_id: sessId,
+        to_phone: '+5511999990001',
+        message_type: 'text',
+        text_body: stageOut.customer_message,
+      });
+      if (outDec.allowed && outDec.meta_api_payload) {
+        await metaCloudClient.sendOutboundMessage(outDec.meta_api_payload);
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          ok: true,
+          event_id: stageOut.event_id,
+          event_type: eventType,
+          duplicate_ignored: stageOut.duplicate_ignored,
+          stage: stageOut.stage,
+          protection_active_declared: stageOut.protection_active_declared,
+          customer_message: stageOut.customer_message,
+          system_note: `🔔 Webhook Oficial Power CRM recebido (${eventType} • id=${eventId}): Status atualizado para "${stageOut.stage}"`,
+          meta: `📱 agente: ${agentConfig.agent_phone} | Power CRM Webhook: ${eventType} | Stage: ${stageOut.stage} | ativo=${stageOut.protection_active_declared}`,
           state: getFullState(),
         })
       );
