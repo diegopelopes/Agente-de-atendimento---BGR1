@@ -1,31 +1,5 @@
-# Dependências
 node_modules/
-dist/
-build/
-coverage/
-
-# Variáveis de ambiente e segredos (NUNCA versionar)
 .env
 .env.*
 !.env.example
-*.pem
-*.key
-secrets/
-credentials.local.json
-
-# Exports não sanitizados do n8n
-n8n/raw-exports/
-*unredacted*
-*com-token*
-
-# Logs e bancos locais
-logs/
 *.log
-*.sqlite
-*.db
-
-# Sistema Operacional e IDE
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/

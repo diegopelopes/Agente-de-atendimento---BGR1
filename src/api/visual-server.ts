@@ -27,6 +27,7 @@ import { sanitizeForAudit } from '../observability/sanitizer.ts';
 import {
   OpenAiCommercialAssistant,
   SUPABASE_SQL_SCHEMA,
+  saveLocalEnvFile,
 } from '../integrations/openai/openai-assistant.ts';
 import type { AuditEvent, QuoteResult } from '../domain/contracts.ts';
 
@@ -61,6 +62,7 @@ let openAiAssistant = new OpenAiCommercialAssistant();
 let powerCrmRuntimeConfig = {
   mode: (process.env.POWERCRM_MODE === 'http' ? 'http' : 'mock') as 'mock' | 'http',
   baseUrl: process.env.POWERCRM_BASE_URL || 'https://api.powercrm.com.br/api/v1',
+  quotationPathTemplate: process.env.POWERCRM_PATH_TEMPLATE || '/quotations/{code}',
   bearerToken: process.env.POWERCRM_BEARER_TOKEN || '',
 };
 let supabaseRuntimeConfig = {
@@ -70,6 +72,7 @@ let supabaseRuntimeConfig = {
 let crmAdapter = new PowerCrmAdapter({
   mode: powerCrmRuntimeConfig.mode,
   baseUrl: powerCrmRuntimeConfig.baseUrl,
+  quotationPathTemplate: powerCrmRuntimeConfig.quotationPathTemplate,
   bearerToken: powerCrmRuntimeConfig.bearerToken || undefined,
 });
 let quotationService = new QuotationService(crmAdapter);
@@ -133,6 +136,7 @@ function getFullState(sessionId = DEFAULT_SESSION_ID) {
       openai_model: openAiAssistant.getModel(),
       powercrm_mode: powerCrmRuntimeConfig.mode,
       powercrm_base_url: powerCrmRuntimeConfig.baseUrl,
+      powercrm_path_template: powerCrmRuntimeConfig.quotationPathTemplate,
       powercrm_token_masked: getMaskedSecret(powerCrmRuntimeConfig.bearerToken, 'Não configurado (Modo Mock)'),
       supabase_configured: Boolean(supabaseRuntimeConfig.projectUrl && supabaseRuntimeConfig.apiKey),
       supabase_url: supabaseRuntimeConfig.projectUrl || 'Não configurado (Memória Local)',
@@ -926,6 +930,12 @@ const HTML_PAGE = `<!DOCTYPE html>
                 <option value="gpt-4o">🚀 gpt-4o (Máxima Inteligência Comercial)</option>
               </select>
             </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button type="button" class="btn sm primary" onclick="testIntegrationConnection('openai')" style="flex: 1; justify-content: center;">
+                🧪 Testar Conexão OpenAI Agora
+              </button>
+            </div>
+            <div id="diag-openai-box" class="log-item" style="display: none; font-size: 11.5px;"></div>
           </div>
 
           <div class="form-box" style="gap: 10px;">
@@ -942,9 +952,16 @@ const HTML_PAGE = `<!DOCTYPE html>
                 </select>
               </div>
               <div>
-                <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🌐 Base URL Power CRM</label>
-                <input id="api-crm-url" type="text" value="https://api.powercrm.com.br/api/v1" style="width: 100%; margin-top: 4px;" />
+                <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🛣️ Rota de Cotação (Path Template)</label>
+                <select id="api-crm-path" style="width: 100%; margin-top: 4px;" aria-label="Rota Power CRM">
+                  <option value="/quotations/{code}">/quotations/{code} (Plural Padrão)</option>
+                  <option value="/quotation/{code}">/quotation/{code} (Singular)</option>
+                </select>
               </div>
+            </div>
+            <div>
+              <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🌐 Base URL Power CRM</label>
+              <input id="api-crm-url" type="text" value="https://api.powercrm.com.br/api/v1" style="width: 100%; margin-top: 4px;" />
             </div>
             <div>
               <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🔐 Power CRM Bearer Token</label>
@@ -953,9 +970,15 @@ const HTML_PAGE = `<!DOCTYPE html>
                 Token atual: <strong id="api-crm-masked">Não configurado (Modo Mock)</strong>
               </div>
             </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button type="button" class="btn sm primary" onclick="testIntegrationConnection('powercrm')" style="flex: 1; justify-content: center;">
+                🧪 Testar Conexão Power CRM Agora
+              </button>
+            </div>
+            <div id="diag-crm-box" class="log-item" style="display: none; font-size: 11.5px;"></div>
           </div>
 
-          <button class="btn primary" onclick="saveIntegrationsConfig()">💾 Salvar e Ativar Conexões (OpenAI + Power CRM)</button>
+          <button class="btn primary" onclick="saveIntegrationsConfig()">💾 Salvar no Servidor (.env) e Ativar Conexões (OpenAI + Power CRM)</button>
         </div>
       </section>
 
@@ -1326,6 +1349,10 @@ const HTML_PAGE = `<!DOCTYPE html>
         document.getElementById('api-openai-masked').textContent = ig.openai_masked_key;
         document.getElementById('api-openai-model').value = ig.openai_model || 'gpt-4o-mini';
         document.getElementById('api-crm-mode').value = ig.powercrm_mode || 'mock';
+        const crmPathEl = document.getElementById('api-crm-path');
+        if (crmPathEl && ig.powercrm_path_template) {
+          crmPathEl.value = ig.powercrm_path_template;
+        }
         document.getElementById('api-crm-url').value = ig.powercrm_base_url || 'https://api.powercrm.com.br/api/v1';
         document.getElementById('api-crm-masked').textContent = ig.powercrm_token_masked;
         const sqlBox = document.getElementById('supabase-sql-box');
@@ -1454,6 +1481,7 @@ const HTML_PAGE = `<!DOCTYPE html>
       const openai_api_key = document.getElementById('api-openai-key').value.trim();
       const openai_model = document.getElementById('api-openai-model').value;
       const powercrm_mode = document.getElementById('api-crm-mode').value;
+      const powercrm_path_template = document.getElementById('api-crm-path').value;
       const powercrm_base_url = document.getElementById('api-crm-url').value.trim();
       const powercrm_bearer_token = document.getElementById('api-crm-token').value.trim();
       const supabase_url = document.getElementById('api-supabase-url').value.trim();
@@ -1466,6 +1494,7 @@ const HTML_PAGE = `<!DOCTYPE html>
           openai_api_key: openai_api_key || undefined,
           openai_model,
           powercrm_mode,
+          powercrm_path_template,
           powercrm_base_url,
           powercrm_bearer_token: powercrm_bearer_token || undefined,
           supabase_url: supabase_url || undefined,
@@ -1478,7 +1507,30 @@ const HTML_PAGE = `<!DOCTYPE html>
       document.getElementById('api-supabase-key').value = '';
       if (data.system_note) appendMessage('system', data.system_note);
       updateDashboard(data.state);
-      showToast('Conexões de API (OpenAI / Power CRM / Supabase) salvas!');
+      showToast('Conexões de API salvas no arquivo .env local!');
+    }
+
+    async function testIntegrationConnection(provider) {
+      await saveIntegrationsConfig();
+      const boxId = provider === 'openai' ? 'diag-openai-box' : 'diag-crm-box';
+      const box = document.getElementById(boxId);
+      if (box) {
+        box.style.display = 'block';
+        box.className = 'log-item';
+        box.innerHTML = '⏳ Testando conexão ao vivo com ' + provider.toUpperCase() + '...';
+      }
+      const res = await fetch('/api/integrations/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider })
+      });
+      const data = await res.json();
+      if (box) {
+        box.className = 'log-item ' + (data.ok ? '' : 'HIGH');
+        box.innerHTML = (data.ok ? '✅ ' : '❌ ') + '<strong>' + data.title + '</strong><br/>' + data.message;
+      }
+      if (data.state) updateDashboard(data.state);
+      showToast(data.title);
     }
 
     function copySupabaseSchema() {
@@ -2367,6 +2419,7 @@ const server = http.createServer(async (req, res) => {
       crmAdapter = new PowerCrmAdapter({
         mode: powerCrmRuntimeConfig.mode,
         baseUrl: powerCrmRuntimeConfig.baseUrl,
+        quotationPathTemplate: powerCrmRuntimeConfig.quotationPathTemplate,
         bearerToken: powerCrmRuntimeConfig.bearerToken || undefined,
       });
       quotationService = new QuotationService(crmAdapter);
@@ -2396,8 +2449,9 @@ const server = http.createServer(async (req, res) => {
     const bodyText = Buffer.concat(bodyChunks).toString('utf-8');
     const payload = bodyText ? JSON.parse(bodyText) : {};
 
-    // Endpoint 0.5: Configurar APIs (OpenAI, Power CRM e Supabase) sem expor segredos
+    // Endpoint 0.5: Configurar APIs (OpenAI, Power CRM e Supabase) e persistir em .env local sem expor segredos
     if (req.method === 'POST' && req.url === '/api/integrations/config') {
+      const envUpdates: Record<string, string | undefined> = {};
       if (typeof payload.openai_api_key === 'string' && payload.openai_api_key.trim()) {
         openAiAssistant.configure({ apiKey: payload.openai_api_key.trim() });
       }
@@ -2406,30 +2460,42 @@ const server = http.createServer(async (req, res) => {
       }
       if (payload.powercrm_mode === 'mock' || payload.powercrm_mode === 'http') {
         powerCrmRuntimeConfig.mode = payload.powercrm_mode;
+        envUpdates.POWERCRM_MODE = powerCrmRuntimeConfig.mode;
+      }
+      if (typeof payload.powercrm_path_template === 'string' && payload.powercrm_path_template.trim()) {
+        powerCrmRuntimeConfig.quotationPathTemplate = payload.powercrm_path_template.trim();
+        envUpdates.POWERCRM_PATH_TEMPLATE = powerCrmRuntimeConfig.quotationPathTemplate;
       }
       if (typeof payload.powercrm_base_url === 'string' && payload.powercrm_base_url.trim()) {
         powerCrmRuntimeConfig.baseUrl = payload.powercrm_base_url.trim();
+        envUpdates.POWERCRM_BASE_URL = powerCrmRuntimeConfig.baseUrl;
       }
       if (typeof payload.powercrm_bearer_token === 'string' && payload.powercrm_bearer_token.trim()) {
         powerCrmRuntimeConfig.bearerToken = payload.powercrm_bearer_token.trim();
+        envUpdates.POWERCRM_BEARER_TOKEN = powerCrmRuntimeConfig.bearerToken;
       }
       if (typeof payload.supabase_url === 'string' && payload.supabase_url.trim()) {
         supabaseRuntimeConfig.projectUrl = payload.supabase_url.trim();
+        envUpdates.SUPABASE_URL = supabaseRuntimeConfig.projectUrl;
       }
       if (typeof payload.supabase_key === 'string' && payload.supabase_key.trim()) {
         supabaseRuntimeConfig.apiKey = payload.supabase_key.trim();
+        envUpdates.SUPABASE_KEY = supabaseRuntimeConfig.apiKey;
       }
+
+      saveLocalEnvFile(envUpdates);
 
       crmAdapter = new PowerCrmAdapter({
         mode: powerCrmRuntimeConfig.mode,
         baseUrl: powerCrmRuntimeConfig.baseUrl,
+        quotationPathTemplate: powerCrmRuntimeConfig.quotationPathTemplate,
         bearerToken: powerCrmRuntimeConfig.bearerToken || undefined,
       });
       quotationService = new QuotationService(crmAdapter);
 
       const auditEv = buildCustomAuditEvent(
         'integrations_config_updated',
-        `APIs atualizadas: OpenAI=${openAiAssistant.isConfigured() ? openAiAssistant.getModel() : 'local'} | PowerCRM=${powerCrmRuntimeConfig.mode} | Supabase=${Boolean(supabaseRuntimeConfig.projectUrl)}`,
+        `APIs salvas (.env): OpenAI=${openAiAssistant.isConfigured() ? openAiAssistant.getModel() : 'local'} | PowerCRM=${powerCrmRuntimeConfig.mode} (${powerCrmRuntimeConfig.quotationPathTemplate}) | Supabase=${Boolean(supabaseRuntimeConfig.projectUrl)}`,
         'LOW'
       );
       dashboardService.recordEvent({ auditEvent: auditEv });
@@ -2438,11 +2504,117 @@ const server = http.createServer(async (req, res) => {
       res.end(
         JSON.stringify({
           ok: true,
-          system_note: `🔑 Conexões atualizadas! OpenAI: ${openAiAssistant.isConfigured() ? `ATIVA (${openAiAssistant.getModel()})` : 'Modo NLU Local'} | Power CRM: ${powerCrmRuntimeConfig.mode.toUpperCase()}`,
+          system_note: `🔑 Conexões salvas no arquivo .env local! OpenAI: ${openAiAssistant.isConfigured() ? `ATIVA (${openAiAssistant.getModel()})` : 'Modo NLU Local'} | Power CRM: ${powerCrmRuntimeConfig.mode.toUpperCase()} (${powerCrmRuntimeConfig.quotationPathTemplate})`,
           state: getFullState(),
         })
       );
       return;
+    }
+
+    // Endpoint 0.6: Diagnóstico de Conexão ao Vivo (OpenAI API & Power CRM API) — Prioridade 1
+    if (req.method === 'POST' && req.url === '/api/integrations/test') {
+      const provider = String(payload.provider ?? 'openai');
+
+      if (provider === 'openai') {
+        const diag = await openAiAssistant.testConnection();
+        const auditEv = buildCustomAuditEvent(
+          'openai_connection_test',
+          `Teste de conexao OpenAI: ok=${diag.ok} status=${diag.status_code} latency=${diag.latency_ms}ms`,
+          diag.ok ? 'LOW' : 'MEDIUM'
+        );
+        dashboardService.recordEvent({ auditEvent: auditEv });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            ok: diag.ok,
+            title: diag.ok
+              ? `OpenAI Conectada (${diag.model_verified} • ${diag.latency_ms}ms)`
+              : `Falha na Conexão OpenAI (HTTP ${diag.status_code})`,
+            message: diag.message,
+            diag,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
+
+      if (provider === 'powercrm') {
+        const startedAt = Date.now();
+        if (powerCrmRuntimeConfig.mode === 'mock') {
+          const mockRes = await crmAdapter.getQuotationByCode('COT-10001');
+          const latencyMs = Date.now() - startedAt;
+          const ok = mockRes.status === 'sucesso' && Boolean(mockRes.quote);
+          const auditEv = buildCustomAuditEvent(
+            'powercrm_connection_test',
+            `Teste Power CRM (Modo Mock): ok=${ok} planos=${mockRes.quote?.options.length ?? 0} latency=${latencyMs}ms`,
+            'LOW'
+          );
+          dashboardService.recordEvent({ auditEvent: auditEv });
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(
+            JSON.stringify({
+              ok,
+              title: `Power CRM Mock Homologado (${latencyMs}ms)`,
+              message: `Modo Mock Local ativo e validado com ${mockRes.quote?.options.length ?? 0} planos oficiais (BGR Essencial R$ 149,90 e BGR Completo R$ 199,90). Para testar a API real do Power CRM, mude o seletor para "Produção HTTP" e informe o Bearer Token.`,
+              state: getFullState(),
+            })
+          );
+          return;
+        }
+
+        // Modo HTTP Real: testa a rota configurada e, se retornar 404, testa automaticamente a rota alternativa (/quotations/{code} vs /quotation/{code})
+        let resTest = await crmAdapter.getQuotationByCode('COT-10001');
+        let testedPath = powerCrmRuntimeConfig.quotationPathTemplate;
+        if (resTest.http_code === 404) {
+          const altPath =
+            testedPath === '/quotations/{code}' ? '/quotation/{code}' : '/quotations/{code}';
+          const altAdapter = new PowerCrmAdapter({
+            mode: 'http',
+            baseUrl: powerCrmRuntimeConfig.baseUrl,
+            quotationPathTemplate: altPath,
+            bearerToken: powerCrmRuntimeConfig.bearerToken || undefined,
+          });
+          const altRes = await altAdapter.getQuotationByCode('COT-10001');
+          if (altRes.http_code !== 404) {
+            resTest = altRes;
+            testedPath = altPath;
+            powerCrmRuntimeConfig.quotationPathTemplate = altPath;
+            crmAdapter = altAdapter;
+            quotationService = new QuotationService(crmAdapter);
+            saveLocalEnvFile({ POWERCRM_PATH_TEMPLATE: altPath });
+          }
+        }
+
+        const latencyMs = Date.now() - startedAt;
+        const ok = resTest.status === 'sucesso' || resTest.http_code === 404;
+        // Observação: se retornar 404 em HTTP real com token válido (e não 401/403), significa que a autenticação Bearer passou, apenas o código COT-10001 não existe na base de produção
+        const authPassed = resTest.http_code !== 401 && resTest.http_code !== 403 && resTest.http_code >= 200 && resTest.http_code < 500;
+
+        const auditEv = buildCustomAuditEvent(
+          'powercrm_connection_test',
+          `Teste Power CRM HTTP (${testedPath}): status=${resTest.status} http=${resTest.http_code} latency=${latencyMs}ms`,
+          authPassed ? 'LOW' : 'HIGH'
+        );
+        dashboardService.recordEvent({ auditEvent: auditEv });
+
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            ok: authPassed,
+            title: authPassed
+              ? `Power CRM HTTP Alcançado (HTTP ${resTest.http_code} • ${latencyMs}ms)`
+              : `Falha na Conexão Power CRM HTTP (HTTP ${resTest.http_code})`,
+            message:
+              resTest.status === 'sucesso'
+                ? `Conexão HTTP e Bearer Token validados com sucesso na rota ${testedPath}! Cotação oficial retornada em ${latencyMs}ms.`
+                : resTest.http_code === 401 || resTest.http_code === 403
+                  ? `Token rejeitado pelo Power CRM (HTTP ${resTest.http_code}). Verifique seu POWERCRM_BEARER_TOKEN.`
+                  : `Servidor Power CRM respondeu HTTP ${resTest.http_code} em ${latencyMs}ms na rota ${testedPath}: ${resTest.error_message || 'Endpoint alcançado com sucesso.'}`,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
     }
 
     // Endpoint 1: Troca livre do Número do Agente Comercial

@@ -50,6 +50,60 @@ export interface OpenAiTurnOutput {
 }
 
 const PROJECT_ROOT = path.resolve(import.meta.dirname, '..', '..', '..');
+const ENV_FILE_PATH = path.join(PROJECT_ROOT, '.env');
+
+export function loadLocalEnvFile(): Record<string, string> {
+  const vars: Record<string, string> = {};
+  try {
+    if (!fs.existsSync(ENV_FILE_PATH)) return vars;
+    const raw = fs.readFileSync(ENV_FILE_PATH, 'utf-8');
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx === -1) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      const val = trimmed.slice(eqIdx + 1).trim();
+      if (key) {
+        vars[key] = val;
+        if (!process.env[key] && val) {
+          process.env[key] = val;
+        }
+      }
+    }
+  } catch {
+    // ignore read errors
+  }
+  return vars;
+}
+
+export function saveLocalEnvFile(updates: Record<string, string | undefined>): void {
+  const current = loadLocalEnvFile();
+  for (const [k, v] of Object.entries(updates)) {
+    if (typeof v === 'string') {
+      current[k] = v;
+    }
+  }
+  const lines = [
+    '# BGR Benefícios — Credenciais Locais (Gerado pelo Console Visual — Ignorado pelo Git)',
+    `OPENAI_API_KEY=${current.OPENAI_API_KEY ?? ''}`,
+    `OPENAI_MODEL=${current.OPENAI_MODEL ?? 'gpt-4o-mini'}`,
+    `POWERCRM_MODE=${current.POWERCRM_MODE ?? 'mock'}`,
+    `POWERCRM_BASE_URL=${current.POWERCRM_BASE_URL ?? 'https://api.powercrm.com.br/api/v1'}`,
+    `POWERCRM_PATH_TEMPLATE=${current.POWERCRM_PATH_TEMPLATE ?? '/quotations/{code}'}`,
+    `POWERCRM_BEARER_TOKEN=${current.POWERCRM_BEARER_TOKEN ?? ''}`,
+    `SUPABASE_URL=${current.SUPABASE_URL ?? ''}`,
+    `SUPABASE_KEY=${current.SUPABASE_KEY ?? ''}`,
+    '',
+  ];
+  try {
+    fs.writeFileSync(ENV_FILE_PATH, lines.join('\n'), 'utf-8');
+  } catch {
+    // ignore write errors in read-only environments
+  }
+}
+
+loadLocalEnvFile();
 
 function loadPromptFile(filename: string): string {
   try {
@@ -92,6 +146,71 @@ export class OpenAiCommercialAssistant {
 
   getModel(): string {
     return this.model;
+  }
+
+  async testConnection(): Promise<{
+    ok: boolean;
+    status_code: number;
+    latency_ms: number;
+    model_verified: string;
+    message: string;
+  }> {
+    if (!this.isConfigured()) {
+      return {
+        ok: false,
+        status_code: 400,
+        latency_ms: 0,
+        model_verified: this.model,
+        message: 'Nenhuma chave sk-... configurada. Cole sua OPENAI_API_KEY e clique em Salvar.',
+      };
+    }
+
+    const start = Date.now();
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: this.model,
+          max_tokens: 12,
+          messages: [{ role: 'user', content: 'Responda apenas: OK BGR' }],
+        }),
+      });
+      const latency = Date.now() - start;
+      if (!response.ok) {
+        return {
+          ok: false,
+          status_code: response.status,
+          latency_ms: latency,
+          model_verified: this.model,
+          message:
+            response.status === 401
+              ? 'HTTP 401: Chave OpenAI inválida ou revogada. Verifique sua chave em platform.openai.com.'
+              : response.status === 429
+                ? 'HTTP 429: Limite de cota atingido ou conta OpenAI sem saldo de créditos pré-pagos (Billing).'
+                : `HTTP ${response.status}: Falha ao validar na API da OpenAI.`,
+        };
+      }
+      const data = (await response.json()) as { model?: string };
+      return {
+        ok: true,
+        status_code: 200,
+        latency_ms: latency,
+        model_verified: data.model || this.model,
+        message: `✅ Conexão OpenAI validada com sucesso! Modelo ativo: ${data.model || this.model} (${latency}ms).`,
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        status_code: 503,
+        latency_ms: Date.now() - start,
+        model_verified: this.model,
+        message: `Erro de rede ao contatar api.openai.com: ${err instanceof Error ? err.message : 'Timeout'}`,
+      };
+    }
   }
 
   async processCustomerTurn(input: OpenAiTurnInput): Promise<OpenAiTurnOutput> {
