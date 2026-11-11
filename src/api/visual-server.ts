@@ -26,6 +26,7 @@ import {
   CampaignFollowUpService,
   type CadenceCategory,
 } from '../services/campaign-followup-service.ts';
+import { CadenceCronScheduler } from '../services/cadence-cron-scheduler.ts';
 import { MetricsDashboardService } from '../observability/metrics-dashboard.ts';
 import { sanitizeForAudit } from '../observability/sanitizer.ts';
 import {
@@ -100,6 +101,53 @@ let campaignService = new CampaignFollowUpService({
   weekdaysOnly: false,
 });
 let dashboardService = new MetricsDashboardService();
+let cronScheduler = new CadenceCronScheduler(async () => {
+  const rules = campaignService.getCadenceRules().filter((r) => r.enabled);
+  let sent = 0;
+  let blocked = 0;
+  for (const step of rules.slice(0, 2)) {
+    const resDisp = campaignService.evaluateCadenceStepDispatch({
+      step_id: step.step_id,
+      agent_phone: agentConfig.agent_phone,
+      contact: {
+        contact_id: `cnt_cron_${Date.now()}_${step.step_id}`,
+        name: 'Associado Agendado (Cron BRT)',
+        phone: '+5531999990101',
+        stage: 'cotacao_enviada',
+        followup_count: 0,
+        consent_state: {
+          contact_id: `cnt_cron_${Date.now()}`,
+          phone_hash: 'sha256_cron_0101',
+          opt_in_status: 'granted',
+          legal_basis: 'consentimento_explicito',
+          opt_out_requested: false,
+          consent_source: 'cron_scheduler_bgr',
+          updated_at: new Date().toISOString(),
+        },
+      },
+    });
+    dashboardService.recordEvent({ auditEvent: resDisp.audit_event });
+    if (resDisp.eligibility) sent += 1;
+    else blocked += 1;
+    cadenceDispatchHistory.push({
+      dispatch_id: `dsp_cron_${Date.now()}_${step.step_id}`,
+      timestamp: new Date().toISOString(),
+      category: step.category,
+      step_id: step.step_id,
+      day_label: step.day_label,
+      title: `[CRON] ${step.title}`,
+      agent_phone: agentConfig.agent_phone,
+      contact_name: 'Associado Agendado (Cron BRT)',
+      contact_phone_masked: '+5531****0101',
+      eligibility: resDisp.eligibility,
+      delivery_status: resDisp.delivery_status,
+      rendered_message: resDisp.rendered_message,
+      reason: resDisp.reason,
+    });
+  }
+  triggerBackgroundPersistence();
+  return { sent, blocked };
+});
 let chatHistoryLog: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
 let agentConfig: AgentRuntimeConfig = {
@@ -230,6 +278,7 @@ function getFullState(sessionId = DEFAULT_SESSION_ID) {
       cobranca: campaignService.getCadenceRules('cobranca'),
     },
     cadence_metrics: campaignService.getMetricsSummary(),
+    cadence_cron_status: cronScheduler.getStatus(),
     cadence_history: cadenceDispatchHistory.slice(-20).reverse(),
     kpis: dashboardService.getDashboardSnapshot(),
     alerts: dashboardService.getActiveAlerts().slice(-10).reverse(),
@@ -805,6 +854,36 @@ const HTML_PAGE = `<!DOCTYPE html>
           <span>➕ Nova Regra & Histórico de Disparos</span>
         </div>
         <div class="col-body">
+          <div class="form-box" style="gap: 8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-weight: 700; font-size: 13px; color: #6ee7b7;">⏰ Agendador Cron Automático (Prioridade 5)</div>
+              <span id="cron-status-pill" class="badge warn">PAUSADO</span>
+            </div>
+            <div style="font-size: 11.5px; color: var(--muted);" id="cron-summary-lbl">
+              Agendador Cron pronto (janela comercial 09:00–18:00 BRT + bloqueio Opt-Out).
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <select id="cron-interval-sel" aria-label="Intervalo do Cron">
+                <option value="60">⚡ Ciclo a cada 60s (Demo)</option>
+                <option value="300" selected>🕒 Ciclo a cada 5 min</option>
+                <option value="1800">🕕 Ciclo a cada 30 min</option>
+                <option value="3600">🕘 Ciclo a cada 1 hora</option>
+              </select>
+              <select id="cron-brt-sel" aria-label="Filtro Horário Comercial">
+                <option value="false">🌐 Qualquer Horário (24/7)</option>
+                <option value="true">🏢 Só 09h–18h BRT (Seg–Sex)</option>
+              </select>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn sm success" onclick="toggleCadenceCron(true)" style="flex: 1; justify-content: center;">
+                ▶️ Ativar Cron Automático
+              </button>
+              <button type="button" class="btn sm danger" onclick="toggleCadenceCron(false)" style="flex: 1; justify-content: center;">
+                ⏸️ Pausar Cron
+              </button>
+            </div>
+          </div>
+
           <div class="form-box">
             <div style="font-weight: 700; font-size: 13px; color: #93c5fd;">✨ Incluir Nova Etapa na Régua</div>
             <div style="display: grid; grid-template-columns: 1fr 95px; gap: 8px;">
@@ -1552,6 +1631,19 @@ const HTML_PAGE = `<!DOCTYPE html>
           state.cadence_rules.cobranca.map(renderCadenceStepCard).join('');
       }
 
+      if (state.cadence_cron_status) {
+        const cs = state.cadence_cron_status;
+        const pillEl = document.getElementById('cron-status-pill');
+        const sumEl = document.getElementById('cron-summary-lbl');
+        if (pillEl) {
+          pillEl.textContent = cs.enabled ? '🟢 CRON ATIVO (' + cs.total_runs + ' ciclos)' : '⏸️ PAUSADO';
+          pillEl.className = 'badge ' + (cs.enabled ? '' : 'warn');
+        }
+        if (sumEl) {
+          sumEl.textContent = cs.last_run_summary;
+        }
+      }
+
       // Renderiza Atendentes Humanos Cadastrados
       if (state.human_attendants) {
         const listEl = document.getElementById('human-attendants-list');
@@ -1881,6 +1973,20 @@ const HTML_PAGE = `<!DOCTYPE html>
       if (data.chat_preview) appendMessage('agent', data.chat_preview, data.meta || '');
       updateDashboard(data.state);
       showToast('Régua de ' + (category === 'cobranca' ? 'Cobrança Geral' : 'Campanhas de Venda') + ' executada!');
+    }
+
+    async function toggleCadenceCron(enabled) {
+      const intervalSeconds = Number(document.getElementById('cron-interval-sel').value || 300);
+      const respectBusinessHoursBrt = document.getElementById('cron-brt-sel').value === 'true';
+      const res = await fetch('/api/cadence/cron', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled, interval_seconds: intervalSeconds, respect_business_hours_brt: respectBusinessHoursBrt })
+      });
+      const data = await res.json();
+      if (data.system_note) appendMessage('system', data.system_note);
+      updateDashboard(data.state);
+      showToast(enabled ? 'Agendador Cron Automático ATIVADO!' : 'Agendador Cron PAUSADO!');
     }
 
     async function registerHumanAttendantUI() {
@@ -2705,6 +2811,28 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // Prioridade 5: Endpoint de Healthcheck Oficial (Docker / PM2 / Load Balancer / HTTPS Proxy)
+    if (req.method === 'GET' && req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          status: 'healthy',
+          service: 'bgr-agente-comercial',
+          version: '2.0.0',
+          uptime_seconds: Math.round(process.uptime()),
+          timestamp: new Date().toISOString(),
+          integrations: {
+            openai_configured: openAiAssistant.isConfigured(),
+            powercrm_mode: powerCrmRuntimeConfig.mode,
+            supabase_configured: supabasePersistence.isConfigured(),
+            whatsapp_meta_configured: metaCloudClient.isGraphApiConfigured(),
+          },
+          cron_scheduler: cronScheduler.getStatus(),
+        })
+      );
+      return;
+    }
+
     if (req.method === 'POST' && req.url === '/api/reset') {
       router = new AgentRouterService({ environment: 'teste' });
       crmAdapter = new PowerCrmAdapter({
@@ -3252,6 +3380,38 @@ const server = http.createServer(async (req, res) => {
 
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ ok: true, updated, state: getFullState() }));
+      return;
+    }
+
+    // Endpoint 2.5: Ativar/Pausar Agendador Cron Automático da Régua (Prioridade 5)
+    if (req.method === 'POST' && req.url === '/api/cadence/cron') {
+      const enabled = Boolean(payload.enabled);
+      const intervalSeconds = Number(payload.interval_seconds || 300);
+      const respectBusinessHoursBrt = Boolean(payload.respect_business_hours_brt);
+      const st = cronScheduler.configure({
+        enabled,
+        intervalSeconds,
+        respectBusinessHoursBrt,
+      });
+      if (enabled) {
+        await cronScheduler.executeTick();
+      }
+      const auditEv = buildCustomAuditEvent(
+        'cadence_cron_updated',
+        `Agendador Cron da Regua ${enabled ? 'ATIVADO' : 'PAUSADO'} (intervalo=${st.interval_seconds}s | filtro_brt=${st.respect_business_hours_brt})`,
+        'LOW'
+      );
+      dashboardService.recordEvent({ auditEvent: auditEv });
+
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          ok: true,
+          cron_status: cronScheduler.getStatus(),
+          system_note: `⏰ Agendador Cron Automático da Régua ${enabled ? `ATIVADO (ciclo a cada ${st.interval_seconds}s)` : 'PAUSADO'}. ${cronScheduler.getStatus().last_run_summary}`,
+          state: getFullState(),
+        })
+      );
       return;
     }
 
