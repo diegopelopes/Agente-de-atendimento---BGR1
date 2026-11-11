@@ -104,10 +104,15 @@ describe('Fase 7 — Homologação Completa E2E (32 Cenários Obrigatórios T01�
     assert.equal(stepFaq.response.includes('Sem Burocracia'), true);
     assert.equal(stepFaq.memory_snapshot.expected_slot, 'vehicle_year');
 
-    // 5. Cliente responde apenas o ano ("2023") -> Agente salva year=2023 e pede o tipo de uso ('vehicle_usage')
+    // 5. Cliente responde apenas o ano ("2023") -> Agente salva year=2023 e pede a PLACA do veículo ('vehicle_plate')
     const step4 = router.routeMessage({ message: '2023', channelId: 'chat_teste', sessionId });
     assert.equal(step4.memory_snapshot.vehicle.year, 2023);
-    assert.equal(step4.memory_snapshot.expected_slot, 'vehicle_usage');
+    assert.equal(step4.memory_snapshot.expected_slot, 'vehicle_plate');
+
+    // 5.5. Cliente informa a placa ("OMA-1020") -> Agente salva plate_masked='OMA1020' e pede o tipo de uso ('vehicle_usage')
+    const stepPlate = router.routeMessage({ message: 'OMA-1020', channelId: 'chat_teste', sessionId });
+    assert.equal(stepPlate.memory_snapshot.vehicle.plate_masked, 'OMA1020');
+    assert.equal(stepPlate.memory_snapshot.expected_slot, 'vehicle_usage');
 
     // 6. Cliente responde coloquialmente ("uso no dia a dia / passeio") -> Agente salva usage='particular' e pede a cidade ('city_uf')
     const step5 = router.routeMessage({ message: 'uso no dia a dia', channelId: 'chat_teste', sessionId });
@@ -120,30 +125,34 @@ describe('Fase 7 — Homologação Completa E2E (32 Cenários Obrigatórios T01�
     assert.equal(step6.next_action, 'consultar_crm');
   });
 
-  test('Regressão de Falso Positivo ("fazer cotação" vs Yamaha Fazer) e Indecisão de Veículo ("não escolhi o veículo ainda")', () => {
+  test('Regressão de Falso Positivo ("fazer cotação" vs Yamaha Fazer, "uno 2008" vs Peugeot 2008/Placa) e Fluxo Sequencial de Cotação', () => {
     const router = new AgentRouterService();
     const sessionId = 'e2e_sess_fazer_bug';
 
-    // 1. Cliente envia "Olá, gostaria de fazer uma cotação!" -> NÃO deve confundir o verbo "fazer" com a moto Yamaha Fazer 250!
+    // 1. Cliente envia "Olá, gostaria de fazer uma cotação!" -> Após o pedido de cotação, pergunta a marca e modelo do veículo com ano!
     const s1 = router.routeMessage({
       message: 'Olá, gostaria de fazer uma cotação!',
       channelId: 'chat_teste',
       sessionId,
     });
     assert.equal(s1.memory_snapshot.vehicle.model, undefined);
-    assert.equal(s1.memory_snapshot.expected_slot, 'name');
+    assert.equal(s1.memory_snapshot.expected_slot, 'vehicle_model');
+    assert.equal(s1.response.includes('Yamaha Fazer'), false);
+    assert.equal(s1.response.includes('marca, o modelo e o ano'), true);
 
-    // 2. Cliente responde "diego" -> Deve salvar o nome "Diego" e perguntar qual é o modelo e ano do veículo
-    const s2 = router.routeMessage({
-      message: 'diego',
+    // 2. Cliente pesquisa "uno 2008" -> NUNCA deve confundir com Peugeot 2008 nem com placa! Deve identificar Fiat Uno 2008 e perguntar a placa!
+    const sUno = router.routeMessage({
+      message: 'uno 2008',
       channelId: 'chat_teste',
       sessionId,
     });
-    assert.equal(s2.memory_snapshot.lead.name, 'Diego');
-    assert.equal(s2.memory_snapshot.vehicle.model, undefined);
-    assert.equal(s2.memory_snapshot.expected_slot, 'vehicle_model');
-    assert.equal(s2.response.includes('Yamaha Fazer'), false);
-    assert.equal(s2.response.includes('qual é o modelo e o ano do seu veículo'), true);
+    assert.equal(sUno.memory_snapshot.vehicle.brand, 'Fiat');
+    assert.equal(sUno.memory_snapshot.vehicle.model, 'Uno');
+    assert.equal(sUno.memory_snapshot.vehicle.year, 2008);
+    assert.equal(sUno.memory_snapshot.vehicle.plate_masked, undefined);
+    assert.equal(sUno.memory_snapshot.expected_slot, 'vehicle_plate');
+    assert.equal(sUno.response.includes('Fiat Uno 2008'), true);
+    assert.equal(sUno.response.toLowerCase().includes('placa'), true);
 
     // 3. Cliente responde "nao escolhi o veiculo ainda" -> Deve orientar amigavelmente a simular qualquer modelo de referência
     const s3 = router.routeMessage({
@@ -151,7 +160,7 @@ describe('Fase 7 — Homologação Completa E2E (32 Cenários Obrigatórios T01�
       channelId: 'chat_teste',
       sessionId,
     });
-    assert.equal(s3.response.includes('Sem problema algum, Diego!'), true);
+    assert.equal(s3.response.includes('Sem problema algum'), true);
     assert.equal(s3.memory_snapshot.expected_slot, 'vehicle_model');
   });
 

@@ -272,7 +272,11 @@ REGRAS OBRIGATÓRIAS:
    - Já possui cotação oficial do CRM: ${input.sessionMemory.hasOfficialQuote ? 'SIM' : 'NÃO'}
    ${input.sessionMemory.officialQuoteSummary ? `- Resumo da Cotação Oficial: ${input.sessionMemory.officialQuoteSummary}` : ''}
 2. NUNCA repita perguntas cujos dados já estão preenchidos na memória atual.
-3. Para gerar a cotação oficial, precisamos de: (a) Nome, (b) Modelo e Ano do veículo (OU a *placa do veículo* para consulta exata na Tabela FIPE do Power CRM), (c) Uso (particular ou aplicativo), (d) Cidade onde circula. Ao perguntar o veículo, avise que o cliente pode informar o modelo e ano ou a *placa do veículo* para um resultado ainda mais específico da Tabela FIPE! Peça apenas 1 etapa faltante por vez de forma natural!
+3. Siga estritamente esta ordem no fluxo inicial de conversa de cotação:
+   - 1º Passo (após o pedido de cotação): pergunte a *marca e o modelo do veículo com o ano* (ex.: Fiat Uno 2008, VW Golf 2018, Chevrolet Onix 2022).
+   - 2º Passo (após ter marca, modelo e ano): pergunte a *placa do veículo* (ex.: ABC-1234 ou ABC1D23) para refinar a cotação na Tabela FIPE.
+   - 3º Passo (após a placa): siga o fluxo de cotar na FIPE perguntando o tipo de uso (particular ou aplicativo), a cidade/UF onde circula e o nome do cliente (se ainda não informado). Peça apenas 1 etapa por vez!
+4. NUNCA confunda o modelo + ano de um veículo (ex.: "Uno 2008", "Gol 2015", "Fox 2012") com placa de veículo nem confunda o ano "2008" com o carro "Peugeot 2008"! "Uno 2008" é SEMPRE Marca="Fiat", Modelo="Uno", Ano=2008 e Placa=null.
 4. Se o cliente disser que ainda não escolheu o veículo ou está só pesquisando, defina "vehicle_cleared_or_undecided": true e convide-o a simular qualquer modelo que ele tenha em mente (ex: Onix 2022, HB20 2021, Corolla 2023).
 5. NUNCA invente valores em reais (R$) por conta própria se "Já possui cotação oficial do CRM" for NÃO. Quando todos os 5 dados estiverem preenchidos, o sistema anexará automaticamente os valores oficiais do Power CRM!
 6. NUNCA confunda o verbo "fazer" (ex: "quero fazer uma cotação") com a moto "Yamaha Fazer".`;
@@ -333,8 +337,17 @@ REGRAS OBRIGATÓRIAS:
     } else {
       if (parsed.extracted_plate && parsed.extracted_plate.trim()) {
         const cleanPlate = parsed.extracted_plate.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-        if (cleanPlate.length === 7) {
-          mergedVehicle.plate_masked = cleanPlate;
+        if (/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(cleanPlate)) {
+          const prefix3 = cleanPlate.slice(0, 3);
+          const suffix4 = cleanPlate.slice(3);
+          const isYearSuffix = /^(19[7-9]\d|20[0-2]\d)$/.test(suffix4);
+          const isCarModelOrCommonPrefix =
+            /^(UNO|GOL|FOX|FIT|HRV|WRV|CRV|ZRV|MOB|TOR|ARG|CRO|PUL|FAS|PAL|SIE|PUN|DOB|FIO|CEL|COR|AST|VEC|COB|SPI|CRU|TRA|EQU|S10|BIZ|PCX|XRE|BRO|FAN|POP|FAZ|MT0|NMA|XMA|NEO|KIA|BMW|RAM|BYD|GWM|JAC|ANO|USO|MEU|SEU|POR|COM|QUE|NAO|SIM)$/.test(
+              prefix3
+            );
+          if (!(isYearSuffix && isCarModelOrCommonPrefix)) {
+            mergedVehicle.plate_masked = cleanPlate;
+          }
         }
       }
       if (parsed.extracted_brand && parsed.extracted_brand.trim()) {
@@ -346,11 +359,6 @@ REGRAS OBRIGATÓRIAS:
       }
       if (typeof parsed.extracted_year === 'number' && parsed.extracted_year >= 1970 && parsed.extracted_year <= 2027) {
         mergedVehicle.year = parsed.extracted_year;
-      }
-      if (mergedVehicle.plate_masked && !mergedVehicle.model) {
-        mergedVehicle.brand = mergedVehicle.brand ?? 'Consulta Placa';
-        mergedVehicle.model = `Placa ${mergedVehicle.plate_masked}`;
-        mergedVehicle.year = mergedVehicle.year ?? 2022;
       }
       if (parsed.extracted_usage === 'particular' || parsed.extracted_usage === 'aplicativo') {
         mergedVehicle.usage = parsed.extracted_usage;
