@@ -3357,8 +3357,19 @@ const server = http.createServer(async (req, res) => {
               model: mem.vehicle.model,
               year: mem.vehicle.year,
               usage: mem.vehicle.usage,
+              plate_masked: mem.vehicle.plate_masked ?? null,
             },
           });
+          if (qOut.fipe_data) {
+            latestFipeData = qOut.fipe_data;
+            mem.vehicle.fipe_code = qOut.fipe_data.fipe_code;
+            if (qOut.fipe_data.plate_info) {
+              mem.vehicle.brand = qOut.fipe_data.brand_name;
+              mem.vehicle.model = qOut.fipe_data.plate_info.detran_model;
+              mem.vehicle.year = qOut.fipe_data.plate_info.model_year;
+            }
+            router.syncSessionMemory(DEFAULT_SESSION_ID, 'whatsapp_oficial', mem.lead, mem.vehicle);
+          }
           if (qOut.quote_result) {
             currentQuote = qOut.quote_result;
             replyText = qOut.customer_message;
@@ -3377,6 +3388,7 @@ const server = http.createServer(async (req, res) => {
           const sent = await metaCloudClient.sendOutboundMessage(outDec.meta_api_payload);
           lastOutboundWamid = sent.wamid;
         }
+        triggerBackgroundPersistence();
       }
 
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
