@@ -239,6 +239,18 @@ export class SupabasePersistenceService {
     if (!this.isConfigured() || rows.length === 0) {
       return { ok: true, count: 0 };
     }
+    // Deduplica linhas pela chave primária/conflito para evitar erro PostgreSQL 21000 em lotes
+    const dedupMap = new Map<string, Record<string, unknown>>();
+    for (const r of rows) {
+      const keyVal = String(r[onConflictColumn] ?? '');
+      if (keyVal) {
+        dedupMap.set(keyVal, r);
+      }
+    }
+    const uniqueRows = Array.from(dedupMap.values());
+    if (uniqueRows.length === 0) {
+      return { ok: true, count: 0 };
+    }
     try {
       const url = `${this.projectUrl}/rest/v1/${tableName}?on_conflict=${encodeURIComponent(onConflictColumn)}`;
       const res = await fetch(url, {
@@ -249,13 +261,13 @@ export class SupabasePersistenceService {
           'Content-Type': 'application/json',
           Prefer: 'resolution=merge-duplicates,return=minimal',
         },
-        body: JSON.stringify(rows),
+        body: JSON.stringify(uniqueRows),
       });
       if (!res.ok) {
         const txt = await res.text();
         return { ok: false, count: 0, error: `HTTP ${res.status}: ${txt.slice(0, 120)}` };
       }
-      return { ok: true, count: rows.length };
+      return { ok: true, count: uniqueRows.length };
     } catch (err) {
       return {
         ok: false,
@@ -365,21 +377,25 @@ export class SupabasePersistenceService {
     }
 
     // 3. bgr_human_attendants (Tabela Pai de Consultores BGR)
+    const allowedQueues = new Set(['comercial', 'vistoria', 'financeiro', 'sinistro', 'retencao', 'ouvidoria']);
     const attRes = await this.upsertTableRows(
       'bgr_human_attendants',
       'attendant_id',
-      snapshot.human_attendants.map((a) => ({
-        attendant_id: a.attendant_id,
-        name: a.name,
-        email: a.email,
-        whatsapp_phone: a.whatsapp_phone,
-        queue: a.queue,
-        role_title: a.role_title,
-        shift_hours: a.shift_hours,
-        status: a.status,
-        active_sessions_count: a.active_sessions_count,
-        created_at: a.created_at,
-      }))
+      snapshot.human_attendants.map((a) => {
+        const rawQ = String(a.queue || 'comercial').toLowerCase().replace(/^sinistros$/, 'sinistro');
+        return {
+          attendant_id: a.attendant_id,
+          name: a.name,
+          email: a.email,
+          whatsapp_phone: a.whatsapp_phone,
+          queue: allowedQueues.has(rawQ) ? rawQ : 'comercial',
+          role_title: a.role_title,
+          shift_hours: a.shift_hours,
+          status: a.status,
+          active_sessions_count: a.active_sessions_count,
+          created_at: a.created_at,
+        };
+      })
     );
     if (attRes.ok) {
       tablesSynced += 1;
