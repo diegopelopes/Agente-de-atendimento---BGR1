@@ -159,6 +159,15 @@ let agentConfig: AgentRuntimeConfig = {
 
 let cadenceDispatchHistory: CadenceDispatchRecord[] = [];
 let currentQuote: QuoteResult | null = null;
+let latestFipeData: {
+  vehicle_type_id?: number;
+  brand_id?: number;
+  model_id?: number;
+  model_full_name?: string;
+  model_year_id?: number;
+  fipe_code?: string;
+  fipe_value_brl?: number;
+} | null = null;
 const DEFAULT_SESSION_ID = 'sess_visual_001';
 const DEFAULT_OPP_ID = 'opp_visual_001';
 let opportunityCreated = false;
@@ -166,8 +175,11 @@ let opportunityCreated = false;
 function buildPersistenceSnapshot(): LocalPersistenceSnapshot {
   const conv = handoffService.getOrCreateConversation(DEFAULT_SESSION_ID, 'chat_teste');
   const mem = router.getSessionMemory(DEFAULT_SESSION_ID);
+  const nowIso = new Date().toISOString();
+  const oppObj = opportunityCreated ? lifecycleService.getOpportunity(DEFAULT_OPP_ID) : undefined;
+
   return {
-    updated_at: new Date().toISOString(),
+    updated_at: nowIso,
     agent_config: agentConfig,
     sessions: [
       {
@@ -182,12 +194,73 @@ function buildPersistenceSnapshot(): LocalPersistenceSnapshot {
         vehicle_model: mem?.vehicle.model ?? null,
         vehicle_year: mem?.vehicle.year ?? null,
         vehicle_usage: mem?.vehicle.usage ?? null,
+        vehicle_plate_masked: mem?.vehicle.plate_masked ?? null,
+        vehicle_type_id: latestFipeData?.vehicle_type_id ?? 1,
+        brand_id: latestFipeData?.brand_id ?? null,
+        model_id: latestFipeData?.model_id ?? null,
+        model_full_name: latestFipeData?.model_full_name ?? null,
+        model_year_id: latestFipeData?.model_year_id ?? null,
+        fipe_code: latestFipeData?.fipe_code ?? mem?.vehicle.fipe_code ?? null,
+        fipe_value_brl: latestFipeData?.fipe_value_brl ?? null,
         quotation_code: currentQuote?.quotation_code ?? null,
-        updated_at: new Date().toISOString(),
+        updated_at: nowIso,
       },
     ],
+    quotations: currentQuote
+      ? [
+          {
+            quotation_code: currentQuote.quotation_code,
+            quote_id: currentQuote.quote_id,
+            idempotency_key: `idem_${currentQuote.quotation_code.toLowerCase()}`,
+            lead_id: `lead_${DEFAULT_SESSION_ID}`,
+            vehicle_id: `veh_${DEFAULT_SESSION_ID}`,
+            fipe_code: latestFipeData?.fipe_code ?? mem?.vehicle.fipe_code ?? null,
+            fipe_value_brl: latestFipeData?.fipe_value_brl ?? null,
+            status: currentQuote.status,
+            source: currentQuote.source,
+            plans_json: currentQuote.plans,
+            valid_until: currentQuote.valid_until,
+            fetched_at: currentQuote.fetched_at,
+          },
+        ]
+      : [],
+    opportunities: oppObj
+      ? [
+          {
+            opportunity_id: oppObj.id,
+            lead_id: `lead_${DEFAULT_SESSION_ID}`,
+            quotation_code: currentQuote?.quotation_code ?? null,
+            selected_plan_id: oppObj.selected_plan_id ?? 'bgr_essencial',
+            selected_plan_name:
+              currentQuote?.plans.find((p) => p.plan_id === oppObj.selected_plan_id)?.plan_name ?? 'BGR Essencial',
+            monthly_fee_brl:
+              currentQuote?.plans.find((p) => p.plan_id === oppObj.selected_plan_id)?.monthly_fee_brl ?? 189.9,
+            stage: oppObj.stage,
+            signature_verified: oppObj.signature_verified,
+            payment_confirmed: oppObj.payment_verified,
+            inspection_approved: oppObj.activation_confirmed,
+            member_activated: oppObj.activation_confirmed,
+            protection_active: oppObj.activation_confirmed,
+          },
+        ]
+      : [],
     human_attendants: handoffService.listHumanAttendants(),
     cadence_rules: campaignService.getCadenceRules(),
+    cadence_dispatches: cadenceDispatchHistory.map((d) => ({
+      dispatch_id: d.dispatch_id,
+      step_id: d.step_id,
+      category: d.category,
+      day_label: d.day_label,
+      title: d.title,
+      agent_phone: d.agent_phone,
+      contact_name: d.contact_name,
+      contact_phone_masked: d.contact_phone_masked,
+      eligibility: d.eligibility,
+      delivery_status: d.delivery_status,
+      rendered_message: d.rendered_message,
+      reason: d.reason,
+      created_at: d.timestamp,
+    })),
     optout_phones: optOutPhonesList,
     audit_events: dashboardService.getAuditTrail(),
   };
@@ -3936,11 +4009,14 @@ const server = http.createServer(async (req, res) => {
             plate_masked: finalVehicle.plate_masked ?? null,
           },
         });
-        if (qOut.fipe_data?.plate_info) {
-          finalVehicle.brand = qOut.fipe_data.brand_name;
-          finalVehicle.model = qOut.fipe_data.plate_info.detran_model;
-          finalVehicle.year = qOut.fipe_data.plate_info.model_year;
+        if (qOut.fipe_data) {
+          latestFipeData = qOut.fipe_data;
           finalVehicle.fipe_code = qOut.fipe_data.fipe_code;
+          if (qOut.fipe_data.plate_info) {
+            finalVehicle.brand = qOut.fipe_data.brand_name;
+            finalVehicle.model = qOut.fipe_data.plate_info.detran_model;
+            finalVehicle.year = qOut.fipe_data.plate_info.model_year;
+          }
           router.syncSessionMemory(DEFAULT_SESSION_ID, 'chat_teste', finalLead, finalVehicle);
         }
         currentQuote = qOut.quote_result;

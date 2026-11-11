@@ -39,8 +39,62 @@ export interface PersistedSessionRecord {
   vehicle_model: string | null;
   vehicle_year: number | null;
   vehicle_usage: string | null;
+  vehicle_plate_masked?: string | null;
+  vehicle_type_id?: number | null;
+  brand_id?: number | null;
+  model_id?: number | null;
+  model_full_name?: string | null;
+  model_year_id?: number | null;
+  fipe_code?: string | null;
+  fipe_value_brl?: number | null;
   quotation_code: string | null;
   updated_at: string;
+}
+
+export interface PersistedQuotationRecord {
+  quotation_code: string;
+  quote_id: string;
+  idempotency_key: string;
+  lead_id: string;
+  vehicle_id: string;
+  fipe_code: string | null;
+  fipe_value_brl: number | null;
+  status: string;
+  source: string;
+  plans_json: unknown[];
+  valid_until: string;
+  fetched_at: string;
+}
+
+export interface PersistedOpportunityRecord {
+  opportunity_id: string;
+  lead_id: string;
+  quotation_code: string | null;
+  selected_plan_id: string;
+  selected_plan_name: string | null;
+  monthly_fee_brl: number | null;
+  stage: string;
+  signature_verified: boolean;
+  payment_confirmed: boolean;
+  inspection_approved: boolean;
+  member_activated: boolean;
+  protection_active: boolean;
+}
+
+export interface PersistedCadenceDispatchRecord {
+  dispatch_id: string;
+  step_id: string;
+  category: 'vendas' | 'cobranca';
+  day_label: string;
+  title: string;
+  agent_phone: string;
+  contact_name: string;
+  contact_phone_masked: string;
+  eligibility: boolean;
+  delivery_status: string;
+  rendered_message: string;
+  reason: string;
+  created_at: string;
 }
 
 export interface LocalPersistenceSnapshot {
@@ -52,8 +106,11 @@ export interface LocalPersistenceSnapshot {
     updated_at: string;
   };
   sessions: PersistedSessionRecord[];
+  quotations?: PersistedQuotationRecord[];
+  opportunities?: PersistedOpportunityRecord[];
   human_attendants: HumanAttendant[];
   cadence_rules: CadenceStepRule[];
+  cadence_dispatches?: PersistedCadenceDispatchRecord[];
   optout_phones: string[];
   audit_events: AuditEvent[];
 }
@@ -338,7 +395,7 @@ export class SupabasePersistenceService {
 
     // 1. bgr_leads (Tabela Pai de Clientes/Prospects)
     const leadRows = snapshot.sessions
-      .filter((s) => s.lead_name || s.lead_phone)
+      .filter((s) => s.lead_name || s.lead_phone || s.vehicle_model)
       .map((s) => ({
         lead_id: `lead_${s.session_id}`,
         name: s.lead_name || 'Cliente BGR',
@@ -356,16 +413,24 @@ export class SupabasePersistenceService {
       }
     }
 
-    // 2. bgr_vehicles_fipe (Tabela Relacionada a bgr_leads via FK lead_id)
+    // 2. bgr_vehicles_fipe (Tabela Relacionada a bgr_leads via FK lead_id, incluindo Placa e Ficha Técnica FIPE)
     const vehicleRows = snapshot.sessions
       .filter((s) => s.vehicle_brand && s.vehicle_model)
       .map((s) => ({
         vehicle_id: `veh_${s.session_id}`,
         lead_id: `lead_${s.session_id}`,
+        vehicle_type_id: s.vehicle_type_id || 1,
+        brand_id: s.brand_id ?? null,
         brand: s.vehicle_brand,
+        model_id: s.model_id ?? null,
         model: s.vehicle_model,
+        model_full_name: s.model_full_name ?? `${s.vehicle_brand} ${s.vehicle_model}`,
+        model_year_id: s.model_year_id ?? null,
         year: s.vehicle_year || 2022,
         usage: s.vehicle_usage || 'particular',
+        fipe_code: s.fipe_code ?? null,
+        fipe_value_brl: s.fipe_value_brl ?? null,
+        plate_masked: s.vehicle_plate_masked ?? null,
         updated_at: nowIso,
       }));
     if (vehicleRows.length > 0) {
@@ -376,7 +441,60 @@ export class SupabasePersistenceService {
       }
     }
 
-    // 3. bgr_human_attendants (Tabela Pai de Consultores BGR)
+    // 3. bgr_quotations (Tabela Relacionada a bgr_leads e bgr_vehicles_fipe)
+    if (Array.isArray(snapshot.quotations) && snapshot.quotations.length > 0) {
+      const quotRes = await this.upsertTableRows(
+        'bgr_quotations',
+        'quotation_code',
+        snapshot.quotations.map((q) => ({
+          quotation_code: q.quotation_code,
+          quote_id: q.quote_id,
+          idempotency_key: q.idempotency_key,
+          lead_id: q.lead_id,
+          vehicle_id: q.vehicle_id,
+          fipe_code: q.fipe_code,
+          fipe_value_brl: q.fipe_value_brl,
+          status: q.status,
+          source: q.source,
+          plans_json: q.plans_json,
+          valid_until: q.valid_until,
+          fetched_at: q.fetched_at,
+        }))
+      );
+      if (quotRes.ok) {
+        tablesSynced += 1;
+        rowsUpserted += quotRes.count;
+      }
+    }
+
+    // 4. bgr_opportunities (Ciclo de Vida de Proposta, Assinatura, Pagamento e Ativação)
+    if (Array.isArray(snapshot.opportunities) && snapshot.opportunities.length > 0) {
+      const oppRes = await this.upsertTableRows(
+        'bgr_opportunities',
+        'opportunity_id',
+        snapshot.opportunities.map((o) => ({
+          opportunity_id: o.opportunity_id,
+          lead_id: o.lead_id,
+          quotation_code: o.quotation_code,
+          selected_plan_id: o.selected_plan_id,
+          selected_plan_name: o.selected_plan_name,
+          monthly_fee_brl: o.monthly_fee_brl,
+          stage: o.stage,
+          signature_verified: o.signature_verified,
+          payment_confirmed: o.payment_confirmed,
+          inspection_approved: o.inspection_approved,
+          member_activated: o.member_activated,
+          protection_active: o.protection_active,
+          updated_at: nowIso,
+        }))
+      );
+      if (oppRes.ok) {
+        tablesSynced += 1;
+        rowsUpserted += oppRes.count;
+      }
+    }
+
+    // 5. bgr_human_attendants (Tabela Pai de Consultores BGR)
     const allowedQueues = new Set(['comercial', 'vistoria', 'financeiro', 'sinistro', 'retencao', 'ouvidoria']);
     const attRes = await this.upsertTableRows(
       'bgr_human_attendants',
@@ -404,13 +522,27 @@ export class SupabasePersistenceService {
       errors.push(`bgr_human_attendants: ${attRes.error}`);
     }
 
-    // 4. bgr_sessions (Relacionada a bgr_leads, bgr_quotations e bgr_human_attendants)
+    // 6. bgr_sessions (Relacionada a bgr_leads, bgr_quotations e bgr_human_attendants)
     const sessRes = await this.upsertTableRows(
       'bgr_sessions',
       'session_id',
       snapshot.sessions.map((s) => ({
-        ...s,
-        lead_id: s.lead_name || s.lead_phone ? `lead_${s.session_id}` : null,
+        session_id: s.session_id,
+        channel: s.channel,
+        attendance_mode: s.attendance_mode,
+        current_stage: s.current_stage,
+        lead_id: s.lead_name || s.lead_phone || s.vehicle_model ? `lead_${s.session_id}` : null,
+        quotation_code: s.quotation_code,
+        lead_name: s.lead_name,
+        lead_phone: s.lead_phone,
+        lead_city_uf: s.lead_city_uf,
+        vehicle_brand: s.vehicle_brand,
+        vehicle_model: s.vehicle_model,
+        vehicle_year: s.vehicle_year,
+        vehicle_usage: s.vehicle_usage,
+        fipe_code: s.fipe_code ?? null,
+        fipe_value_brl: s.fipe_value_brl ?? null,
+        updated_at: s.updated_at,
       }))
     );
     if (sessRes.ok) {
@@ -420,7 +552,7 @@ export class SupabasePersistenceService {
       errors.push(`bgr_sessions: ${sessRes.error}`);
     }
 
-    // 3. bgr_cadence_rules
+    // 7. bgr_cadence_rules
     const cadRes = await this.upsertTableRows(
       'bgr_cadence_rules',
       'step_id',
@@ -442,6 +574,33 @@ export class SupabasePersistenceService {
       rowsUpserted += cadRes.count;
     } else if (cadRes.error) {
       errors.push(`bgr_cadence_rules: ${cadRes.error}`);
+    }
+
+    // 8. bgr_cadence_dispatches (Histórico de Disparos Relacionado a bgr_cadence_rules)
+    if (Array.isArray(snapshot.cadence_dispatches) && snapshot.cadence_dispatches.length > 0) {
+      const dspRes = await this.upsertTableRows(
+        'bgr_cadence_dispatches',
+        'dispatch_id',
+        snapshot.cadence_dispatches.slice(-50).map((d) => ({
+          dispatch_id: d.dispatch_id,
+          step_id: d.step_id,
+          category: d.category,
+          day_label: d.day_label,
+          title: d.title,
+          agent_phone: d.agent_phone,
+          contact_name: d.contact_name,
+          contact_phone_masked: d.contact_phone_masked,
+          eligibility: d.eligibility,
+          delivery_status: d.delivery_status,
+          rendered_message: d.rendered_message,
+          reason: d.reason,
+          created_at: d.created_at,
+        }))
+      );
+      if (dspRes.ok) {
+        tablesSynced += 1;
+        rowsUpserted += dspRes.count;
+      }
     }
 
     // 4. bgr_optout_suppression

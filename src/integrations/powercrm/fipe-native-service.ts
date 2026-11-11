@@ -468,6 +468,12 @@ export class PowerCrmNativeFipeService {
       if (primaryWord === 'fox' && (normItem.includes('crossfox') || normItem.includes('spacefox'))) {
         score -= 45;
       }
+      if (!normTarget.includes('furgao') && normItem.includes('furgao')) {
+        score -= 35;
+      }
+      if (primaryWord === 'uno' && /\b(mille|vivace|attractive|way|economy)\b/i.test(normItem)) {
+        score += 10;
+      }
 
       // Bônus por cada token adicional do modelo (ex: "Golf GTI", "Jetta GLI", "Tiggo 7", "Tiggo 8", "CG 160")
       let allExtraTokensMatched = true;
