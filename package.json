@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Agente Comercial de IA — BGR Benefícios (Orquestração n8n + Domínio e Adapter Power CRM)",
   "scripts": {
+    "start": "node src/api/visual-server.ts",
     "start:visual": "node src/api/visual-server.ts",
     "test": "node --test tests/unit/contracts.test.ts tests/unit/quotation-service.test.ts tests/unit/proposal-lifecycle.test.ts tests/unit/whatsapp-handoff.test.ts tests/unit/campaign-followup.test.ts tests/integration/powercrm-adapter.test.ts tests/e2e/homologacao-32-cenarios.test.ts",
     "test:unit": "node --test tests/unit/contracts.test.ts tests/unit/quotation-service.test.ts tests/unit/proposal-lifecycle.test.ts tests/unit/whatsapp-handoff.test.ts tests/unit/campaign-followup.test.ts",

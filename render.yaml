@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: bgr-agente-comercial
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: "10000"
+      - key: POWERCRM_MODE
+        value: http
+      - key: POWERCRM_BASE_URL
+        value: https://api.powercrm.com.br/api
+      - key: POWERCRM_BEARER_TOKEN
+        sync: false
+      - key: SUPABASE_URL
+        value: https://mxynaxlpdfraalbfrgyx.supabase.co
+      - key: SUPABASE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini

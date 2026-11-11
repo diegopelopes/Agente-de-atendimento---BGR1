@@ -4341,6 +4341,12 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    if (req.method === 'GET' && req.url === '/healthz') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ status: 'ok', service: 'bgr-agente-comercial', timestamp: new Date().toISOString() }));
+      return;
+    }
+
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not Found' }));
   } catch (err) {
@@ -4351,6 +4357,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`BGR Visual Console v2.0 running at http://localhost:${PORT}`);
+const HOST = process.env.HOST ?? '0.0.0.0';
+server.listen(PORT, HOST, () => {
+  console.log(`BGR Visual Console v2.0 running at http://localhost:${PORT} (bound to ${HOST}:${PORT})`);
 });
