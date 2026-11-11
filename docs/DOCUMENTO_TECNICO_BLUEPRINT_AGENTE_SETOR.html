@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Especificação Técnica & Blueprint — Agente Comercial IA (Setor de Proteção Veicular)</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 16mm 14mm 16mm 14mm;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      line-height: 1.5;
+      font-size: 10.5pt;
+    }
+    .cover-header {
+      background: linear-gradient(135deg, #0b1120 0%, #1e3a8a 65%, #047857 100%);
+      color: #ffffff;
+      padding: 26px 28px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .cover-badge {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.25);
+      border: 1px solid #34d399;
+      color: #a7f3d0;
+      font-size: 8.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+    }
+    .cover-header h1 {
+      font-size: 18pt;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 8px;
+    }
+    .cover-header p {
+      font-size: 10pt;
+      color: #cbd5e1;
+    }
+    .meta-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.18);
+      font-size: 8.5pt;
+    }
+    .meta-strip div strong {
+      display: block;
+      color: #93c5fd;
+      font-size: 8pt;
+      text-transform: uppercase;
+    }
+
+    .topic-section {
+      margin-bottom: 18px;
+      page-break-inside: avoid;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .topic-header {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 9px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .topic-num {
+      background: #2563eb;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 9pt;
+      padding: 3px 9px;
+      border-radius: 6px;
+      letter-spacing: 0.04em;
+    }
+    .topic-title {
+      font-size: 11.5pt;
+      font-weight: 700;
+    }
+    .topic-body {
+      padding: 14px 16px;
+      background: #ffffff;
+    }
+    h3 {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin: 10px 0 6px 0;
+    }
+    h3:first-child { margin-top: 0; }
+    p { margin-bottom: 8px; color: #334155; }
+    ul, ol { margin: 6px 0 10px 20px; color: #334155; }
+    li { margin-bottom: 4px; }
+    code {
+      font-family: Consolas, 'Courier New', monospace;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 9pt;
+      border: 1px solid #cbd5e1;
+    }
+    pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 8.5pt;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 8px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 10px 0;
+      font-size: 9pt;
+    }
+    th {
+      background: #f1f5f9;
+      color: #0f172a;
+      text-align: left;
+      padding: 7px 10px;
+      border: 1px solid #cbd5e1;
+      font-weight: 700;
+    }
+    td {
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      vertical-align: top;
+    }
+    .arch-flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .arch-box {
+      background: #f8fafc;
+      border: 1px solid #94a3b8;
+      border-top: 3px solid #2563eb;
+      border-radius: 7px;
+      padding: 8px 10px;
+      font-size: 8.5pt;
+    }
+    .arch-box strong {
+      display: block;
+      color: #0f172a;
+      margin-bottom: 4px;
+      font-size: 9pt;
+    }
+    .alert-box {
+      background: #ecfdf5;
+      border-left: 4px solid #10b981;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 9.5pt;
+      color: #065f46;
+      margin: 8px 0;
+    }
+    .footer-sign {
+      margin-top: 18px;
+      padding-top: 10px;
+      border-top: 1px solid #cbd5e1;
+      display: flex;
+      justify-content: space-between;
+      font-size: 8.5pt;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cover-header">
+    <div class="cover-badge">Documento Técnico de Engenharia & Blueprint Setorial</div>
+    <h1>Agente Comercial e de Atendimento IA — Setor de Proteção Veicular</h1>
+    <p>Especificação técnica consolidada (Tópicos 01 a 12) detalhando arquitetura, contratos, NLU híbrido, OpenAI (GPT-4o-mini, Whisper e TTS), Power CRM, máquina de estados, WhatsApp Business, réguas de vendas/cobranças, LGPD e guia de geração de novos agentes para o setor.</p>
+    <div class="meta-strip">
+      <div><strong>Projeto Referência</strong>BGR Benefícios — Agente IA v2.0</div>
+      <div><strong>Stack Principal</strong>Node.js 26 + TypeScript ESM</div>
+      <div><strong>Integrações</strong>OpenAI + Power CRM + Supabase + Meta WABA</div>
+      <div><strong>Homologação</strong>39/39 Testes (Cenários T01–T32)</div>
+    </div>
+  </div>
+
+  <!-- TÓPICO 01 -->
+  <section class="topic-section">
+    <div class="topic-header">
+      <span class="topic-num">TÓPICO 01</span>
+      <span class="topic-title">Visão Geral, Stack Tecnológica e Arquitetura em Camadas</span>
+    </div>
+    <div class="topic-body">
+      <h3>1.1. Objetivo Operacional do Agente</h3>
+      <p>Construir um Agente Comercial e de Atendimento Omnichannel (WhatsApp Web / Cloud API + Voz + Console Operacional) capaz de conduzir todo o ciclo comercial do setor de proteção veicular com governança estrita: qualificação progressiva sem repetição de perguntas, reconhecimento de 160+ veículos nacionais FIPE, cotação oficial integrada ao Power CRM sem invenção de preços, bloqueio contra ativação prematura de proteção, transbordo humano setorial com trava de concorrência e réguas automatizadas de vendas e cobranças.</p>
+
+      <h3>1.2. Matriz Tecnológica Utilizada</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Camada</th>
+            <th>Tecnologia / Ferramenta</th>
+            <th>Responsabilidade Técnica</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Runtime &amp; Linguagem</strong></td>
+            <td>Node.js <code>v26.13.0</code> + TypeScript Nativo (ESM)</td>
+            <td>Execução nativa de TypeScript com tipagem estrita e latência sub-milissegundo no motor local.</td>
+          </tr>
+          <tr>
+            <td><strong>Inteligência &amp; Voz</strong></td>
+            <td>OpenAI API (<code>gpt-4o-mini</code> / <code>gpt-4o</code>, <code>whisper-1</code>, <code>tts-1</code>) + NLU Local</td>
+            <td>Extração estruturada JSON, transcrição de áudio de voz do WhatsApp e síntese vocal em português.</td>
+          </tr>
+          <tr>
+            <td><strong>CRM &amp; Cotação Oficial</strong></td>
+            <td>Power CRM REST API v1 (<code>PowerCrmAdapter</code>)</td>
+            <td>Cálculo oficial de planos, criação de oportunidades, retry controlado em GET e modo Mock seguro.</td>
+          </tr>
+          <tr>
+            <td><strong>Mensageria &amp; Canal</strong></td>
+            <td>WhatsApp Business Cloud API / Evolution + Web Speech</td>
+            <td>Controle de janela de 24h da Meta, deduplicação por <code>wamid</code>, captura de áudio e opt-out imediato.</td>
+          </tr>
+          <tr>
+            <td><strong>Banco de Dados</strong></td>
+            <td>Supabase (PostgreSQL) + Memória Transacional</td>
+            <td>Persistência de sessões, atendentes humanos, regras da régua, lista de supressão LGPD e auditoria.</td>
+          </tr>
+          <tr>
+            <td><strong>Qualidade &amp; Testes</strong></td>
+            <td>Node.js Test Runner (<code>node:test</code> + <code>node:assert</code>)</td>
+            <td>39 testes automatizados cobrindo 100% dos 32 cenários críticos de homologação (<code>T01</code> a <code>T32</code>).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>1.3. Arquitetura em 4 Camadas Desacopladas</h3>
+      <div class="arch-flow">
+        <div class="arch-box">
+          <strong>1. Guardrails &amp; Entrada</strong>
+          Filtro Opt-Out LGPD, Trava IA vs. Humano e Bloqueio de Prompt Injection / Token Leak.
+        </div>
+        <div class="arch-box">
+          <strong>2. Roteador &amp; NLU Híbrido</strong>
+          Slot-Filling contextual, Catálogo 160+ veículos FIPE e Conector OpenAI GPT-4o-mini + Whisper.
+        </div>
+        <div class="arch-box">
+          <strong>3. Serviços de Domínio</strong>
+          QuotationService, ProposalLifecycleService, HandoffService e CampaignFollowUpService.
+        </div>
+        <div class="arch-box">
+          <strong>4. Adaptadores &amp; Dados</strong>
+          PowerCrmAdapter, Supabase PostgreSQL, Sanitizer LGPD e MetricsDashboardService.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TÓPICO 02 -->
+  <section class="topic-section">
+    <div class="topic-header">
+      <span class="topic-num">TÓPICO 02</span>
+      <span class="topic-title">Estrutura Modular de Diretórios e os 10 Contratos Canônicos</span>
+    </div>
+    <div class="topic-body">
+      <h3>2.1. Organização de Pastas do Repositório</h3>
+      <pre>bgr-agente-comercial/
+├── config/       (agent.config.json, contracts.schema.json)
+├── prompts/      (system.md, developer.md, few_shots.json)
+├── workflows/    (main_attendance_workflow.json, powercrm_quotation_workflow.json, reactivation_campaign_workflow.json)
+├── src/
+│   ├── domain/contracts.ts                       # 10 Entidades Canônicas + Regras de Qualificação e Estado
+│   ├── integrations/powercrm/adapter.ts          # Adaptador Resiliente Power CRM (Mock + HTTP)
+│   ├── integrations/openai/openai-assistant.ts   # Integração OpenAI (GPT-4o-mini, Whisper-1, TTS-1) + SQL Supabase
+│   ├── services/agent-router-service.ts          # NLU Contextual, Slot-Filling e Catálogo 160+ Veículos
+│   ├── services/quotation-service.ts             # Cotação Oficial, Idempotência e Contorno de Objeções
+│   ├── services/proposal-lifecycle-service.ts    # Máquina de Estados da Proposta e Webhooks Oficiais
+│   ├── services/handoff-service.ts               # Filas Setoriais, Trava IA vs. Humano e Gestão de Atendentes
+│   ├── services/campaign-followup-service.ts     # Régua de Mensagens (Vendas D+1..15 e Cobrança D-3..+10)
+│   ├── channels/whatsapp/channel-service.ts      # Janela 24h Meta, Deduplicação wamid e Opt-Out PARAR
+│   ├── observability/sanitizer.ts &amp; metrics-dashboard.ts # Sanitização LGPD e 12+ KPIs Executivos
+│   └── api/visual-server.ts                      # Console Visual Baseado em Ícones + Simulador WhatsApp Web
+└── tests/        (unit/, integration/, e2e/homologacao-32-cenarios.test.ts)</pre>
+
+      <h3>2.2. As 10 Entidades Canônicas (<code>src/domain/contracts.ts</code>)</h3>
+      <ul>
+        <li><strong>01. Lead</strong>: <code>id</code>, <code>name</code>, <code>phone</code>, <code>city_uf</code>, <code>email</code>, <code>document_masked</code>, <code>origin</code>.</li>
+        <li><strong>02. Vehicle</strong>: <code>brand</code>, <code>model</code>, <code>year</code>, <code>usage</code> (<code>particular</code> | <code>aplicativo</code> | <code>comercial</code> | <code>frota</code>), <code>is_special_or_auction</code>.</li>
+        <li><strong>03. Conversation</strong>: <code>session_id</code>, <code>channel</code>, <code>attendance_mode</code> (<code>ia_ativa</code> | <code>humano_ativo</code> | <code>aguardando_humano</code>), <code>current_stage</code>, <code>window_24h_open</code>.</li>
+        <li><strong>04. Qualification</strong>: <code>qualified</code>, <code>missing_fields[]</code>, <code>next_question_field</code>, <code>eligible_for_instant_quote</code>.</li>
+        <li><strong>05. QuoteRequest</strong> &amp; <strong>06. QuoteResult</strong>: Requisição idempotente e retorno oficial contendo <code>quotation_code</code>, validade e lista de planos (mensalidade, adesão, franquia/cota de participação e coberturas).</li>
+        <li><strong>07. ProposalOpportunity</strong>: Controle estrito de <code>signature_verified</code>, <code>payment_verified</code>, <code>inspection_status</code>, <code>activation_confirmed</code> e <code>protection_active_declared</code>.</li>
+        <li><strong>08. Handoff</strong>, <strong>09. ConsentState</strong> &amp; <strong>10. AuditEvent</strong>: Protocolo de transferência humana por fila, estado de consentimento LGPD e evento de auditoria com resumo sanitizado.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- TÓPICO 03 -->
+  <section class="topic-section">
+    <div class="topic-header">
+      <span class="topic-num">TÓPICO 03</span>
+      <span class="topic-title">Motor Conversacional Híbrido: Slot-Filling, Catálogo FIPE, OpenAI e Voz</span>
+    </div>
+    <div class="topic-body">
+      <h3>3.1. Qualificação Progressiva por Slot Contextual (<code>expected_slot</code>)</h3>
+      <p>O serviço <code>AgentRouterService</code> rastreia qual pergunta está ativa na sessão através da sequência <code>name → vehicle_model → vehicle_year → vehicle_usage → city_uf → completed</code>. Isso permite compreender respostas curtas naturais (como responder apenas <code>"Diego"</code> para o nome, <code>"2022"</code> para o ano, <code>"passeio"</code> para o uso ou <code>"Contagem"</code> para a cidade) sem jamais repetir perguntas já respondidas.</p>
+
+      <h3>3.2. Catálogo Nacional de Veículos (160+ Modelos FIPE) e Prevenção de Falso Positivo</h3>
+      <ul>
+        <li>Reconhece modelos populares, SUVs, picapes e motocicletas mesmo quando o cliente não informa a marca (ex.: <code>"Onix" → Chevrolet Onix</code>, <code>"HB20" → Hyundai HB20</code>, <code>"CG 160" → Honda CG 160</code>).</li>
+        <li><strong>Isolamento Semântico</strong>: Impede que o verbo português <em>"fazer"</em> (em <code>"Quero fazer uma cotação"</code>) seja confundido com a motocicleta <code>Yamaha Fazer 250</code>.</li>
+        <li><strong>Tratamento de Indecisão</strong>: Frases como <code>"ainda não escolhi o veículo"</code> limpam o slot de veículo e convidam o cliente a simular qualquer modelo de referência.</li>
+      </ul>
+
+      <h3>3.3. Conector OpenAI (GPT-4o-mini + Whisper-1 Áudio + TTS-1 Voz)</h3>
+      <p>Quando a <code>OPENAI_API_KEY</code> é conectada na interface, <code>OpenAiCommercialAssistant</code> processa as mensagens usando os prompts oficiais (<code>system.md</code> e <code>developer.md</code>), extrai entidades em JSON estruturado, transcreve áudios gravados pelo cliente no WhatsApp via <code>whisper-1</code> e permite reproduzir as respostas em voz neural em português.</p>
+    </div>
+  </section>
+
+  <!-- TÓPICO 04 -->
+  <section class="topic-section">
+    <div class="topic-header">
+      <span class="topic-num">TÓPICO 04</span>
+      <span class="topic-title">Integração Power CRM, Cotação Oficial e Contorno de Objeções</span>
+    </div>
+    <div class="topic-body">
+      <h3>4.1. Resiliência e Governança do <code>PowerCrmAdapter</code></h3>
+      <ul>
+        <li><strong>Duplo Modo</strong>: Opera em modo <code>mock</code> (homologação local com planos BGR Essencial R$ 149,90 e BGR Completo R$ 189,90) ou modo <code>http</code> (produção REST v1 com Bearer Token).</li>
+        <li><strong>Tratamento de Erros HTTP</strong>: <code>401/403</code> (sem retry, oculta token e aciona humano - T12); <code>404</code> (sem retry - T09); <code>429</code> e <code>5xx/Timeout</code> (retry exclusivo em GET até <code>maxRetriesGet</code> - T13); bloqueio automático de cotação sem preço válido (<code>ERR_CRM_EMPTY_PRICE</code> - T14).</li>
+      </ul>
+
+      <h3>4.2. Proibição de Preço Inventado, Idempotência e Matriz de Objeções (<code>QuotationService</code>)</h3>
+      <ul>
+        <li><strong>Zero Alucinação de Preço (T08/T10)</strong>: Jamais informa valores sem os 5 dados obrigatórios ou para veículos de leilão/chassi remarcado.</li>
+        <li><strong>Idempotência (T32)</strong>: Requisições idênticas na mesma sessão retornam a mesma cotação sem duplicar registros no CRM.</li>
+        <li><strong>Contorno de Objeções (T15–T22)</strong>: Argumentação estruturada para <em>"Está caro"</em> e <em>"Vou pensar"</em>, e bloqueio estrito contra concessão de descontos não autorizados (<code>discount_granted: false</code>).</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- TÓPICO 05 -->
+  <section class="topic-section">
+    <div class="topic-header">
+      <span class="topic-num">TÓPICO 05</span>
+      <span class="topic-title">Máquina de Estados da Proposta e Bloqueio de Ativação Prematura</span>
+    </div>
+    <div class="topic-body">
+      <p>O serviço <code>ProposalLifecycleService</code> governa a transição de estados desde <code>cotacao_enviada</code> até <code>ativacao_confirmada</code>:</p>
+      <ul>
+        <li><strong>Cenário T27 (Alegação Verbal de Assinatura)</strong>: Se o cliente afirmar no chat que já assinou o link, o sistema mantém <code>protection_active_declared: false</code> até chegar o webhook oficial <code>proposal.signed</code>.</li>
+        <li><strong>Cenário T28 (Envio de Comprovante PIX no Chat)</strong>: Comprovantes enviados na conversa não ativam a proteção; exige-se o webhook bancário <code>payment.confirmed</code> + vistoria aprovada (<code>inspection.approved</code>).</li>
+        <li><strong>Cenário T29 (Ativação Oficial Completa)</strong>: A proteção só é declarada ativa quando <code>signature_verified</code>, <code>payment_verified</code>, <code>inspection_status === 'aprovada'</code> e <code>activation_confirmed</code> (webhook <code>member.activated</code>) estão todos confirmados e deduplicados por <code>event_id</code>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- TÓPICO 06 -->
+  <section class="topic-section">
+    <div class="topic-header">
+      <span class="topic-num">TÓPICO 06</span>
+      <span class="topic-title">Canal WhatsApp Business, Transbordo Humano (Handoff) e Equipe de Atendentes</span>
+    </div>
+    <div class="topic-body">
+      <ul>
+        <li><strong>Janela de 24h da Meta (T24–T26)</strong>: Permite texto livre dentro de 24h da última mensagem do cliente; fora da janela de 24h, bloqueia texto livre e exige template aprovado.</li>
+        <li><strong>Roteamento Setorial (T19)</strong>: Classifica automaticamente entre <code>sinistros</code> (Prioridade CRÍTICA + telefone 0800 24h imediato), <code>retencao</code> (cancelamento), <code>ouvidoria</code> (reclamações) e <code>comercial</code>.</li>
+        <li><strong>Trava de Concorrência IA vs. Humano (T18)</strong>: Quando um atendente humano assume a sessão (<code>humano_ativo</code>), a IA é imediatamente silenciada para não atropelar o consultor.</li>
+        <li><strong>Gestão de Atendentes Humanos</strong>: Cadastro completo de consultores (nome, e-mail, WhatsApp, fila, cargo, turno e status online/pausa) com botão de takeover em 1 clique.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- TÓPICO 07 -->
+  <section class="topic-section">
+    <div class="topic-header">
+      <span class="topic-num">TÓPICO 07</span>
+      <span class="topic-title">Régua de Mensagens (Campanhas de Venda e Cobranças) e Número Dinâmico</span>
+    </div>
+    <div class="topic-body">
+      <p>O serviço <code>CampaignFollowUpService</code> opera duas réguas editáveis vinculadas ao número dinâmico do agente (<code>{{numero_agente}}</code>):</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Categoria da Régua</th>
+            <th>Etapas Configuradas</th>
+            <th>Regras de Governança e Disparo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Campanhas de Venda (<code>vendas</code>)</strong></td>
+            <td><code>D+1</code> (Cotação em Aberto), <code>D+3</code> (Benefícios 24h), <code>D+5</code> (Condição Adesão), <code>D+7</code> (Último Aviso), <code>D+15</code> (Reativação)</td>
+            <td>Respeita horário comercial BRT (09h–18h em dias úteis), limite máximo de 3 tentativas por ciclo e deduplicação por etapa.</td>
+          </tr>
+          <tr>
+            <td><strong>Cobranças em Modo Geral (<code>cobranca</code>)</strong></td>
+            <td><code>D-3</code> (Preventivo), <code>D0</code> (Vencimento Hoje), <code>D+1</code> (1º Dia Atraso), <code>D+5</code> (Regularização), <code>D+10</code> (Negociação Amigável)</td>
+            <td>Bloqueio imediato caso o telefone esteja na lista de supressão LGPD (<code>opt_out_requested: true</code>).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- TÓPICO 08 & 09 -->
+  <section class="topic-section">
+    <div class="topic-header">
+      <span class="topic-num">TÓPICOS 08 &amp; 09</span>
+      <span class="topic-title">Segurança LGPD, Painel de 12+ KPIs e Schema SQL Supabase (Produção)</span>
+    </div>
+    <div class="topic-body">
+      <h3>8.1. Sanitização Anti-Leak e Observabilidade Executiva</h3>
+      <p>O módulo <code>sanitizer.ts</code> intercepta tentativas de extração de credenciais (T20) e Prompt Injection (T21), mascarando chaves <code>sk-...</code>, <code>Bearer</code>, CPF, placa e telefone em todos os logs. O <code>MetricsDashboardService</code> calcula 12+ KPIs em tempo real sem dupla contagem de contratos ou receita.</p>
+
+      <h3>9.1. Tabelas Oficiais para Persistência no Supabase (PostgreSQL)</h3>
+      <p>O script <code>SUPABASE_SQL_SCHEMA</code> provisiona 5 tabelas prontas para produção: <code>public.bgr_sessions</code>, <code>public.bgr_human_attendants</code>, <code>public.bgr_cadence_rules</code>, <code>public.bgr_optout_suppression</code> e <code>public.bgr_audit_events</code>.</p>
+    </div>
+  </section>
+
+  <!-- TÓPICO 10 & 11 -->
+  <section class="topic-section">
+    <div class="topic-header">
+      <span class="topic-num">TÓPICOS 10 &amp; 11</span>
+      <span class="topic-title">Console Visual Baseado em Ícones, Simulador WhatsApp Web e 39 Testes</span>
+    </div>
+    <div class="topic-body">
+      <ul>
+        <li><strong>Console Administrativo (<code>http://localhost:3090/</code>)</strong>: 6 abas baseadas em ícones (<code>💬 Atendimento</code>, <code>📅 Régua Vendas &amp; Cobrança</code>, <code>👨‍💼 Atendentes Humanos</code>, <code>📱 Número do Agente</code>, <code>🔑 APIs &amp; Supabase</code> e <code>📊 KPIs &amp; LGPD</code>).</li>
+        <li><strong>Tela do Cliente Fiel ao WhatsApp Web (<code>http://localhost:3090/chat</code>)</strong>: Interface idêntica ao WhatsApp Web com lista de conversas, balões com rabicho e duplo check azul (<code>✓✓</code>), gravação de áudio pelo microfone (<code>🎙️</code>), simulador de voz em 1 clique e resposta falada pelo agente (<code>🔊 Ouvir Áudio</code>).</li>
+        <li><strong>Homologação 100% Aprovada</strong>: 39 testes automatizados passando em 7 suítes cobrindo todos os cenários <code>T01</code> a <code>T32</code>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- TÓPICO 12 -->
+  <section class="topic-section">
+    <div class="topic-header">
+      <span class="topic-num">TÓPICO 12</span>
+      <span class="topic-title">Guia e Prompt Mestre para Gerar um Novo Agente de Atendimento do Setor</span>
+    </div>
+    <div class="topic-body">
+      <div class="alert-box">
+        <strong>Como Replicar para Outra Operação ou Associação do Setor:</strong> Mantenha intactos os módulos de engenharia (<code>src/domain</code>, <code>src/services</code>, <code>src/channels</code>, <code>src/observability</code>) e altere apenas: (1) Identidade e tabela de planos em <code>config/agent.config.json</code> e <code>prompts/system.md</code>; (2) Número WhatsApp remetente na aba <code>📱 Número do Agente</code>; (3) Equipe de consultores na aba <code>👨‍💼 Atendentes Humanos</code>; (4) Templates na aba <code>📅 Régua</code>; e (5) Chaves OpenAI, CRM e Supabase na aba <code>🔑 APIs &amp; Supabase</code>.
+      </div>
+      <h3>Prompt Mestre para Geração Automática de Novo Agente do Setor</h3>
+      <pre>Crie um Agente Comercial e de Atendimento IA completo em Node.js + TypeScript (ESM) para a empresa [NOME_DA_EMPRESA] do setor de Proteção Veicular, seguindo a arquitetura de 12 tópicos do Blueprint BGR Benefícios:
+1. Contratos Canônicos (src/domain/contracts.ts): Lead, Vehicle, Conversation, Qualification, QuoteRequest, QuoteResult, ProposalOpportunity, Handoff, ConsentState e AuditEvent.
+2. Roteador NLU Híbrido (src/services/agent-router-service.ts): Slot-Filling progressivo (name -> vehicle_model -> vehicle_year -> vehicle_usage -> city_uf -> completed), catálogo de 160+ veículos nacionais FIPE, guardrails anti-prompt-injection/anti-token-leak e integração com OpenAI (gpt-4o-mini + whisper-1 + tts-1).
+3. Adaptador CRM Resiliente (src/integrations/powercrm/adapter.ts) + QuotationService: Proibição estrita de inventar preços, cache de idempotência e contorno de objeções sem conceder descontos não autorizados.
+4. Ciclo de Proposta (src/services/proposal-lifecycle-service.ts): Máquina de estados que bloqueia ativação prematura por alegação verbal ou comprovante no chat, exigindo os 4 webhooks oficiais (proposal.signed, payment.confirmed, inspection.approved, member.activated).
+5. WhatsApp &amp; Handoff (src/channels/whatsapp/channel-service.ts + src/services/handoff-service.ts): Janela de 24h da Meta, opt-out imediato (PARAR), filas setoriais (comercial, retencao, sinistros, ouvidoria), cadastro de atendentes humanos e trava que silencia a IA quando humano_ativo.
+6. Régua de Mensagens (src/services/campaign-followup-service.ts): Cadências editáveis de Vendas (D+1 a D+15) e Cobranças Gerais (D-3 a D+10) com número dinâmico do agente.
+7. Console Visual Baseado em Ícones + Simulador WhatsApp Web com Suporte a Texto e Voz (src/api/visual-server.ts) + Suíte de 39 Testes Automatizados (T01 a T32).</pre>
+    </div>
+  </section>
+
+  <div class="footer-sign">
+    <span>BGR Benefícios — Engenharia de Agentes Comerciais de IA</span>
+    <span>Documento Técnico Consolidado (Tópicos 01 a 12) • Homologado T01–T32</span>
+  </div>
+
+</body>
+</html>

@@ -10,6 +10,8 @@
  */
 
 import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
 import { AgentRouterService } from '../services/agent-router-service.ts';
 import { PowerCrmAdapter } from '../integrations/powercrm/adapter.ts';
 import { QuotationService } from '../services/quotation-service.ts';
@@ -442,6 +444,7 @@ const HTML_PAGE = `<!DOCTYPE html>
     </div>
 
     <div style="display: flex; gap: 8px; align-items: center;">
+      <a href="/blueprint.pdf" download="DOCUMENTO_TECNICO_BLUEPRINT_AGENTE_SETOR.pdf" class="btn primary sm" style="text-decoration: none;" title="Baixar Especificação Técnica e Blueprint em PDF">📄 Baixar PDF Técnico</a>
       <button id="openai-status-badge" class="btn warn sm" onclick="switchView('apis')" title="Configurar Chave OpenAI, Power CRM e Supabase">🔑 APIs: Modo Local</button>
       <a href="/chat" target="_blank" class="btn success sm" style="text-decoration: none;">💬 Abrir Chat Cliente (Nova Aba)</a>
       <span id="mode-badge" class="badge">🤖 IA ATIVA</span>
@@ -2338,6 +2341,18 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && req.url === '/chat') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(CHAT_ONLY_HTML);
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/blueprint.pdf') {
+      const pdfPath = path.resolve(import.meta.dirname, '..', '..', 'docs', 'DOCUMENTO_TECNICO_BLUEPRINT_AGENTE_SETOR.pdf');
+      const pdfBytes = fs.readFileSync(pdfPath);
+      res.writeHead(200, {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="DOCUMENTO_TECNICO_BLUEPRINT_AGENTE_SETOR.pdf"',
+        'Content-Length': pdfBytes.length,
+      });
+      res.end(pdfBytes);
       return;
     }
 

@@ -1,0 +1,489 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R 12 0 R] /Count 4 >>
+endobj
+5 0 obj
+<< /Length 6381 >>
+stream
+0.94 0.96 0.98 rg
+42 805.89 511.28 18 re f
+BT /F1 7.5 Tf 0.35 0.42 0.52 rg
+48 811.89 Td (BGR BENEF\315CIOS - ESPECIFICA\307\303O T\311CNICA & BLUEPRINT DE AGENTE IA DO SETOR) Tj ET
+0.06 0.09 0.16 rg
+42 761 511.28 36 re f
+BT /F2 13.5 Tf 1 1 1 rg
+52 774 Td (ESPECIFICA\307\303O T\311CNICA & BLUEPRINT ARQUITETURAL) Tj ET
+BT /F2 10 Tf 0.12 0.25 0.68 rg
+42 739 Td (Agente Comercial e de Atendimento IA - Setor de Prote\347\343o Veicular \(BGR Benef\355cios v2.0\)) Tj ET
+BT /F1 8 Tf 0.35 0.42 0.52 rg
+42 723 Td (Data: 10/11/2026 | Stack: Node.js 26 + TypeScript ESM + OpenAI + Power CRM + Supabase | Homologa\347\343o: 39/39 Testes \(T01-T32\)) Tj ET
+0.14 0.39 0.92 rg
+42 689 511.28 20 re f
+BT /F2 9.5 Tf 1 1 1 rg
+50 695 Td (T\323PICO 01 - VIS\303O GERAL, STACK TECNOL\323GICA E ARQUITETURA DO SISTEMA) Tj ET
+BT /F2 9.2 Tf 0.08 0.22 0.55 rg
+42 669 Td (1.1. Objetivo Operacional do Agente) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 655 Td (Construir um Agente Comercial e de Atendimento Omnichannel \(WhatsApp Web / Cloud API + Voz +) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 643 Td (Console Operacional\) capaz de conduzir todo o ciclo comercial do setor de prote\347\343o veicular) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 631 Td (com governan\347a estrita: qualifica\347\343o progressiva sem repeti\347\343o de perguntas \(Slot-Filling) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 619 Td (Contextual\), reconhecimento de 160+ ve\355culos nacionais FIPE, consulta de cota\347\365es oficiais no) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 607 Td (Power CRM com proibi\347\343o absoluta de inven\347\343o de pre\347os, ciclo de vida de proposta com trava) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 595 Td (contra ativa\347\343o prematura de prote\347\343o, transbordo humano setorial com trava de concorr\352ncia) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 583 Td (\(ia_ativa vs. humano_ativo\) e r\351gua automatizada de mensagens para Campanhas de Venda e) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 571 Td (Cobran\347as em Modo Geral.) Tj ET
+BT /F2 9.2 Tf 0.08 0.22 0.55 rg
+42 551 Td (1.2. Stack Tecnol\363gica Utilizada) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 537 Td (- Runtime & Linguagem: Node.js v26.13.0 + TypeScript Nativo \(ESM\) com execu\347\343o direta e) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 525.5 Td (  tipagem estrita.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 512 Td (- Motor de IA & Voz: OpenAI API \(gpt-4o-mini / gpt-4o + whisper-1 + tts-1\) combinado com) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 500.5 Td (  Motor NLU Determin\355stico Local para fallback autom\341tico.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 487 Td (- CRM & Cota\347\343o Oficial: Power CRM REST API v1 \(PowerCrmAdapter\) com modo Mock de) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 475.5 Td (  homologa\347\343o e modo HTTP de produ\347\343o resiliente.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 462 Td (- Mensageria & Voz: WhatsApp Business Cloud API / Evolution API + Web Speech API +) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 450.5 Td (  MediaRecorder \(\341udio de voz e s\355ntese pt-BR\).) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 437 Td (- Orquestra\347\343o & Banco de Dados: Workflows n8n homologados + Supabase \(PostgreSQL\) com 5) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 425.5 Td (  tabelas can\364nicas para produ\347\343o.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 412 Td (- Testes Automatizados: Node.js Test Runner \(39 testes unit\341rios, integra\347\343o e E2E cobrindo) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 400.5 Td (  os 32 cen\341rios T01 a T32\).) Tj ET
+0.14 0.39 0.92 rg
+42 371 511.28 20 re f
+BT /F2 9.5 Tf 1 1 1 rg
+50 377 Td (T\323PICO 02 - ESTRUTURA DE DIRET\323RIOS E OS 10 CONTRATOS CAN\324NICOS) Tj ET
+BT /F2 9.2 Tf 0.08 0.22 0.55 rg
+42 351 Td (2.1. M\363dulos Principais do Reposit\363rio \(bgr-agente-comercial\)) Tj ET
+0.95 0.96 0.98 rg
+46 328 503.28 19 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 337 Td (config/agent.config.json & config/contracts.schema.json \(Configura\347\365es e JSON Schema\)) Tj ET
+0.95 0.96 0.98 rg
+46 307 503.28 19 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 316 Td (prompts/system.md, prompts/developer.md & prompts/few_shots.json \(Prompts Oficiais\)) Tj ET
+0.95 0.96 0.98 rg
+46 286 503.28 19 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 295 Td (src/domain/contracts.ts \(10 Entidades Can\364nicas + Regras de Qualifica\347\343o e Estado\)) Tj ET
+0.95 0.96 0.98 rg
+46 265 503.28 19 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 274 Td (src/integrations/powercrm/adapter.ts \(Adaptador Resiliente Power CRM Mock/HTTP\)) Tj ET
+0.95 0.96 0.98 rg
+46 233 503.28 30 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 253 Td (src/integrations/openai/openai-assistant.ts \(OpenAI GPT-4o-mini, Whisper-1, TTS-1 e SQL) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 242 Td (Supabase\)) Tj ET
+0.95 0.96 0.98 rg
+46 212 503.28 19 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 221 Td (src/services/agent-router-service.ts \(Slot-Filling Contextual e Cat\341logo 160+ Ve\355culos\)) Tj ET
+0.95 0.96 0.98 rg
+46 191 503.28 19 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 200 Td (src/services/quotation-service.ts \(Cota\347\343o Oficial, Idempot\352ncia e Matriz de Obje\347\365es\)) Tj ET
+0.95 0.96 0.98 rg
+46 170 503.28 19 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 179 Td (src/services/proposal-lifecycle-service.ts \(M\341quina de Estados e Webhooks Oficiais\)) Tj ET
+0.95 0.96 0.98 rg
+46 149 503.28 19 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 158 Td (src/services/handoff-service.ts \(Filas Setoriais, Trava IA vs. Humano e Equipe Humana\)) Tj ET
+0.95 0.96 0.98 rg
+46 128 503.28 19 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 137 Td (src/services/campaign-followup-service.ts \(R\351gua de Vendas D+1..15 e Cobran\347a D-3..+10\)) Tj ET
+0.95 0.96 0.98 rg
+46 107 503.28 19 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 116 Td (src/channels/whatsapp/channel-service.ts \(Janela 24h Meta, Deduplica\347\343o wamid e Opt-Out\)) Tj ET
+0.95 0.96 0.98 rg
+46 86 503.28 19 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 95 Td (src/observability/sanitizer.ts & metrics-dashboard.ts \(LGPD Anti-Leak e 12+ KPIs\)) Tj ET
+0.95 0.96 0.98 rg
+46 65 503.28 19 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 74 Td (src/api/visual-server.ts \(Console Visual v2.0 em \315cones + Simulador WhatsApp Web\)) Tj ET
+BT /F1 8 Tf 0.45 0.50 0.58 rg 42 28 Td (P\341gina 1 de 4 - Blueprint T\351cnico Agente Comercial IA \(BGR Benef\355cios\)) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 4 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 1 0 R /F2 2 0 R /F3 3 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 6984 >>
+stream
+0.94 0.96 0.98 rg
+42 805.89 511.28 18 re f
+BT /F1 7.5 Tf 0.35 0.42 0.52 rg
+48 811.89 Td (BGR BENEF\315CIOS - ESPECIFICA\307\303O T\311CNICA & BLUEPRINT DE AGENTE IA DO SETOR) Tj ET
+BT /F2 9.2 Tf 0.08 0.22 0.55 rg
+42 781 Td (2.2. As 10 Entidades Can\364nicas \(src/domain/contracts.ts\)) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 767 Td (1. Lead \(dados cadastrais\); 2. Vehicle \(marca, modelo, ano, uso, leil\343o/especial\); 3.) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 755 Td (Conversation \(modo de atendimento ia_ativa/humano_ativo, etapa, janela 24h\); 4. Qualification) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 743 Td (\(status qualificado e campos faltantes\); 5. QuoteRequest \(requisi\347\343o idempotente\); 6.) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 731 Td (QuoteResult \(c\363digo da cota\347\343o, validade e planos oficiais\); 7. ProposalOpportunity \(travas de) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 719 Td (assinatura, pagamento, vistoria e ativa\347\343o\); 8. Handoff \(protocolo e fila setorial\); 9.) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 707 Td (ConsentState \(governan\347a LGPD e opt-out\); 10. AuditEvent \(trilha sanitizada\).) Tj ET
+0.14 0.39 0.92 rg
+42 675 511.28 20 re f
+BT /F2 9.5 Tf 1 1 1 rg
+50 681 Td (T\323PICO 03 - MOTOR CONVERSACIONAL H\315BRIDO: SLOT-FILLING, CAT\301LOGO FIPE E OPENAI) Tj ET
+BT /F2 9.2 Tf 0.08 0.22 0.55 rg
+42 655 Td (3.1. Qualifica\347\343o Progressiva por Slot Contextual \(expected_slot\)) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 641 Td (O AgentRouterService rastreia o slot esperado na sequ\352ncia: name -> vehicle_model ->) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 629 Td (vehicle_year -> vehicle_usage -> city_uf -> completed. Isso permite entender respostas curtas) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 617 Td (\(ex: responder apenas "Diego", "2022", "particular" ou "Contagem"\) sem jamais repetir) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 605 Td (perguntas j\341 respondidas na sess\343o \(T01 a T06\).) Tj ET
+BT /F2 9.2 Tf 0.08 0.22 0.55 rg
+42 585 Td (3.2. Cat\341logo Nacional de Ve\355culos \(BRAZIL_VEHICLE_CATALOG - 160+ Modelos\)) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 571 Td (- Infer\352ncia autom\341tica de marca quando o cliente informa apenas o modelo \(ex: "Onix" ->) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 559.5 Td (  Chevrolet Onix, "T-Cross" -> Volkswagen T-Cross, "CG 160" -> Honda CG 160\).) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 546 Td (- Preven\347\343o de Falso Positivo Sem\342ntico: Isola o verbo portugu\352s "fazer" \(em "Quero fazer) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 534.5 Td (  uma cota\347\343o"\) para nunca colidir com a moto Yamaha Fazer 250.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 521 Td (- Tratamento de Indecis\343o: Frases como "ainda n\343o escolhi o ve\355culo" limpam o ve\355culo da) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 509.5 Td (  mem\363ria e convidam o cliente a simular qualquer modelo de refer\352ncia.) Tj ET
+BT /F2 9.2 Tf 0.08 0.22 0.55 rg
+42 492 Td (3.3. Integra\347\343o OpenAI \(GPT-4o-mini / GPT-4o + Whisper-1 \301udio + TTS-1 Voz\)) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 478 Td (O m\363dulo OpenAiCommercialAssistant utiliza response_format json_object para responder com) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 466 Td (empatia comercial e extrair simultaneamente nome, marca, modelo, ano, uso e cidade. Tamb\351m) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 454 Td (transcreve \341udios de voz enviados pelo cliente via Whisper \(whisper-1\) e sintetiza \341udio via) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 442 Td (TTS \(tts-1\).) Tj ET
+0.14 0.39 0.92 rg
+42 410 511.28 20 re f
+BT /F2 9.5 Tf 1 1 1 rg
+50 416 Td (T\323PICO 04 - INTEGRA\307\303O POWER CRM, COTA\307\303O OFICIAL E CONTORNO DE OBJE\307\325ES) Tj ET
+BT /F2 9.2 Tf 0.08 0.22 0.55 rg
+42 390 Td (4.1. Resili\352ncia HTTP e Governan\347a do PowerCrmAdapter) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 376 Td (- Opera em modo mock \(planos BGR Essencial R$ 149,90 e BGR Completo R$ 189,90\) ou modo http) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 364.5 Td (  \(produ\347\343o REST v1 com Bearer Token\).) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 351 Td (- Tratamento expl\355cito de erros HTTP: 401/403 \(n\343o faz retry, mascara o token e aciona) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 339.5 Td (  fallback humano - T12\); 404 \(c\363digo inexistente sem retry - T09\); 429 e 5xx/Timeout \(retry) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 328 Td (  controlado apenas em GET at\351 maxRetriesGet - T13\).) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 314.5 Td (- Bloqueio de Cota\347\343o sem Pre\347o \(ERR_CRM_EMPTY_PRICE - T14\): Impede apresentar planos vazios) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 303 Td (  ou zerados e transfere para especialista humano.) Tj ET
+BT /F2 9.2 Tf 0.08 0.22 0.55 rg
+42 285.5 Td (4.2. Qualifica\347\343o, Idempot\352ncia e Matriz de Obje\347\365es \(QuotationService\)) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 271.5 Td (- Proibi\347\343o Absoluta de Pre\347o Inventado \(T08/T10\): Nenhuma estimativa em R$ \351 gerada se) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 260 Td (  faltarem dados obrigat\363rios ou para ve\355culos de leil\343o/especiais.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 246.5 Td (- Idempot\352ncia \(T32\): Cache por sess\343o e chave do ve\355culo evita duplicar cota\347\365es id\352nticas) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 235 Td (  no CRM.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 221.5 Td (- Matriz de Obje\347\365es \(T15, T16, T17, T22\): Contorna "Est\341 caro" e "Vou pensar" com) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 210 Td (  argumentos de valor e bloqueia concess\343o de descontos n\343o autorizados \(discount_granted:) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 198.5 Td (  false\).) Tj ET
+0.14 0.39 0.92 rg
+42 169 511.28 20 re f
+BT /F2 9.5 Tf 1 1 1 rg
+50 175 Td (T\323PICO 05 - M\301QUINA DE ESTADOS DA PROPOSTA E BLOQUEIO DE ATIVA\307\303O PREMATURA) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 153 Td (O ProposalLifecycleService governa a evolu\347\343o da proposta: cotacao_enviada -> proposta_enviada) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 141 Td (-> aguardando_assinatura -> aguardando_pagamento -> vistoria_pendente -> pagamento_confirmado) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 129 Td (-> ativacao_confirmada.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 113 Td (- Cen\341rio T27 \(Alega\347\343o Verbal de Assinatura\): Afirmar no chat "J\341 assinei o contrato" N\303O) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 101.5 Td (  marca signature_verified nem ativa a prote\347\343o.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 88 Td (- Cen\341rio T28 \(Envio de Comprovante PIX no Chat\): Enviar comprovante no WhatsApp N\303O ativa a) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 76.5 Td (  prote\347\343o; aguarda-se confirma\347\343o banc\341ria oficial.) Tj ET
+BT /F1 8 Tf 0.45 0.50 0.58 rg 42 28 Td (P\341gina 2 de 4 - Blueprint T\351cnico Agente Comercial IA \(BGR Benef\355cios\)) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 4 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 1 0 R /F2 2 0 R /F3 3 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 7169 >>
+stream
+0.94 0.96 0.98 rg
+42 805.89 511.28 18 re f
+BT /F1 7.5 Tf 0.35 0.42 0.52 rg
+48 811.89 Td (BGR BENEF\315CIOS - ESPECIFICA\307\303O T\311CNICA & BLUEPRINT DE AGENTE IA DO SETOR) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 785 Td (- Cen\341rio T29 \(Ativa\347\343o Oficial Completa\): A prote\347\343o s\363 \351 declarada ativa) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 773.5 Td (  \(protection_active_declared: true\) ap\363s o recebimento deduplicado dos 4 webhooks oficiais:) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 762 Td (  proposal.signed + payment.confirmed + inspection.approved + member.activated.) Tj ET
+0.14 0.39 0.92 rg
+42 732.5 511.28 20 re f
+BT /F2 9.5 Tf 1 1 1 rg
+50 738.5 Td (T\323PICO 06 - CANAL WHATSAPP BUSINESS, TRANSBORDO HUMANO \(HANDOFF\) E ATENDENTES) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 716.5 Td (- Isolamento e Deduplica\347\343o \(T23/T32\): Sess\365es isoladas por n\372mero E.164 e deduplica\347\343o) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 705 Td (  autom\341tica de wamid repetidos pela Meta.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 691.5 Td (- Janela de 24 Horas da Meta \(T24/T25/T26\): Permite texto livre em <24h; ap\363s 24h bloqueia) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 680 Td (  texto livre e exige template aprovado.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 666.5 Td (- Filas Setoriais de Handoff \(T19\): Roteamento autom\341tico para sinistros \(prioridade CR\315TICA) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 655 Td (  + telefone 0800 24h imediato\), retencao, ouvidoria e comercial.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 641.5 Td (- Trava IA vs. Humano \(T18\) e Cadastro de Equipe: Ao confirmar takeover \(humano_ativo\), a IA) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 630 Td (  \351 100% silenciada. Inclui m\363dulo completo para cadastrar consultores humanos, alterar) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 618.5 Td (  status \(online/pausa/ocupado\) e assumir conversas.) Tj ET
+0.14 0.39 0.92 rg
+42 589 511.28 20 re f
+BT /F2 9.5 Tf 1 1 1 rg
+50 595 Td (T\323PICO 07 - MOTOR DE R\311GUA DE MENSAGENS \(VENDAS E COBRAN\307AS\) E N\332MERO DIN\302MICO) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 573 Td (- Troca Livre do N\372mero do Agente: O telefone remetente \(agent_phone\) pode ser alterado) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 561.5 Td (  livremente no topo do console e atualiza instantaneamente todas as r\351guas) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 550 Td (  \({{numero_agente}}\) e cabe\347alhos.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 536.5 Td (- R\351gua de Campanhas de Venda \(vendas\): 5 etapas pr\351-configuradas e edit\341veis: D+1 \(Cota\347\343o) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 525 Td (  em Aberto\), D+3 \(Benef\355cios e Assist\352ncia 24h\), D+5 \(Condi\347\343o Especial de Ades\343o\), D+7) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 513.5 Td (  \(\332ltimo Aviso de Validade\) e D+15 \(Campanha de Reativa\347\343o Comercial\).) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 500 Td (- R\351gua de Cobran\347as em Modo Geral \(cobranca\): 5 etapas financeiras: D-3 \(Lembrete) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 488.5 Td (  Preventivo\), D0 \(Vencimento Hoje\), D+1 \(1\272 Dia de Atraso\), D+5 \(Regulariza\347\343o de Prote\347\343o\)) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 477 Td (  e D+10 \(Negocia\347\343o Amig\341vel\).) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 463.5 Td (- Governan\347a de Disparo \(T30/T31/T32\): Respeita janela comercial BRT, limite de 3) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 452 Td (  tentativas, deduplica\347\343o e bloqueio imediato de contatos em Opt-Out \(PARAR\).) Tj ET
+0.14 0.39 0.92 rg
+42 422.5 511.28 20 re f
+BT /F2 9.5 Tf 1 1 1 rg
+50 428.5 Td (T\323PICO 08 - SEGURAN\307A, GOVERNAN\307A LGPD, SANITIZA\307\303O E PAINEL DE 12+ KPIS) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 406.5 Td (- Guardrails de Seguran\347a \(T20/T21\): Bloqueio determin\355stico contra extra\347\343o de) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 395 Td (  tokens/senhas e contra ataques de Prompt Injection.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 381.5 Td (- Sanitizador LGPD \(sanitizer.ts\): Mascara automaticamente chaves sk-..., Bearer tokens, CPF) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 370 Td (  \(***.***.***-**\), placas \(***-****\) e telefones \(+5511****0001\) antes de gravar qualquer) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 358.5 Td (  evento de auditoria.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 345 Td (- Observabilidade Executiva \(metrics-dashboard.ts\): Calcula em tempo real 12+ KPIs) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 333.5 Td (  \(conversas \372nicas, qualificados, cota\347\365es oficiais, propostas, contratos confirmados,) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 322 Td (  receita mensal atribu\355da em R$ sem dupla contagem, taxa de convers\343o, taxa de handoff,) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 310.5 Td (  lat\352ncia m\351dia/P95 e alertas cr\355ticos\).) Tj ET
+0.14 0.39 0.92 rg
+42 281 511.28 20 re f
+BT /F2 9.5 Tf 1 1 1 rg
+50 287 Td (T\323PICO 09 - ESQUEMA OFICIAL DE BANCO DE DADOS \(SUPABASE / POSTGRESQL\)) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 265 Td (O sistema disponibiliza na aba "APIs & Supabase" o script SUPABASE_SQL_SCHEMA pronto para) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 253 Td (execu\347\343o no SQL Editor do Supabase, criando as 5 tabelas de produ\347\343o: 1\) public.bgr_sessions;) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 241 Td (2\) public.bgr_human_attendants; 3\) public.bgr_cadence_rules; 4\) public.bgr_optout_suppression;) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 229 Td (5\) public.bgr_audit_events.) Tj ET
+0.14 0.39 0.92 rg
+42 197 511.28 20 re f
+BT /F2 9.5 Tf 1 1 1 rg
+50 203 Td (T\323PICO 10 - CONSOLE VISUAL BASEADO EM \315CONES E TELA WHATSAPP WEB \(TEXTO & \301UDIO\)) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 181 Td (- Console Administrativo \(http://localhost:3090/\): Interface v2.0 com barra lateral de 6) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 169.5 Td (  \355cones \(Atendimento & Testes, R\351gua Vendas & Cobran\347a, Atendentes Humanos, N\372mero do) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 158 Td (  Agente, APIs & Supabase, KPIs & LGPD\).) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 144.5 Td (- Tela do Cliente Fiel ao WhatsApp Web \(http://localhost:3090/chat\): Layout de duas colunas) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 133 Td (  id\352ntico ao WhatsApp Web oficial, com bal\365es verdes \(#005c4b\) e escuros \(#202c33\), rabicho) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 121.5 Td (  triangular, hor\341rio e duplo check azul \(\).) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 108 Td (- Envio e Recebimento de \301udio \(Voz\): Grava\347\343o pelo microfone \(MediaRecorder\), transcri\347\343o) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 96.5 Td (  autom\341tica \(SpeechRecognition pt-BR + OpenAI Whisper-1\), bot\343o de simula\347\343o de \341udio em 1) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 85 Td (  clique e s\355ntese de voz nas respostas do agente \(Ouvir \301udio / Voz IA: ON\).) Tj ET
+BT /F1 8 Tf 0.45 0.50 0.58 rg 42 28 Td (P\341gina 3 de 4 - Blueprint T\351cnico Agente Comercial IA \(BGR Benef\355cios\)) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 4 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 1 0 R /F2 2 0 R /F3 3 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 4559 >>
+stream
+0.94 0.96 0.98 rg
+42 805.89 511.28 18 re f
+BT /F1 7.5 Tf 0.35 0.42 0.52 rg
+48 811.89 Td (BGR BENEF\315CIOS - ESPECIFICA\307\303O T\311CNICA & BLUEPRINT DE AGENTE IA DO SETOR) Tj ET
+0.14 0.39 0.92 rg
+42 769 511.28 20 re f
+BT /F2 9.5 Tf 1 1 1 rg
+50 775 Td (T\323PICO 11 - SU\315TE DE HOMOLOGA\307\303O AUTOMATIZADA \(39 TESTES / CEN\301RIOS T01-T32\)) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 753 Td (Valida\347\343o 100% automatizada via Node.js Test Runner distribu\355da em 7 su\355tes: 1\)) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 741 Td (fase1-contracts.test.ts; 2\) fase2-powercrm-adapter.test.ts; 3\)) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 729 Td (fase3-quotation-service.test.ts; 4\) fase4-proposal-lifecycle.test.ts; 5\)) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 717 Td (fase5-whatsapp-handoff.test.ts; 6\) fase6-campaign-followup.test.ts; 7\)) Tj ET
+BT /F1 8.8 Tf 0.15 0.20 0.28 rg
+42 705 Td (homologacao-32-cenarios.test.ts \(39 testes passando com zero falhas\).) Tj ET
+0.14 0.39 0.92 rg
+42 673 511.28 20 re f
+BT /F2 9.5 Tf 1 1 1 rg
+50 679 Td (T\323PICO 12 - GUIA E PROMPT MESTRE PARA GERAR UM NOVO AGENTE DO SETOR) Tj ET
+BT /F2 9.2 Tf 0.08 0.22 0.55 rg
+42 653 Td (12.1. Passo a Passo para Replicar em Nova Associa\347\343o ou Empresa do Setor) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 639 Td (- Passo 1 \(Identidade e Planos\): Altere company_id, nome da associa\347\343o e valores dos planos) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 627.5 Td (  em config/agent.config.json, prompts/system.md e PowerCrmAdapter.) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 614 Td (- Passo 2 \(N\372mero e Equipe Humana\): Configure o n\372mero oficial do WhatsApp na aba "N\372mero do) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 602.5 Td (  Agente" e cadastre os consultores nas 4 filas \(comercial, retencao, sinistros, ouvidoria\).) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 589 Td (- Passo 3 \(R\351gua e APIs\): Personalize os templates de Vendas \(D+1..D+15\) e Cobran\347a) Tj ET
+BT /F1 8.6 Tf 0.15 0.20 0.28 rg
+48 577.5 Td (  \(D-3..D+10\) e insira as chaves OpenAI, CRM e Supabase na aba "APIs & Supabase".) Tj ET
+BT /F2 9.2 Tf 0.08 0.22 0.55 rg
+42 560 Td (12.2. Prompt Mestre para Gera\347\343o Autom\341tica de um Novo Agente por IA) Tj ET
+0.95 0.96 0.98 rg
+46 372 503.28 184 re f
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 546 Td (PROMPT MESTRE: "Crie um Agente Comercial e de Atendimento IA completo em Node.js +) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 535 Td (TypeScript \(ESM\) para a empresa [NOME_DA_EMPRESA] do setor de Prote\347\343o Veicular,) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 524 Td (seguindo os 12 t\363picos do Blueprint BGR Benef\355cios: \(1\) 10 Contratos Can\364nicos em) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 513 Td (src/domain/contracts.ts; \(2\) Roteador NLU H\355brido em) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 502 Td (src/services/agent-router-service.ts com Slot-Filling progressivo \(name -> vehicle_model) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 491 Td (-> vehicle_year -> vehicle_usage -> city_uf -> completed\), cat\341logo de 160+ ve\355culos) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 480 Td (nacionais FIPE, guardrails anti-prompt-injection e integra\347\343o OpenAI \(gpt-4o-mini +) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 469 Td (whisper-1 + tts-1\); \(3\) PowerCrmAdapter resiliente + QuotationService com proibi\347\343o de) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 458 Td (pre\347o inventado e contorno de obje\347\365es; \(4\) ProposalLifecycleService bloqueando ativa\347\343o) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 447 Td (prematura sem os 4 webhooks oficiais \(proposal.signed, payment.confirmed,) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 436 Td (inspection.approved, member.activated\); \(5\) WhatsAppChannelService + HandoffService com) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 425 Td (janela 24h, opt-out PARAR, filas setoriais, cadastro de atendentes humanos e trava que) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 414 Td (silencia a IA quando humano_ativo; \(6\) CampaignFollowUpService com r\351guas edit\341veis de) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 403 Td (Vendas \(D+1..D+15\) e Cobran\347as \(D-3..D+10\) e n\372mero din\342mico do agente; \(7\) Console) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 392 Td (Visual em \315cones + Simulador WhatsApp Web com Texto e Voz + 39 testes automatizados) Tj ET
+BT /F3 7.8 Tf 0.08 0.12 0.20 rg
+52 381 Td (\(T01-T32\).") Tj ET
+BT /F1 8 Tf 0.45 0.50 0.58 rg 42 28 Td (P\341gina 4 de 4 - Blueprint T\351cnico Agente Comercial IA \(BGR Benef\355cios\)) Tj ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 4 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 1 0 R /F2 2 0 R /F3 3 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Type /Catalog /Pages 4 0 R >>
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000009 00000 n 
+0000000106 00000 n 
+0000000208 00000 n 
+0000000303 00000 n 
+0000000380 00000 n 
+0000006813 00000 n 
+0000006965 00000 n 
+0000014001 00000 n 
+0000014153 00000 n 
+0000021374 00000 n 
+0000021527 00000 n 
+0000026139 00000 n 
+0000026293 00000 n 
+trailer
+<< /Size 14 /Root 13 0 R >>
+startxref
+26343
+%%EOF
