@@ -18,6 +18,7 @@ import { QuotationService } from '../services/quotation-service.ts';
 import { ProposalLifecycleService } from '../services/proposal-lifecycle-service.ts';
 import { HandoffService } from '../services/handoff-service.ts';
 import { WhatsAppChannelService } from '../channels/whatsapp/channel-service.ts';
+import { MetaWhatsAppCloudClient } from '../channels/whatsapp/meta-cloud-client.ts';
 import {
   CampaignFollowUpService,
   type CadenceCategory,
@@ -88,6 +89,7 @@ let quotationService = new QuotationService(crmAdapter);
 let lifecycleService = new ProposalLifecycleService({ environment: 'teste' });
 let handoffService = new HandoffService({ environment: 'teste' });
 let whatsappService = new WhatsAppChannelService(handoffService, { environment: 'teste' });
+let metaCloudClient = new MetaWhatsAppCloudClient();
 let campaignService = new CampaignFollowUpService({
   environment: 'teste',
   startHourBrt: 0,
@@ -212,6 +214,9 @@ function getFullState(sessionId = DEFAULT_SESSION_ID) {
       supabase_key_masked: getMaskedSecret(supabaseRuntimeConfig.apiKey, 'Não configurada'),
       supabase_sync_status: supabasePersistence.getStatusSummary(),
       supabase_sql_schema: SUPABASE_SQL_SCHEMA,
+      whatsapp_meta_configured: metaCloudClient.isGraphApiConfigured(),
+      whatsapp_verify_token: metaCloudClient.getVerifyToken(),
+      whatsapp_access_token_masked: metaCloudClient.getMaskedAccessToken(),
     },
     conversation: conv,
     current_quote: currentQuote,
@@ -959,6 +964,38 @@ const HTML_PAGE = `<!DOCTYPE html>
               • <strong>Última Atualização:</strong> <span id="status-agent-updated">Agora</span>
             </div>
           </div>
+          <div class="section-label">🌐 Webhook Oficial Meta WhatsApp Cloud API (Prioridade 3)</div>
+          <div class="form-box" style="gap: 10px;">
+            <div style="font-size: 12px; color: var(--muted); line-height: 1.45;">
+              Endpoint oficial pronto para o painel <strong>Meta for Developers (WhatsApp → Configuration → Webhook)</strong>:
+            </div>
+            <div>
+              <label style="font-size: 11.5px; color: #93c5fd; font-weight: 600;">🔗 Callback URL (GET Challenge & POST Events)</label>
+              <input id="cfg-meta-webhook-url" type="text" value="http://localhost:3090/webhooks/whatsapp" readonly style="width: 100%; margin-top: 4px; font-family: Consolas, monospace; color: #6ee7b7;" />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div>
+                <label style="font-size: 11.5px; color: #93c5fd; font-weight: 600;">🛡️ Verify Token (Meta Hub)</label>
+                <input id="cfg-meta-verify-token" type="text" value="bgr_meta_verify_token_2026" style="width: 100%; margin-top: 4px;" />
+              </div>
+              <div>
+                <label style="font-size: 11.5px; color: #93c5fd; font-weight: 600;">🔑 Meta Graph Access Token</label>
+                <input id="cfg-meta-access-token" type="password" placeholder="EAAGm0PX4ZCps..." style="width: 100%; margin-top: 4px;" />
+              </div>
+            </div>
+            <div style="font-size: 11px; color: var(--muted);">
+              Graph API Token: <strong id="status-meta-token-masked" style="color: #6ee7b7;">Não configurado (Modo Simulador Local)</strong>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn sm primary" onclick="saveFullAgentConfig()" style="flex: 1; justify-content: center;">
+                💾 Salvar Credenciais Meta
+              </button>
+              <button type="button" class="btn sm success" onclick="simulateMetaOfficialWebhook()" style="flex: 1; justify-content: center;">
+                🧪 Simular Webhook Meta (POST)
+              </button>
+            </div>
+            <div id="diag-meta-webhook-box" class="log-item" style="display: none; font-size: 11.5px;"></div>
+          </div>
           <div class="section-label">🛡️ Governança Aplicada ao Número do Agente</div>
           <div class="log-item">
             <strong>🔄 Troca Dinâmica Instantânea</strong><br/>
@@ -1454,6 +1491,14 @@ const HTML_PAGE = `<!DOCTYPE html>
             ? 'Nuvem Supabase Ativa (' + st.total_cloud_syncs + ' syncs) + Snapshot Local'
             : 'Snapshot Local Durável Ativo (data/bgr-persistence-snapshot.json)';
         }
+        const metaVerifyEl = document.getElementById('cfg-meta-verify-token');
+        if (metaVerifyEl && ig.whatsapp_verify_token) {
+          metaVerifyEl.value = ig.whatsapp_verify_token;
+        }
+        const metaMaskedEl = document.getElementById('status-meta-token-masked');
+        if (metaMaskedEl && ig.whatsapp_access_token_masked) {
+          metaMaskedEl.textContent = ig.whatsapp_access_token_masked;
+        }
       }
 
       const modeEl = document.getElementById('mode-badge');
@@ -1549,15 +1594,86 @@ const HTML_PAGE = `<!DOCTYPE html>
       const phone = document.getElementById('cfg-agent-phone').value.trim();
       const name = document.getElementById('cfg-agent-name').value.trim();
       const waba = document.getElementById('cfg-agent-waba').value.trim();
+      const verifyEl = document.getElementById('cfg-meta-verify-token');
+      const accessEl = document.getElementById('cfg-meta-access-token');
+      const whatsapp_verify_token = verifyEl ? verifyEl.value.trim() : undefined;
+      const whatsapp_access_token = accessEl && accessEl.value.trim() ? accessEl.value.trim() : undefined;
       const res = await fetch('/api/agent-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent_phone: phone, agent_display_name: name, whatsapp_phone_number_id: waba })
+        body: JSON.stringify({
+          agent_phone: phone,
+          agent_display_name: name,
+          whatsapp_phone_number_id: waba,
+          whatsapp_verify_token,
+          whatsapp_access_token
+        })
       });
       const data = await res.json();
-      appendMessage('system', '📱 Configuração do Agente atualizada: ' + data.state.agent_config.agent_display_name + ' (' + data.state.agent_config.agent_phone + ')');
+      if (accessEl) accessEl.value = '';
+      appendMessage('system', '📱 Configuração do Agente e Webhook Meta atualizada: ' + data.state.agent_config.agent_display_name + ' (' + data.state.agent_config.agent_phone + ')');
       updateDashboard(data.state);
-      showToast('Número do Agente salvo: ' + data.state.agent_config.agent_phone);
+      showToast('Número do Agente e Webhook Meta salvos!');
+    }
+
+    async function simulateMetaOfficialWebhook() {
+      const box = document.getElementById('diag-meta-webhook-box');
+      if (box) {
+        box.style.display = 'block';
+        box.className = 'log-item';
+        box.innerHTML = '⏳ Enviando payload oficial whatsapp_business_account para POST /webhooks/whatsapp...';
+      }
+      const sampleMetaPayload = {
+        object: 'whatsapp_business_account',
+        entry: [
+          {
+            id: 'WABA_BGR_2026',
+            changes: [
+              {
+                field: 'messages',
+                value: {
+                  messaging_product: 'whatsapp',
+                  metadata: {
+                    display_phone_number: latestState?.agent_config?.agent_phone || '+55 31 99888-7766',
+                    phone_number_id: latestState?.agent_config?.whatsapp_phone_number_id || 'waba_bgr_31998887766'
+                  },
+                  contacts: [
+                    {
+                      profile: { name: 'Mariana Costa (WhatsApp Real)' },
+                      wa_id: '5531991234567'
+                    }
+                  ],
+                  messages: [
+                    {
+                      from: '5531991234567',
+                      id: 'wamid.HBgNNTUzMTk5MTIzNDU2NxUCABIYFDNB_' + Date.now(),
+                      timestamp: String(Math.floor(Date.now() / 1000)),
+                      type: 'text',
+                      text: {
+                        body: 'Olá! Meu nome é Mariana, quero cotar um Jeep Compass 2023 uso particular em Belo Horizonte - MG'
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      };
+      const res = await fetch('/webhooks/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sampleMetaPayload)
+      });
+      const data = await res.json();
+      if (box) {
+        box.className = 'log-item ' + (data.ok ? '' : 'HIGH');
+        box.innerHTML = (data.ok ? '✅ ' : '❌ ') + '<strong>Webhook Oficial Meta Processado (HTTP ' + res.status + ')</strong><br/>' + (data.summary || '') + (data.outbound_preview ? '<br/><br/>📤 <em>Resposta enviada:</em> ' + data.outbound_preview : '');
+      }
+      if (data.inbound_text) appendMessage('user', '[Meta Webhook] ' + data.inbound_text);
+      if (data.outbound_preview) appendMessage('agent', data.outbound_preview, 'Meta Cloud API Webhook • wamid=' + (data.outbound_wamid || 'sim'));
+      if (data.state) updateDashboard(data.state);
+      showToast('Webhook Oficial Meta processado com sucesso!');
     }
 
     async function applyAgentPreset(phone, name, waba) {
@@ -2522,6 +2638,21 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // Prioridade 3: Desafio de Verificação GET do Webhook Oficial Meta WhatsApp Cloud API
+    if (req.method === 'GET' && req.url?.startsWith('/webhooks/whatsapp')) {
+      const parsedUrl = new URL(req.url, `http://localhost:${PORT}`);
+      const challengeRes = metaCloudClient.verifyWebhookChallenge(parsedUrl.searchParams);
+      const auditEv = buildCustomAuditEvent(
+        'whatsapp_meta_webhook_challenge',
+        `Desafio GET Webhook Meta recebido: ok=${challengeRes.ok} status=${challengeRes.status_code}`,
+        challengeRes.ok ? 'LOW' : 'MEDIUM'
+      );
+      dashboardService.recordEvent({ auditEvent: auditEv });
+      res.writeHead(challengeRes.status_code, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end(challengeRes.challenge_response);
+      return;
+    }
+
     if (req.method === 'POST' && req.url === '/api/reset') {
       router = new AgentRouterService({ environment: 'teste' });
       crmAdapter = new PowerCrmAdapter({
@@ -2780,26 +2911,191 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // Endpoint 1: Troca livre do Número do Agente Comercial
+    // Endpoint 1: Troca livre do Número do Agente Comercial & Credenciais Meta Cloud API
     if (req.method === 'POST' && req.url === '/api/agent-config') {
       const newPhone = String(payload.agent_phone ?? '').trim();
       const newName = String(payload.agent_display_name ?? '').trim();
       const newWaba = String(payload.whatsapp_phone_number_id ?? '').trim();
+      const verifyTok = typeof payload.whatsapp_verify_token === 'string' ? payload.whatsapp_verify_token.trim() : '';
+      const accessTok = typeof payload.whatsapp_access_token === 'string' ? payload.whatsapp_access_token.trim() : '';
 
       if (newPhone) agentConfig.agent_phone = newPhone;
       if (newName) agentConfig.agent_display_name = newName;
       if (newWaba) agentConfig.whatsapp_phone_number_id = newWaba;
       agentConfig.updated_at = new Date().toISOString();
 
+      metaCloudClient.configure({
+        phoneNumberId: agentConfig.whatsapp_phone_number_id,
+        verifyToken: verifyTok || undefined,
+        accessToken: accessTok || undefined,
+      });
+
+      saveLocalEnvFile({
+        WHATSAPP_PHONE_NUMBER_ID: agentConfig.whatsapp_phone_number_id,
+        WHATSAPP_VERIFY_TOKEN: verifyTok || undefined,
+        WHATSAPP_ACCESS_TOKEN: accessTok || undefined,
+      });
+
       const auditEv = buildCustomAuditEvent(
         'agent_phone_updated',
-        `Numero do Agente alterado para ${agentConfig.agent_phone} (${agentConfig.agent_display_name})`,
+        `Numero do Agente alterado para ${agentConfig.agent_phone} (${agentConfig.agent_display_name}) | Meta Graph=${metaCloudClient.isGraphApiConfigured()}`,
         'LOW'
       );
       dashboardService.recordEvent({ auditEvent: auditEv });
 
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ ok: true, state: getFullState() }));
+      return;
+    }
+
+    // Prioridade 3: Recebimento de Eventos POST do Webhook Oficial Meta WhatsApp Business Cloud API
+    if (req.method === 'POST' && req.url?.startsWith('/webhooks/whatsapp')) {
+      const sigHeader = req.headers['x-hub-signature-256'];
+      const sigOk = metaCloudClient.verifyWebhookSignature(
+        bodyText,
+        typeof sigHeader === 'string' ? sigHeader : undefined
+      );
+      if (!sigOk) {
+        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ ok: false, error: 'Assinatura X-Hub-Signature-256 invalida' }));
+        return;
+      }
+
+      const inboundList = metaCloudClient.parseInboundMetaPayload(payload);
+      if (inboundList.length === 0) {
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            ok: true,
+            summary: 'Evento de status/recibo da Meta recebido (sem mensagem de texto/áudio).',
+            state: getFullState(),
+          })
+        );
+        return;
+      }
+
+      let lastInboundText = '';
+      let lastOutboundPreview = '';
+      let lastOutboundWamid = '';
+
+      for (const item of inboundList) {
+        let effectiveText = item.text_body;
+        if (item.message_type === 'audio' && item.audio_media_id) {
+          const media = await metaCloudClient.downloadMediaAsBase64(item.audio_media_id);
+          if (media && openAiAssistant.isConfigured()) {
+            const transcribed = await openAiAssistant.transcribeAudioBase64(media.base64, media.mimeType);
+            if (transcribed) effectiveText = transcribed;
+          }
+          if (!effectiveText) {
+            effectiveText = 'Olá, gostaria de fazer uma cotação para meu veículo';
+          }
+        }
+
+        lastInboundText = effectiveText;
+
+        const inboundDecision = whatsappService.processInboundWebhook({
+          message_id: item.message_id,
+          from_phone: item.from_phone,
+          profile_name: item.profile_name,
+          text_body: effectiveText,
+          received_at_iso: item.timestamp_iso,
+        });
+        dashboardService.recordEvent({ auditEvent: inboundDecision.audit_event });
+
+        if (inboundDecision.duplicate_ignored) {
+          continue;
+        }
+
+        if (inboundDecision.opt_out_processed) {
+          if (!optOutPhonesList.includes(item.from_phone)) {
+            optOutPhonesList.push(item.from_phone);
+          }
+          campaignService.registerOptOutSuppression(item.from_phone);
+          if (inboundDecision.immediate_reply_text) {
+            lastOutboundPreview = inboundDecision.immediate_reply_text;
+            const outDec = whatsappService.prepareOutboundMessage({
+              session_id: inboundDecision.session_id,
+              to_phone: item.from_phone,
+              message_type: 'text',
+              text_body: lastOutboundPreview,
+            });
+            if (outDec.allowed && outDec.meta_api_payload) {
+              const sent = await metaCloudClient.sendOutboundMessage(outDec.meta_api_payload);
+              lastOutboundWamid = sent.wamid;
+            }
+          }
+          continue;
+        }
+
+        if (!inboundDecision.allow_ai_agent) {
+          lastOutboundPreview = inboundDecision.immediate_reply_text || '';
+          continue;
+        }
+
+        // Roteia pelo motor canônico (AgentRouterService + QuotationService + OpenAI)
+        const rtOut = router.routeMessage({
+          message: effectiveText,
+          channelId: 'whatsapp_oficial',
+          sessionId: DEFAULT_SESSION_ID,
+        });
+        dashboardService.recordEvent({
+          auditEvent: rtOut.audit_event,
+          isFirstMessageInSession: rtOut.memory_snapshot.history_count === 1,
+        });
+
+        let replyText = rtOut.response;
+        const mem = rtOut.memory_snapshot;
+        if (
+          rtOut.next_action === 'consultar_crm' &&
+          mem.lead.name &&
+          mem.lead.city_uf &&
+          mem.vehicle.brand &&
+          mem.vehicle.model &&
+          mem.vehicle.year &&
+          mem.vehicle.usage
+        ) {
+          const qOut = await quotationService.qualifyAndQuote({
+            sessionId: DEFAULT_SESSION_ID,
+            lead: { name: mem.lead.name, city_uf: mem.lead.city_uf, phone: item.from_phone },
+            vehicle: {
+              brand: mem.vehicle.brand,
+              model: mem.vehicle.model,
+              year: mem.vehicle.year,
+              usage: mem.vehicle.usage,
+            },
+            existingQuotationCode: 'COT-10001',
+          });
+          if (qOut.quote_result) {
+            currentQuote = qOut.quote_result;
+            replyText = qOut.customer_message;
+          }
+        }
+
+        lastOutboundPreview = replyText;
+        const outDec = whatsappService.prepareOutboundMessage({
+          session_id: inboundDecision.session_id,
+          to_phone: item.from_phone,
+          message_type: 'text',
+          text_body: replyText,
+        });
+        dashboardService.recordEvent({ auditEvent: outDec.audit_event });
+        if (outDec.allowed && outDec.meta_api_payload) {
+          const sent = await metaCloudClient.sendOutboundMessage(outDec.meta_api_payload);
+          lastOutboundWamid = sent.wamid;
+        }
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          ok: true,
+          summary: `${inboundList.length} mensagem(ns) oficial(is) da Meta processada(s) e respondida(s) dentro da janela de 24h.`,
+          inbound_text: lastInboundText,
+          outbound_preview: lastOutboundPreview,
+          outbound_wamid: lastOutboundWamid,
+          state: getFullState(),
+        })
+      );
       return;
     }
 
