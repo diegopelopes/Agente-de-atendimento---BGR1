@@ -256,6 +256,7 @@ Responda EXCLUSIVAMENTE com um objeto JSON válido (sem markdown em volta) no fo
   "extracted_model": "Modelo do veículo (ex: Onix, Civic, T-Cross, CG 160, Palio) ou null",
   "extracted_year": 2022,
   "extracted_usage": "particular" | "aplicativo" | null,
+  "extracted_plate": "Placa do veículo se informada (ex: OMA1020, RFD2A22) ou null",
   "extracted_city_uf": "Cidade/UF informada pelo cliente ou null",
   "vehicle_cleared_or_undecided": false,
   "wants_human_handoff": false,
@@ -265,13 +266,13 @@ Responda EXCLUSIVAMENTE com um objeto JSON válido (sem markdown em volta) no fo
 REGRAS OBRIGATÓRIAS:
 1. Memória atual da sessão:
    - Nome atual: ${input.sessionMemory.lead.name ?? 'não informado'}
-   - Veículo atual: ${input.sessionMemory.vehicle.brand ?? ''} ${input.sessionMemory.vehicle.model ?? 'não informado'} (Ano: ${input.sessionMemory.vehicle.year ?? 'não informado'}, Uso: ${input.sessionMemory.vehicle.usage ?? 'não informado'})
+   - Veículo atual: ${input.sessionMemory.vehicle.brand ?? ''} ${input.sessionMemory.vehicle.model ?? 'não informado'} (Ano: ${input.sessionMemory.vehicle.year ?? 'não informado'}, Uso: ${input.sessionMemory.vehicle.usage ?? 'não informado'}, Placa: ${input.sessionMemory.vehicle.plate_masked ?? 'não informada'})
    - Cidade/UF atual: ${input.sessionMemory.lead.city_uf ?? 'não informada'}
    - Etapa atual: ${input.sessionMemory.currentStage}
    - Já possui cotação oficial do CRM: ${input.sessionMemory.hasOfficialQuote ? 'SIM' : 'NÃO'}
    ${input.sessionMemory.officialQuoteSummary ? `- Resumo da Cotação Oficial: ${input.sessionMemory.officialQuoteSummary}` : ''}
 2. NUNCA repita perguntas cujos dados já estão preenchidos na memória atual.
-3. Para gerar a cotação oficial, precisamos de: (a) Nome, (b) Modelo do veículo, (c) Ano do veículo, (d) Uso (particular ou aplicativo), (e) Cidade onde circula. Peça apenas 1 dado faltante por vez de forma natural!
+3. Para gerar a cotação oficial, precisamos de: (a) Nome, (b) Modelo e Ano do veículo (OU a *placa do veículo* para consulta exata na Tabela FIPE do Power CRM), (c) Uso (particular ou aplicativo), (d) Cidade onde circula. Ao perguntar o veículo, avise que o cliente pode informar o modelo e ano ou a *placa do veículo* para um resultado ainda mais específico da Tabela FIPE! Peça apenas 1 etapa faltante por vez de forma natural!
 4. Se o cliente disser que ainda não escolheu o veículo ou está só pesquisando, defina "vehicle_cleared_or_undecided": true e convide-o a simular qualquer modelo que ele tenha em mente (ex: Onix 2022, HB20 2021, Corolla 2023).
 5. NUNCA invente valores em reais (R$) por conta própria se "Já possui cotação oficial do CRM" for NÃO. Quando todos os 5 dados estiverem preenchidos, o sistema anexará automaticamente os valores oficiais do Power CRM!
 6. NUNCA confunda o verbo "fazer" (ex: "quero fazer uma cotação") com a moto "Yamaha Fazer".`;
@@ -311,6 +312,7 @@ REGRAS OBRIGATÓRIAS:
       extracted_model?: string | null;
       extracted_year?: number | null;
       extracted_usage?: 'particular' | 'aplicativo' | null;
+      extracted_plate?: string | null;
       extracted_city_uf?: string | null;
       vehicle_cleared_or_undecided?: boolean;
       wants_human_handoff?: boolean;
@@ -329,6 +331,12 @@ REGRAS OBRIGATÓRIAS:
     if (parsed.vehicle_cleared_or_undecided) {
       mergedVehicle = {};
     } else {
+      if (parsed.extracted_plate && parsed.extracted_plate.trim()) {
+        const cleanPlate = parsed.extracted_plate.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        if (cleanPlate.length === 7) {
+          mergedVehicle.plate_masked = cleanPlate;
+        }
+      }
       if (parsed.extracted_brand && parsed.extracted_brand.trim()) {
         mergedVehicle.brand = parsed.extracted_brand.trim();
       }
@@ -338,6 +346,11 @@ REGRAS OBRIGATÓRIAS:
       }
       if (typeof parsed.extracted_year === 'number' && parsed.extracted_year >= 1970 && parsed.extracted_year <= 2027) {
         mergedVehicle.year = parsed.extracted_year;
+      }
+      if (mergedVehicle.plate_masked && !mergedVehicle.model) {
+        mergedVehicle.brand = mergedVehicle.brand ?? 'Consulta Placa';
+        mergedVehicle.model = `Placa ${mergedVehicle.plate_masked}`;
+        mergedVehicle.year = mergedVehicle.year ?? 2022;
       }
       if (parsed.extracted_usage === 'particular' || parsed.extracted_usage === 'aplicativo') {
         mergedVehicle.usage = parsed.extracted_usage;

@@ -120,8 +120,15 @@ export function formatOfficialQuotationPresentation(
   const formatBrl = (val: number) =>
     val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  const plateLine = fipeData?.plate_info
+    ? `• Placa Consultada (Base Oficial): *${fipeData.plate_info.plate}* — ${fipeData.plate_info.detran_brand_model} (${fipeData.plate_info.year_label}${fipeData.plate_info.color ? ` • Cor: ${fipeData.plate_info.color}` : ''})\n`
+    : vehicle.plate_masked
+      ? `• Placa Informada: *${vehicle.plate_masked}*\n`
+      : '';
+
   const fipeSection = fipeData
     ? `📊 *Ficha Técnica Tabela FIPE (Power CRM)*\n` +
+      `${plateLine}` +
       `• Versão FIPE Homologada: *${fipeData.model_full_name}* (${fipeData.year_label})\n` +
       `• Código FIPE Oficial: *${fipeData.fipe_code}*\n` +
       `• Valor 100% Tabela FIPE Protegido: *${fipeData.fipe_value_formatted}*\n\n`
@@ -239,8 +246,19 @@ export class QuotationService {
       year: validatedVehicle.year,
       usage: validatedVehicle.usage,
       cityUf: validatedLead.city_uf ?? 'Belo Horizonte/MG',
+      plate: validatedVehicle.plate_masked,
       allowLiveHttp: this.crmAdapter.isHttpMode(),
     });
+
+    if (fipeData.plate_info) {
+      if (/^(consulta\s+placa|ve[ií]culo)$/i.test(validatedVehicle.brand)) {
+        validatedVehicle.brand = fipeData.brand_name;
+      }
+      if (/^placa\s+/i.test(validatedVehicle.model)) {
+        validatedVehicle.model = fipeData.plate_info.detran_model;
+        validatedVehicle.year = fipeData.plate_info.model_year;
+      }
+    }
 
     if (!validatedVehicle.fipe_code) {
       validatedVehicle.fipe_code = fipeData.fipe_code;

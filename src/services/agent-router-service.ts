@@ -620,24 +620,34 @@ export class AgentRouterService {
     if (!session.vehicle.model) {
       return {
         expectedSlot: 'vehicle_model',
-        questionText: 'Qual é o modelo e o ano do veículo que você gostaria de proteger (ex.: Onix 2022, Corolla 2021, Palio 2018)?',
-        questionLower: 'qual é o modelo e o ano do seu veículo (ex.: Onix 2022, HB20 2021, Civic 2022)?',
+        questionText:
+          'Qual é o modelo e o ano do veículo que você gostaria de proteger (ex.: Onix 2022, Golf 2018, Corolla 2021) — ou, se preferir uma cotação ainda mais específica na Tabela FIPE, pode informar a *placa do veículo* (ex.: OMA-1020, RFD2A22)?',
+        questionLower:
+          'qual é o modelo e o ano do seu veículo (ex.: Onix 2022, Golf 2018, Civic 2022) — ou, se preferir uma busca ainda mais específica na Tabela FIPE, pode informar a *placa do veículo*?',
       };
     }
     if (!session.vehicle.year) {
       const carLabel = `${session.vehicle.brand ? `${session.vehicle.brand} ` : ''}${session.vehicle.model}`;
       return {
         expectedSlot: 'vehicle_year',
-        questionText: `Qual é o ano do seu ${carLabel} (ex.: 2020, 2022)?`,
-        questionLower: `qual é o ano do seu ${carLabel} (ex.: 2020, 2022)?`,
+        questionText: `Qual é o ano do seu ${carLabel} (ex.: 2020, 2022)? Se preferir, também pode informar a *placa* para buscarmos a versão exata na FIPE.`,
+        questionLower: `qual é o ano do seu ${carLabel} (ex.: 2020, 2022)? Se preferir, também pode informar a *placa* para buscarmos a versão exata na FIPE.`,
       };
     }
     if (!session.vehicle.usage) {
-      const carLabel = `${session.vehicle.brand ? `${session.vehicle.brand} ` : ''}${session.vehicle.model} ${session.vehicle.year}`;
+      const isPlateOnly = /^placa\s+/i.test(session.vehicle.model);
+      const carLabel = isPlateOnly
+        ? `veículo de *${session.vehicle.model}*`
+        : `${session.vehicle.brand ? `${session.vehicle.brand} ` : ''}${session.vehicle.model} ${session.vehicle.year}`;
+      const plateNote = isPlateOnly
+        ? ''
+        : session.vehicle.plate_masked
+          ? ` (Placa *${session.vehicle.plate_masked}* identificada)`
+          : ' (se quiser, também pode informar a *placa* junto para cravar a versão exata na FIPE)';
       return {
         expectedSlot: 'vehicle_usage',
-        questionText: `O seu ${carLabel} é utilizado para uso particular/passeio ou para aplicativo/comercial?`,
-        questionLower: `o seu ${carLabel} é para uso particular (passeio/dia a dia) ou você utiliza para aplicativo/comercial?`,
+        questionText: `O seu ${carLabel}${plateNote} é utilizado para uso particular/passeio ou para aplicativo/comercial?`,
+        questionLower: `o seu ${carLabel}${plateNote} é para uso particular (passeio/dia a dia) ou você utiliza para aplicativo/comercial?`,
       };
     }
     if (!session.lead.city_uf) {
@@ -659,8 +669,11 @@ export class AgentRouterService {
     nextSlot: ExpectedQualificationSlot
   ): string {
     const firstName = session.lead.name ? session.lead.name.split(' ')[0] : '';
+    const isPlateOnly = Boolean(session.vehicle.model && /^placa\s+/i.test(session.vehicle.model));
     const carLabel = session.vehicle.model
-      ? `${session.vehicle.brand ? `${session.vehicle.brand} ` : ''}${session.vehicle.model}${session.vehicle.year ? ` ${session.vehicle.year}` : ''}`
+      ? isPlateOnly
+        ? `veículo de *${session.vehicle.model}*`
+        : `${session.vehicle.brand ? `${session.vehicle.brand} ` : ''}${session.vehicle.model}${session.vehicle.year ? ` ${session.vehicle.year}` : ''}`
       : '';
 
     if (nextSlot === 'vehicle_model' && firstName) {
@@ -733,6 +746,13 @@ export class AgentRouterService {
     const cleanText = text.trim();
     if (!cleanText) return;
 
+    // 0. Extração de Placa do Veículo (Padrão Antigo ABC-1234 ou Mercosul ABC1D23)
+    const plateMatch = cleanText.match(/\b([A-Za-z]{3})[-\s]?([0-9][A-Za-z0-9][0-9]{2})\b/);
+    if (plateMatch) {
+      const normalizedPlate = `${plateMatch[1].toUpperCase()}${plateMatch[2].toUpperCase()}`;
+      session.vehicle.plate_masked = normalizedPlate;
+    }
+
     // 1. Extração de Veículo (Catálogo Nacional FIPE + Marcas Explícitas + Slot Contextual)
     // Só busca no catálogo na 1ª mensagem ou na pergunta de nome se o usuário falar explicitamente de veículo/marca/ano
     const hasExplicitVehicleCue =
@@ -753,7 +773,7 @@ export class AgentRouterService {
       if (brandModelMatch) {
         const rawBrand = brandModelMatch[1];
         const rawModel = brandModelMatch[2]
-          .replace(/\b(19\d{2}|20\d{2}|particular|aplicativo|uber|ano|uso|em|de|do|da)\b.*$/i, '')
+          .replace(/\b(19\d{2}|20\d{2}|particular|aplicativo|uber|ano|uso|em|de|do|da|placa)\b.*$/i, '')
           .trim();
         if (rawModel && rawModel.length >= 2) {
           session.vehicle.brand = this.normalizeBrandName(rawBrand);
@@ -762,6 +782,7 @@ export class AgentRouterService {
       } else if (
         session.expected_slot === 'vehicle_model' &&
         !session.vehicle.model &&
+        !plateMatch &&
         !/^(ol[aá]|oi|bom\s+dia|boa\s+tarde|boa\s+noite|qual|quanto|como|onde|por\s+que|quero\s+falar)/i.test(cleanText)
       ) {
         // Fallback contextual: quando o agente acabou de perguntar "Qual é o modelo e o ano do seu veículo?",
@@ -769,7 +790,7 @@ export class AgentRouterService {
         const strippedForModel = cleanText
           .replace(/(?:tenho\s+um|tenho\s+uma|meu\s+carro\s+[eé]\s+um|meu\s+ve[ií]culo\s+[eé]\s+um|[eé]\s+um|[eé]\s+uma)\s+/i, '')
           .replace(/\b(19\d{2}|20\d{2}|\d{2}\/\d{2})\b/g, '')
-          .replace(/\b(ano|modelo|particular|aplicativo|passeio|uber)\b/gi, '')
+          .replace(/\b(ano|modelo|particular|aplicativo|passeio|uber|placa)\b/gi, '')
           .replace(/[,.!?]/g, '')
           .trim();
 
@@ -778,6 +799,14 @@ export class AgentRouterService {
           session.vehicle.model = this.capitalizeWords(strippedForModel);
         }
       }
+    }
+
+    // Se o cliente informou apenas a placa do veículo (ex.: "minha placa é OMA-1020" ou "RFD2A22") sem digitar modelo/ano,
+    // preenche identificadores provisórios que serão resolvidos automaticamente pela API de Placa + FIPE do Power CRM
+    if (session.vehicle.plate_masked && !session.vehicle.model) {
+      session.vehicle.brand = session.vehicle.brand ?? 'Consulta Placa';
+      session.vehicle.model = `Placa ${session.vehicle.plate_masked}`;
+      session.vehicle.year = session.vehicle.year ?? 2022;
     }
 
     // 2. Extração de Ano do Veículo (4 dígitos 1970..2027, formato 2021/2022 ou 2 dígitos quando aguardando ano)

@@ -3933,8 +3933,16 @@ const server = http.createServer(async (req, res) => {
             model: finalVehicle.model ?? 'Civic',
             year: finalVehicle.year ?? 2022,
             usage: finalVehicle.usage ?? 'particular',
+            plate_masked: finalVehicle.plate_masked ?? null,
           },
         });
+        if (qOut.fipe_data?.plate_info) {
+          finalVehicle.brand = qOut.fipe_data.brand_name;
+          finalVehicle.model = qOut.fipe_data.plate_info.detran_model;
+          finalVehicle.year = qOut.fipe_data.plate_info.model_year;
+          finalVehicle.fipe_code = qOut.fipe_data.fipe_code;
+          router.syncSessionMemory(DEFAULT_SESSION_ID, 'chat_teste', finalLead, finalVehicle);
+        }
         currentQuote = qOut.quote_result;
         conv.current_stage = qOut.stage;
         chatHistoryLog.push({ role: 'assistant', content: qOut.customer_message });

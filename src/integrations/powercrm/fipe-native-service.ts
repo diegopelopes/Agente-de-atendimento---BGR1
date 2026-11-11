@@ -19,6 +19,23 @@
 
 import type { QuotePlanOption } from '../../domain/contracts.ts';
 
+export interface PowerCrmPlateDetails {
+  plate: string;
+  detran_brand_model: string;
+  detran_model: string;
+  brand_id: number;
+  fab_year: number;
+  model_year: number;
+  year_label: string;
+  cod_fipe: string | null;
+  color: string | null;
+  fuel: string | null;
+  chassi_masked: string | null;
+  city: string | null;
+  uf: string | null;
+  vehicle_type: string | null;
+}
+
 export interface PowerCrmFipeVehicleData {
   source: 'powercrm_fipe_live' | 'powercrm_fipe_fallback';
   vehicle_type_id: 1 | 2 | 3; // 1 = Carro/Utilitário, 2 = Moto, 3 = Caminhão
@@ -35,6 +52,7 @@ export interface PowerCrmFipeVehicleData {
   city_name: string;
   state_uf: string;
   work_vehicle: boolean;
+  plate_info?: PowerCrmPlateDetails | null;
   calculated_plans: QuotePlanOption[];
 }
 
@@ -269,7 +287,7 @@ export class PowerCrmNativeFipeService {
 
   /**
    * Executa o fluxo completo na API FIPE Nativa do Power CRM:
-   * Marca (cb) -> Modelo e Valor FIPE no Ano (cmby + cm) -> Ano/Combustível (cmy) -> Cidade/UF (stt/ct) -> Planos Reais (POST /api/plans/)
+   * Placa Opcional (/quotation/plates/{plate}) -> Marca (cb) -> Modelo e Valor FIPE no Ano (cmby + cm) -> Ano/Combustível (cmy) -> Cidade/UF (stt/ct) -> Planos Reais (POST /api/plans/)
    */
   async lookupFipeAndPlans(params: {
     brand: string;
@@ -277,6 +295,7 @@ export class PowerCrmNativeFipeService {
     year: number;
     usage: 'particular' | 'aplicativo' | 'comercial' | 'frota';
     cityUf: string;
+    plate?: string | null;
     allowLiveHttp?: boolean;
   }): Promise<PowerCrmFipeVehicleData> {
     const vehicleTypeId: 1 | 2 | 3 = MOTORCYCLE_MODELS_REGEX.test(params.model) ? 2 : 1;
@@ -291,6 +310,7 @@ export class PowerCrmNativeFipeService {
           year: params.year,
           workVehicle,
           cityUf: params.cityUf,
+          plate: params.plate,
         });
         if (liveResult) {
           return liveResult;
@@ -308,6 +328,87 @@ export class PowerCrmNativeFipeService {
       workVehicle,
       cityUf: params.cityUf,
     });
+  }
+
+  /**
+   * Consulta a rota oficial de Placa do Power CRM: GET /api/quotation/plates/{plate}
+   * Retorna os dados reais da base nacional (Marca/Modelo DETRAN, brandId Power CRM, codFipe, Ano Fab/Mod, Cor, Combustível).
+   */
+  async lookupPlateInPowerCrm(
+    plateRaw: string,
+    headers?: Record<string, string>
+  ): Promise<PowerCrmPlateDetails | null> {
+    const cleanPlate = plateRaw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (cleanPlate.length !== 7) return null;
+
+    try {
+      const reqHeaders = headers ?? this.getHeaders();
+      const res = await fetch(`${this.baseUrl}/quotation/plates/${cleanPlate}`, { headers: reqHeaders });
+      if (!res.ok) return null;
+
+      const data = (await res.json()) as {
+        mensagem?: string;
+        city?: string | null;
+        uf?: string | null;
+        chassi?: string | null;
+        brand?: string | null;
+        brandId?: number | null;
+        year?: string | null;
+        fuel?: string | null;
+        color?: string | null;
+        vehicleType?: string | null;
+        codFipe?: string | null;
+        error?: unknown;
+      };
+
+      if (data.error || !data.brand || !data.brandId) {
+        return null;
+      }
+
+      // Remove repetição comum do DETRAN (ex: "VW/SAVEIRO 1.6 CE CROSS VW SAVEIRO 1.6 CE CROSS")
+      const rawBrand = data.brand.trim();
+      const afterSlash = rawBrand.includes('/') ? rawBrand.split('/').slice(1).join('/').trim() : rawBrand;
+      const words = afterSlash.split(/\s+/);
+      let detranModel = afterSlash;
+      // Se a string tiver a segunda metade repetida (ex: "HR-V EX CVT HONDA HR-V EX CVT"), corta antes da marca repetida
+      const brandPrefix = rawBrand.split('/')[0]?.trim().toUpperCase();
+      if (brandPrefix && words.length >= 4) {
+        const repeatIdx = words.findIndex((w, idx) => idx >= 1 && w.toUpperCase() === brandPrefix);
+        if (repeatIdx > 0) {
+          detranModel = words.slice(0, repeatIdx).join(' ');
+        }
+      }
+
+      const yearParts = String(data.year || '2022/2022')
+        .split('/')
+        .map((p) => Number.parseInt(p.trim(), 10))
+        .filter((n) => Number.isFinite(n) && n >= 1970 && n <= 2030);
+      const fabYear = yearParts[0] || 2022;
+      const modelYear = yearParts[1] || fabYear;
+
+      const chassiMasked = data.chassi
+        ? `${data.chassi.slice(0, 4)}*********${data.chassi.slice(-4)}`
+        : null;
+
+      return {
+        plate: cleanPlate,
+        detran_brand_model: `${brandPrefix}/${detranModel}`,
+        detran_model: detranModel,
+        brand_id: Number(data.brandId),
+        fab_year: fabYear,
+        model_year: modelYear,
+        year_label: `${fabYear}/${modelYear}`,
+        cod_fipe: data.codFipe || null,
+        color: data.color || null,
+        fuel: data.fuel || null,
+        chassi_masked: chassiMasked,
+        city: data.city || null,
+        uf: data.uf || null,
+        vehicle_type: data.vehicleType || null,
+      };
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -447,37 +548,96 @@ export class PowerCrmNativeFipeService {
     year: number;
     workVehicle: boolean;
     cityUf: string;
+    plate?: string | null;
   }): Promise<PowerCrmFipeVehicleData | null> {
     const headers = this.getHeaders();
-    const candidateBrands = await this.resolveCandidateBrands(params.vehicleTypeId, params.brand, headers);
-    if (candidateBrands.length === 0) return null;
 
     let matchedBrand: CrmItemIdString | undefined;
     let matchedModel: CrmItemIdString | undefined;
     let effectiveYear = params.year;
+    let effectiveVehicleTypeId = params.vehicleTypeId;
+
+    // 0ª Fase (Prioridade Máxima): Consulta Direta por Placa na API Nativa do Power CRM (GET /quotation/plates/{plate})
+    const plateDetails = params.plate ? await this.lookupPlateInPowerCrm(params.plate, headers) : null;
+    if (plateDetails) {
+      const detranPrimaryWord = this.normalizeSearch(plateDetails.detran_model).split(' ')[0];
+      const userPrimaryWord = this.normalizeSearch(params.model).split(' ')[0];
+      const isPlateOnlyRequest = /^placa\s+/i.test(params.model.trim()) || !userPrimaryWord;
+      const plateMatchesUserModel =
+        isPlateOnlyRequest ||
+        detranPrimaryWord === userPrimaryWord ||
+        this.normalizeSearch(plateDetails.detran_brand_model).includes(userPrimaryWord);
+
+      if (plateMatchesUserModel) {
+        if (plateDetails.vehicle_type === 'MOTOCICLETA' || plateDetails.brand_id === 155) {
+          effectiveVehicleTypeId = 2;
+        }
+        const plateYears = Array.from(new Set([plateDetails.model_year, plateDetails.fab_year, plateDetails.model_year - 1]));
+        for (const py of plateYears) {
+          const cmbyRes = await fetch(
+            `${this.baseUrl}/quotation/cmby?cb=${plateDetails.brand_id}&cy=${py}`,
+            { headers }
+          );
+          if (!cmbyRes.ok) continue;
+          const modelsInYear = (await cmbyRes.json()) as CrmItemIdString[];
+          if (!Array.isArray(modelsInYear) || modelsInYear.length === 0) continue;
+
+          const codFipeMatch = plateDetails.cod_fipe
+            ? modelsInYear.find((m) => m.back === plateDetails.cod_fipe)
+            : undefined;
+          const textMatch = this.findBestModelInList(modelsInYear, plateDetails.detran_model);
+
+          // Usa o codFipe exato do DETRAN se pertencer à mesma família de modelo, ou o match exato da descrição DETRAN
+          const codFipeFirstWord = codFipeMatch ? this.normalizeSearch(codFipeMatch.text).split(' ')[0] : '';
+          const bestPlateModel =
+            codFipeMatch && codFipeFirstWord === detranPrimaryWord
+              ? codFipeMatch
+              : textMatch || codFipeMatch;
+
+          if (bestPlateModel) {
+            matchedBrand = {
+              id: plateDetails.brand_id,
+              text: plateDetails.detran_brand_model.split('/')[0] || params.brand,
+              back: null,
+              value: null,
+            };
+            matchedModel = bestPlateModel;
+            effectiveYear = py;
+            break;
+          }
+        }
+      }
+    }
+
+    const candidateBrands = matchedBrand
+      ? [matchedBrand]
+      : await this.resolveCandidateBrands(effectiveVehicleTypeId, params.brand, headers);
+    if (candidateBrands.length === 0) return null;
 
     // 1ª Fase: Busca direta no ano solicitado e anos adjacentes imediatos (GET /quotation/cmby?cb={brandId}&cy={year})
     const immediateYears = Array.from(new Set([params.year, params.year - 1, params.year + 1]));
 
-    for (const brandObj of candidateBrands) {
-      for (const candidateYear of immediateYears) {
-        const cmbyRes = await fetch(
-          `${this.baseUrl}/quotation/cmby?cb=${brandObj.id}&cy=${candidateYear}`,
-          { headers }
-        );
-        if (!cmbyRes.ok) continue;
-        const modelsInYear = (await cmbyRes.json()) as CrmItemIdString[];
-        if (!Array.isArray(modelsInYear) || modelsInYear.length === 0) continue;
+    if (!matchedModel) {
+      for (const brandObj of candidateBrands) {
+        for (const candidateYear of immediateYears) {
+          const cmbyRes = await fetch(
+            `${this.baseUrl}/quotation/cmby?cb=${brandObj.id}&cy=${candidateYear}`,
+            { headers }
+          );
+          if (!cmbyRes.ok) continue;
+          const modelsInYear = (await cmbyRes.json()) as CrmItemIdString[];
+          if (!Array.isArray(modelsInYear) || modelsInYear.length === 0) continue;
 
-        const found = this.findBestModelInList(modelsInYear, params.model);
-        if (found) {
-          matchedBrand = brandObj;
-          matchedModel = found;
-          effectiveYear = candidateYear;
-          break;
+          const found = this.findBestModelInList(modelsInYear, params.model);
+          if (found) {
+            matchedBrand = brandObj;
+            matchedModel = found;
+            effectiveYear = candidateYear;
+            break;
+          }
         }
+        if (matchedModel) break;
       }
-      if (matchedModel) break;
     }
 
     // 2ª Fase (Ampla): Se o modelo não existia naquele ano exato (ex: Golf 2022 quando o Golf saiu de linha em 2020,
@@ -583,7 +743,7 @@ export class PowerCrmNativeFipeService {
 
     return {
       source: 'powercrm_fipe_live',
-      vehicle_type_id: params.vehicleTypeId,
+      vehicle_type_id: effectiveVehicleTypeId,
       brand_id: matchedBrand.id,
       brand_name: matchedBrand.text,
       model_id: matchedModel.id,
@@ -597,6 +757,7 @@ export class PowerCrmNativeFipeService {
       city_name: cityName,
       state_uf: stateUf,
       work_vehicle: params.workVehicle,
+      plate_info: plateDetails,
       calculated_plans: calculatedPlans,
     };
   }
