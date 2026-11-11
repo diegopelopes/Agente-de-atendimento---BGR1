@@ -128,7 +128,7 @@ function buildPersistenceSnapshot(): LocalPersistenceSnapshot {
         vehicle_brand: mem?.vehicle.brand ?? null,
         vehicle_model: mem?.vehicle.model ?? null,
         vehicle_year: mem?.vehicle.year ?? null,
-        vehicle_usage: mem?.vehicle.usage_type ?? null,
+        vehicle_usage: mem?.vehicle.usage ?? null,
         quotation_code: currentQuote?.quotation_code ?? null,
         updated_at: new Date().toISOString(),
       },
@@ -3626,8 +3626,10 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not Found' }));
   } catch (err) {
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: err instanceof Error ? err.message : 'Internal Error' }));
+    if (!res.headersSent) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err instanceof Error ? err.message : 'Internal Error' }));
+    }
   }
 });
 

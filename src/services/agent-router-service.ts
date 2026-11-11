@@ -584,6 +584,10 @@ export class AgentRouterService {
     return created;
   }
 
+  getSessionMemory(sessionId: string): SessionMemoryContext | undefined {
+    return this.sessions.get(sessionId);
+  }
+
   syncSessionMemory(
     sessionId: string,
     channelId: string,
