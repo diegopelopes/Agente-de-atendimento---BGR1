@@ -324,7 +324,13 @@ REGRAS OBRIGATÓRIAS:
     };
 
     const mergedLead: Partial<Lead> = { ...input.sessionMemory.lead };
-    if (parsed.extracted_name && parsed.extracted_name.trim()) {
+    if (
+      parsed.extracted_name &&
+      parsed.extracted_name.trim() &&
+      !/^(particular|passeio|pessoal|aplicativo|app|uber|comercial|sem\s+placa|n[aã]o\s+sei|n[aã]o|sim)$/i.test(
+        parsed.extracted_name.trim()
+      )
+    ) {
       mergedLead.name = parsed.extracted_name.trim();
     }
     if (parsed.extracted_city_uf && parsed.extracted_city_uf.trim()) {

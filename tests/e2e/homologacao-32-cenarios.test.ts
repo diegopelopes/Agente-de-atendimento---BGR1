@@ -154,6 +154,44 @@ describe('Fase 7 — Homologação Completa E2E (32 Cenários Obrigatórios T01�
     assert.equal(sUno.response.includes('Fiat Uno 2008'), true);
     assert.equal(sUno.response.toLowerCase().includes('placa'), true);
 
+    // 2.1. Cliente responde a placa ("sem placa") -> Pede uso particular/aplicativo sem sujar lead.name
+    const sPlate = router.routeMessage({
+      message: 'sem placa',
+      channelId: 'chat_teste',
+      sessionId,
+    });
+    assert.equal(sPlate.memory_snapshot.lead.name, undefined);
+    assert.equal(sPlate.memory_snapshot.expected_slot, 'vehicle_usage');
+
+    // 2.2. Cliente responde "particular" -> Salva usage='particular' e NUNCA define lead.name='Particular'! Pede cidade/UF
+    const sUsage = router.routeMessage({
+      message: 'particular',
+      channelId: 'chat_teste',
+      sessionId,
+    });
+    assert.equal(sUsage.memory_snapshot.vehicle.usage, 'particular');
+    assert.equal(sUsage.memory_snapshot.lead.name, undefined, 'NUNCA deve confundir "particular" com o nome do cliente');
+    assert.equal(sUsage.memory_snapshot.expected_slot, 'city_uf');
+
+    // 2.3. Cliente responde "Belo Horizonte" -> Salva city_uf e pede o nome do cliente
+    const sCity = router.routeMessage({
+      message: 'Belo Horizonte',
+      channelId: 'chat_teste',
+      sessionId,
+    });
+    assert.equal(sCity.memory_snapshot.lead.city_uf, 'Belo Horizonte');
+    assert.equal(sCity.memory_snapshot.lead.name, undefined);
+    assert.equal(sCity.memory_snapshot.expected_slot, 'name');
+
+    // 2.4. Cliente informa o nome ("Diego Gomes") -> Conclui qualificação com lead.name='Diego Gomes' -> consultar_crm!
+    const sName = router.routeMessage({
+      message: 'Diego Gomes',
+      channelId: 'chat_teste',
+      sessionId,
+    });
+    assert.equal(sName.memory_snapshot.lead.name, 'Diego Gomes');
+    assert.equal(sName.next_action, 'consultar_crm');
+
     // 3. Cliente responde "nao escolhi o veiculo ainda" -> Deve orientar amigavelmente a simular qualquer modelo de referência
     const s3 = router.routeMessage({
       message: 'nao escolhi o veiculo ainda',

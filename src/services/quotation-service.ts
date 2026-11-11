@@ -146,9 +146,13 @@ export function formatOfficialQuotationPresentation(
     .join('\n\n');
 
   const validDate = quote.valid_until.slice(0, 10).split('-').reverse().join('/');
+  const rawFirstName = lead.name.trim().split(/\s+/)[0] || 'Cliente';
+  const safeFirstName = /^(particular|passeio|aplicativo|uber|comercial|sem|placa|nao|não|cliente)$/i.test(rawFirstName)
+    ? lead.name.trim()
+    : rawFirstName;
 
   return (
-    `Olá, ${lead.name.split(' ')[0]}! Aqui está a sua cotação oficial da *BGR Benefícios* (Código: *${quote.quotation_code}*) para o veículo *${vehicle.brand} ${vehicle.model} (${vehicle.year} - ${vehicle.usage})*:\n\n` +
+    `Olá, ${safeFirstName}! Aqui está a sua cotação oficial da *BGR Benefícios* (Código: *${quote.quotation_code}*) para o veículo *${vehicle.brand} ${vehicle.model} (${vehicle.year} - ${vehicle.usage})*:\n\n` +
     `${fipeSection}` +
     `${plansText}\n\n` +
     `📅 *Validade desta cotação*: até ${validDate}.\n` +

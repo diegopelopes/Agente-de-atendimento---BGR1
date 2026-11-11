@@ -927,27 +927,37 @@ export class AgentRouterService {
     }
 
     // 5. Extração de Nome do Cliente
+    // IMPORTANTE: Nunca confundir respostas de outros slots ("particular", "aplicativo", "sem placa", cidades) com o nome do cliente!
+    const NON_NAME_WORDS_REGEX =
+      /^(ol[aá]|oi|bom\s+dia|boa\s+tarde|boa\s+noite|quero|quanto|qual|voc[eê]|tenho|ignore|cobre|tem\s+guincho|particular|passeio|pessoal|fam[ií]lia|normal|aplicativo|app|uber|comercial|aluguel|frota|t[aá]xi|taxi|sem\s+placa|n[aã]o\s+sei|n[aã]o\s+tenho|n[aã]o\s+lembro|pular|sim|n[aã]o|bh|sp|rj|df|mg|pr|sc|rs|ba|pe|ce|go|es|pa|am|ma|mt|ms|pb|rn|al|se|pi|to|ro|ac|ap|rr)$/i;
+
     const explicitNameMatch = cleanText.match(
       /(?:meu\s+nome\s+[eé]|sou\s+o|sou\s+a|me\s+chamo|aqui\s+[eé]\s+o|aqui\s+[eé]\s+a)\s+([A-ZÀ-Úa-zà-ú]+(?:\s+[A-ZÀ-Úa-zà-ú]+){0,3})/i
     );
     if (explicitNameMatch && !session.lead.name) {
       const candidateName = explicitNameMatch[1]
-        .replace(/\b(e\s+tenho|tenho\s+um|quero|gostaria)\b.*$/i, '')
+        .replace(/\b(e\s+tenho|tenho\s+um|quero|gostaria|particular|aplicativo)\b.*$/i, '')
         .trim();
-      if (candidateName.length >= 2) {
+      if (candidateName.length >= 2 && !NON_NAME_WORDS_REGEX.test(candidateName)) {
         session.lead.name = this.capitalizeWords(candidateName);
       }
     } else if (
-      (session.expected_slot === 'name' || (session.greeted && !session.lead.name)) &&
+      (session.expected_slot === 'name' ||
+        (session.expected_slot === 'vehicle_model' && !session.lead.name)) &&
       !foundCatalogVehicle &&
       !KNOWN_BRANDS_REGEX.test(cleanText) &&
-      !/^(ol[aá]|oi|bom\s+dia|boa\s+tarde|boa\s+noite|quero|quanto|qual|voc[eê]|tenho|ignore|cobre|tem\s+guincho)/i.test(
+      !knownCityMatch &&
+      !NON_NAME_WORDS_REGEX.test(cleanText) &&
+      !/\b(particular|passeio|aplicativo|uber|comercial|sem\s+placa|n[aã]o\s+sei|cotar|cota[cç][aã]o|placa)\b/i.test(
         cleanText
       )
     ) {
-      // Se o cliente respondeu diretamente o nome (ex: "Diego", "Diego Gomes", "Carlos, tenho um Onix")
+      // Se o cliente respondeu diretamente o nome quando esperado (ex: "Diego", "Diego Gomes", "Carlos, tenho um Onix")
       const firstPart = cleanText.split(/[,;-]|\s+e\s+tenho|\s+tenho\s+um/i)[0].trim();
-      if (/^[A-ZÀ-Úa-zà-ú]{2,}(?:\s+[A-ZÀ-Úa-zà-ú]{2,}){0,3}$/.test(firstPart)) {
+      if (
+        /^[A-ZÀ-Úa-zà-ú]{2,}(?:\s+[A-ZÀ-Úa-zà-ú]{2,}){0,3}$/.test(firstPart) &&
+        !NON_NAME_WORDS_REGEX.test(firstPart)
+      ) {
         session.lead.name = this.capitalizeWords(firstPart);
       }
     }
