@@ -3276,7 +3276,7 @@ const server = http.createServer(async (req, res) => {
           mem.vehicle.year &&
           mem.vehicle.usage
         ) {
-          const qOut = await quotationService.qualifyAndQuote({
+          const qOut = await quotationService.processQuotationRequest({
             sessionId: DEFAULT_SESSION_ID,
             lead: { name: mem.lead.name, city_uf: mem.lead.city_uf, phone: item.from_phone },
             vehicle: {
@@ -3285,7 +3285,6 @@ const server = http.createServer(async (req, res) => {
               year: mem.vehicle.year,
               usage: mem.vehicle.usage,
             },
-            existingQuotationCode: 'COT-10001',
           });
           if (qOut.quote_result) {
             currentQuote = qOut.quote_result;

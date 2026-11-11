@@ -19,6 +19,7 @@ import {
   type Vehicle,
 } from '../domain/contracts.ts';
 import type { PowerCrmAdapter } from '../integrations/powercrm/adapter.ts';
+import type { PowerCrmFipeVehicleData } from '../integrations/powercrm/fipe-native-service.ts';
 
 export type QuotationFlowNextAction =
   | 'qualificar'
@@ -32,6 +33,7 @@ export interface QuotationFlowOutput {
   missing_fields: string[];
   idempotency_key: string | null;
   quote_result: QuoteResult | null;
+  fipe_data?: PowerCrmFipeVehicleData | null;
   customer_message: string;
   invented_price: false;
   audit_events: AuditEvent[];
@@ -106,15 +108,24 @@ export function getNextQualificationPrompt(
 }
 
 /**
- * Formata a apresentação comercial usando EXCLUSIVAMENTE os dados oficiais retornados pelo Power CRM.
+ * Formata a apresentação comercial usando EXCLUSIVAMENTE os dados oficiais retornados pelo Power CRM
+ * e a Ficha Técnica da API FIPE Nativa do Power CRM (código FIPE, versão homologada e valor 100% FIPE em R$).
  */
 export function formatOfficialQuotationPresentation(
   lead: Lead,
   vehicle: Vehicle,
-  quote: QuoteResult
+  quote: QuoteResult,
+  fipeData?: PowerCrmFipeVehicleData | null
 ): string {
   const formatBrl = (val: number) =>
     val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const fipeSection = fipeData
+    ? `📊 *Ficha Técnica Tabela FIPE (Power CRM)*\n` +
+      `• Versão FIPE Homologada: *${fipeData.model_full_name}* (${fipeData.year_label})\n` +
+      `• Código FIPE Oficial: *${fipeData.fipe_code}*\n` +
+      `• Valor 100% Tabela FIPE Protegido: *${fipeData.fipe_value_formatted}*\n\n`
+    : '';
 
   const plansText = quote.plans
     .map(
@@ -131,6 +142,7 @@ export function formatOfficialQuotationPresentation(
 
   return (
     `Olá, ${lead.name.split(' ')[0]}! Aqui está a sua cotação oficial da *BGR Benefícios* (Código: *${quote.quotation_code}*) para o veículo *${vehicle.brand} ${vehicle.model} (${vehicle.year} - ${vehicle.usage})*:\n\n` +
+    `${fipeSection}` +
     `${plansText}\n\n` +
     `📅 *Validade desta cotação*: até ${validDate}.\n` +
     `⚠️ *Importante*: O recebimento desta cotação não ativa a proteção automaticamente. A cobertura passa a vigorar somente após escolha do plano, vistoria aprovada, assinatura digital da proposta e confirmação oficial do pagamento.\n\n` +
@@ -221,6 +233,19 @@ export class QuotationService {
 
     const idempotencyKey = buildQuoteIdempotencyKey(sessionId, validatedLead, validatedVehicle);
 
+    const fipeData = await this.crmAdapter.getFipeService().lookupFipeAndPlans({
+      brand: validatedVehicle.brand,
+      model: validatedVehicle.model,
+      year: validatedVehicle.year,
+      usage: validatedVehicle.usage,
+      cityUf: validatedLead.city_uf ?? 'Belo Horizonte/MG',
+      allowLiveHttp: this.crmAdapter.isHttpMode(),
+    });
+
+    if (!validatedVehicle.fipe_code) {
+      validatedVehicle.fipe_code = fipeData.fipe_code;
+    }
+
     const quoteRequest: QuoteRequest = {
       idempotency_key: idempotencyKey,
       correlation_id: correlationId,
@@ -240,6 +265,7 @@ export class QuotationService {
         missing_fields: [],
         idempotency_key: idempotencyKey,
         quote_result: null,
+        fipe_data: fipeData,
         customer_message: crmResponse.user_safe_message,
         invented_price: false,
         audit_events: [crmResponse.audit_event],
@@ -253,7 +279,13 @@ export class QuotationService {
       missing_fields: [],
       idempotency_key: idempotencyKey,
       quote_result: crmResponse.data,
-      customer_message: formatOfficialQuotationPresentation(validatedLead, validatedVehicle, crmResponse.data),
+      fipe_data: fipeData,
+      customer_message: formatOfficialQuotationPresentation(
+        validatedLead,
+        validatedVehicle,
+        crmResponse.data,
+        fipeData
+      ),
       invented_price: false,
       audit_events: [crmResponse.audit_event],
     };

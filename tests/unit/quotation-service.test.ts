@@ -50,7 +50,11 @@ describe('Fase 3 — Serviço de Qualificação, Cotação Oficial e Objeções 
     assert.equal(res.stage, 'cotacao_enviada');
     assert.equal(res.invented_price, false);
     assert.ok(res.quote_result);
+    assert.ok(res.fipe_data);
+    assert.equal(res.fipe_data.fipe_code, '014091-0');
     assert.equal(res.quote_result.plans.length, 2);
+    assert.equal(res.customer_message.includes('Ficha Técnica Tabela FIPE (Power CRM)'), true);
+    assert.equal(res.customer_message.includes('014091-0'), true);
     assert.equal(res.customer_message.includes('BGR Essencial'), true);
     assert.equal(res.customer_message.includes('149,90'), true);
     assert.equal(

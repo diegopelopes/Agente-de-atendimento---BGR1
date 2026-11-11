@@ -13,6 +13,7 @@
 import type { AuditEvent, Lead, QuotePlanOption, QuoteRequest, QuoteResult } from '../../domain/contracts.ts';
 import { evaluateQualification } from '../../domain/contracts.ts';
 import { sanitizeForAudit } from '../../observability/sanitizer.ts';
+import { PowerCrmNativeFipeService } from './fipe-native-service.ts';
 
 export type PowerCrmErrorCode =
   | 'ERR_INVALID_INPUT'
@@ -122,6 +123,7 @@ export class PowerCrmAdapter {
     Pick<PowerCrmAdapterConfig, 'bearerToken' | 'fetchImpl'>;
 
   private readonly idempotencyStore = new Map<string, PowerCrmAdapterResponse<QuoteResult>>();
+  private readonly fipeService: PowerCrmNativeFipeService;
 
   constructor(config: PowerCrmAdapterConfig) {
     this.config = {
@@ -135,6 +137,18 @@ export class PowerCrmAdapter {
       companyId: config.companyId ?? 'bgr_beneficios',
       fetchImpl: config.fetchImpl ?? globalThis.fetch,
     };
+    this.fipeService = new PowerCrmNativeFipeService({
+      baseUrl: this.config.baseUrl,
+      bearerToken: this.config.bearerToken,
+    });
+  }
+
+  isHttpMode(): boolean {
+    return this.config.mode === 'http' && this.config.fetchImpl === globalThis.fetch;
+  }
+
+  getFipeService(): PowerCrmNativeFipeService {
+    return this.fipeService;
   }
 
   /**
@@ -450,6 +464,51 @@ export class PowerCrmAdapter {
         severity: 'CRITICAL',
         rawAuditSummary: 'Credencial Power CRM - Bearer ausente ao tentar POST /quotations',
       });
+    }
+
+    // Em modo HTTP real (globalThis.fetch contra api.powercrm.com.br/api), utiliza o fluxo nativo FIPE + POST /plans/
+    if (this.config.fetchImpl === globalThis.fetch) {
+      const fipeLookup = await this.fipeService.lookupFipeAndPlans({
+        brand: vehicle.brand,
+        model: vehicle.model,
+        year: vehicle.year,
+        usage: vehicle.usage,
+        cityUf: lead.city_uf ?? 'Belo Horizonte/MG',
+        allowLiveHttp: true,
+      });
+
+      if (fipeLookup.calculated_plans.length > 0) {
+        vehicle.fipe_code = fipeLookup.fipe_code;
+        const generatedCode = `COT-${idemKey.slice(-6).toUpperCase()}`;
+        const liveResult: QuoteResult = {
+          quote_id: `quo_${idemKey.slice(-8)}`,
+          quotation_code: generatedCode,
+          correlation_id: correlationId,
+          status: 'oficial_calculada',
+          source: 'powercrm_oficial',
+          plans: fipeLookup.calculated_plans,
+          valid_until: new Date(Date.now() + 7 * 86400000).toISOString(),
+          fetched_at: new Date().toISOString(),
+        };
+
+        const liveResponse = this.buildResponse<QuoteResult>({
+          status: 'success',
+          data: liveResult,
+          errorCode: null,
+          httpCode: 200,
+          correlationId,
+          sessionId,
+          attempts: 1,
+          fallbackHumanRequired: false,
+          userSafeMessage: `Cotação oficial ${generatedCode} calculada na Tabela FIPE Power CRM (${fipeLookup.fipe_code} - ${fipeLookup.fipe_value_formatted}).`,
+          eventType: 'powercrm_create_quotation_fipe_live_success',
+          severity: 'LOW',
+          rawAuditSummary: `Cotação FIPE oficial ${generatedCode} calculada via Power CRM (/quotation/cmby + /plans/) para ${lead.name} - ${fipeLookup.model_full_name} (FIPE ${fipeLookup.fipe_code}: ${fipeLookup.fipe_value_formatted}).`,
+        });
+
+        this.idempotencyStore.set(idemKey, liveResponse);
+        return liveResponse;
+      }
     }
 
     const url = `${this.config.baseUrl}/quotations`;
