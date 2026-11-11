@@ -429,7 +429,14 @@ REGRAS OBRIGATÓRIAS:
   }
 }
 
-export const SUPABASE_SQL_SCHEMA = `-- =========================================================================
+export const SUPABASE_SQL_SCHEMA = fs.existsSync(
+  path.join(PROJECT_ROOT, 'supabase', 'migrations', '20261111000001_bgr_relational_schema.sql')
+)
+  ? fs.readFileSync(
+      path.join(PROJECT_ROOT, 'supabase', 'migrations', '20261111000001_bgr_relational_schema.sql'),
+      'utf-8'
+    )
+  : `-- =========================================================================
 -- BGR Benefícios — Schema Oficial Supabase (PostgreSQL) para Produção
 -- Execute no SQL Editor do seu projeto Supabase (https://supabase.com/dashboard)
 -- =========================================================================
@@ -448,49 +455,5 @@ CREATE TABLE IF NOT EXISTS public.bgr_sessions (
   vehicle_usage TEXT,
   quotation_code TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS public.bgr_human_attendants (
-  attendant_id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  whatsapp_phone TEXT NOT NULL,
-  queue TEXT NOT NULL DEFAULT 'comercial',
-  role_title TEXT NOT NULL,
-  shift_hours TEXT NOT NULL DEFAULT '08:00 às 18:00',
-  status TEXT NOT NULL DEFAULT 'online',
-  active_sessions_count INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS public.bgr_cadence_rules (
-  step_id TEXT PRIMARY KEY,
-  category TEXT NOT NULL CHECK (category IN ('vendas', 'cobranca')),
-  day_label TEXT NOT NULL,
-  day_offset INTEGER NOT NULL DEFAULT 1,
-  title TEXT NOT NULL,
-  icon TEXT NOT NULL DEFAULT '💬',
-  template_id TEXT NOT NULL,
-  message_template TEXT NOT NULL,
-  enabled BOOLEAN NOT NULL DEFAULT TRUE,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS public.bgr_optout_suppression (
-  phone_normalized TEXT PRIMARY KEY,
-  reason TEXT NOT NULL DEFAULT 'PARAR',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS public.bgr_audit_events (
-  event_id TEXT PRIMARY KEY,
-  idempotency_key TEXT NOT NULL,
-  correlation_id TEXT NOT NULL,
-  session_id TEXT NOT NULL,
-  event_type TEXT NOT NULL,
-  severity TEXT NOT NULL,
-  status TEXT NOT NULL,
-  safe_summary TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 `;

@@ -324,20 +324,47 @@ export class SupabasePersistenceService {
       // ignora erro de rede silencioso no background
     }
 
-    // 1. bgr_sessions
-    const sessRes = await this.upsertTableRows(
-      'bgr_sessions',
-      'session_id',
-      snapshot.sessions.map((s) => ({ ...s }))
-    );
-    if (sessRes.ok) {
-      tablesSynced += 1;
-      rowsUpserted += sessRes.count;
-    } else if (sessRes.error) {
-      errors.push(`bgr_sessions: ${sessRes.error}`);
+    // 1. bgr_leads (Tabela Pai de Clientes/Prospects)
+    const leadRows = snapshot.sessions
+      .filter((s) => s.lead_name || s.lead_phone)
+      .map((s) => ({
+        lead_id: `lead_${s.session_id}`,
+        name: s.lead_name || 'Cliente BGR',
+        phone: s.lead_phone || '+5531999990000',
+        city_uf: s.lead_city_uf || 'Belo Horizonte/MG',
+        origin: s.channel || 'whatsapp_oficial',
+        powercrm_origin_id: 19266,
+        updated_at: nowIso,
+      }));
+    if (leadRows.length > 0) {
+      const leadRes = await this.upsertTableRows('bgr_leads', 'lead_id', leadRows);
+      if (leadRes.ok) {
+        tablesSynced += 1;
+        rowsUpserted += leadRes.count;
+      }
     }
 
-    // 2. bgr_human_attendants
+    // 2. bgr_vehicles_fipe (Tabela Relacionada a bgr_leads via FK lead_id)
+    const vehicleRows = snapshot.sessions
+      .filter((s) => s.vehicle_brand && s.vehicle_model)
+      .map((s) => ({
+        vehicle_id: `veh_${s.session_id}`,
+        lead_id: `lead_${s.session_id}`,
+        brand: s.vehicle_brand,
+        model: s.vehicle_model,
+        year: s.vehicle_year || 2022,
+        usage: s.vehicle_usage || 'particular',
+        updated_at: nowIso,
+      }));
+    if (vehicleRows.length > 0) {
+      const vehRes = await this.upsertTableRows('bgr_vehicles_fipe', 'vehicle_id', vehicleRows);
+      if (vehRes.ok) {
+        tablesSynced += 1;
+        rowsUpserted += vehRes.count;
+      }
+    }
+
+    // 3. bgr_human_attendants (Tabela Pai de Consultores BGR)
     const attRes = await this.upsertTableRows(
       'bgr_human_attendants',
       'attendant_id',
@@ -359,6 +386,22 @@ export class SupabasePersistenceService {
       rowsUpserted += attRes.count;
     } else if (attRes.error) {
       errors.push(`bgr_human_attendants: ${attRes.error}`);
+    }
+
+    // 4. bgr_sessions (Relacionada a bgr_leads, bgr_quotations e bgr_human_attendants)
+    const sessRes = await this.upsertTableRows(
+      'bgr_sessions',
+      'session_id',
+      snapshot.sessions.map((s) => ({
+        ...s,
+        lead_id: s.lead_name || s.lead_phone ? `lead_${s.session_id}` : null,
+      }))
+    );
+    if (sessRes.ok) {
+      tablesSynced += 1;
+      rowsUpserted += sessRes.count;
+    } else if (sessRes.error) {
+      errors.push(`bgr_sessions: ${sessRes.error}`);
     }
 
     // 3. bgr_cadence_rules
