@@ -70,8 +70,8 @@ let router = new AgentRouterService({ environment: 'teste' });
 let openAiAssistant = new OpenAiCommercialAssistant();
 let powerCrmRuntimeConfig = {
   mode: (process.env.POWERCRM_MODE === 'http' ? 'http' : 'mock') as 'mock' | 'http',
-  baseUrl: process.env.POWERCRM_BASE_URL || 'https://api.powercrm.com.br/api/v1',
-  quotationPathTemplate: process.env.POWERCRM_PATH_TEMPLATE || '/quotations/{code}',
+  baseUrl: process.env.POWERCRM_BASE_URL || 'https://api.powercrm.com.br/api',
+  quotationPathTemplate: process.env.POWERCRM_PATH_TEMPLATE || '/quotation/{code}',
   bearerToken: process.env.POWERCRM_BEARER_TOKEN || '',
 };
 let supabaseRuntimeConfig = {
@@ -2986,7 +2986,49 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        // Modo HTTP Real: testa a rota configurada e, se retornar 404, testa automaticamente a rota alternativa (/quotations/{code} vs /quotation/{code})
+        // Modo HTTP Real: testa o endpoint oficial /quotation/origins do Power CRM para validar o Bearer Token e listar as origens reais da BGR
+        try {
+          const cleanBase = powerCrmRuntimeConfig.baseUrl.replace(/\/+$/, '');
+          const originsRes = await fetch(`${cleanBase}/quotation/origins`, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${powerCrmRuntimeConfig.bearerToken}`,
+              Accept: 'application/json',
+            },
+          });
+          const latencyMs = Date.now() - startedAt;
+          if (originsRes.ok) {
+            const originsList = (await originsRes.json()) as Array<{ originId?: number; name?: string }>;
+            const bgrOrigins = originsList
+              .filter((o) => String(o.name ?? '').toUpperCase().includes('BGR'))
+              .map((o) => `${o.name} (ID ${o.originId})`)
+              .slice(0, 5);
+            const originsLabel =
+              bgrOrigins.length > 0
+                ? bgrOrigins.join(', ')
+                : `${originsList.length} origens retornadas`;
+
+            const auditEv = buildCustomAuditEvent(
+              'powercrm_connection_test',
+              `Power CRM HTTP autenticado com sucesso (HTTP 200 • ${latencyMs}ms): Origens BGR=${originsLabel}`,
+              'LOW'
+            );
+            dashboardService.recordEvent({ auditEvent: auditEv });
+
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(
+              JSON.stringify({
+                ok: true,
+                title: `Power CRM Produção Autenticado (HTTP 200 • ${latencyMs}ms)`,
+                message: `Bearer Token validado ao vivo em ${cleanBase}/quotation/origins! Origens BGR ativas localizadas: ${originsLabel}. Rota de cotação ativa: ${powerCrmRuntimeConfig.quotationPathTemplate}.`,
+                state: getFullState(),
+              })
+            );
+            return;
+          }
+        } catch {
+          // fallback para o teste via crmAdapter abaixo
+        }
         let resTest = await crmAdapter.getQuotationByCode('COT-10001');
         let testedPath = powerCrmRuntimeConfig.quotationPathTemplate;
         if (resTest.http_code === 404) {
