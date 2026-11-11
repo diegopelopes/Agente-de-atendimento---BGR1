@@ -1122,11 +1122,11 @@ const HTML_PAGE = `<!DOCTYPE html>
           <div class="section-label">🌐 Webhook Oficial Meta WhatsApp Cloud API (Prioridade 3)</div>
           <div class="form-box" style="gap: 10px;">
             <div style="font-size: 12px; color: var(--muted); line-height: 1.45;">
-              Endpoint oficial pronto para o painel <strong>Meta for Developers (WhatsApp → Configuration → Webhook)</strong>:
+              Dados prontos para colar no painel <strong>Meta for Developers (WhatsApp → Configuration → Webhook & API Setup)</strong>:
             </div>
             <div>
-              <label style="font-size: 11.5px; color: #93c5fd; font-weight: 600;">🔗 Callback URL (GET Challenge & POST Events)</label>
-              <input id="cfg-meta-webhook-url" type="text" value="http://localhost:3090/webhooks/whatsapp" readonly style="width: 100%; margin-top: 4px; font-family: Consolas, monospace; color: #6ee7b7;" />
+              <label style="font-size: 11.5px; color: #93c5fd; font-weight: 600;">☁️ Callback URL de Produção (Render HTTPS — Cole no Meta for Developers)</label>
+              <input id="cfg-meta-webhook-url" type="text" value="https://agente-de-atendimento-bgr1.onrender.com/webhooks/whatsapp" readonly style="width: 100%; margin-top: 4px; font-family: Consolas, monospace; color: #6ee7b7;" />
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
               <div>
@@ -1141,13 +1141,23 @@ const HTML_PAGE = `<!DOCTYPE html>
             <div style="font-size: 11px; color: var(--muted);">
               Graph API Token: <strong id="status-meta-token-masked" style="color: #6ee7b7;">Não configurado (Modo Simulador Local)</strong>
             </div>
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button type="button" class="btn sm primary" onclick="saveFullAgentConfig()" style="flex: 1; justify-content: center;">
                 💾 Salvar Credenciais Meta
               </button>
-              <button type="button" class="btn sm success" onclick="simulateMetaOfficialWebhook()" style="flex: 1; justify-content: center;">
-                🧪 Simular Webhook Meta (POST)
+              <button type="button" class="btn sm primary" onclick="testMetaGraphConnection()" style="flex: 1; justify-content: center;">
+                🔌 Validar Token na Meta
               </button>
+              <button type="button" class="btn sm success" onclick="simulateMetaOfficialWebhook()" style="flex: 1; justify-content: center;">
+                🧪 Simular Webhook (POST)
+              </button>
+            </div>
+            <div style="border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 6px;">
+              <label style="font-size: 11.5px; color: #93c5fd; font-weight: 600;">📲 Disparo Real de Teste via Meta Cloud API (Número Destino com DDI+DDD)</label>
+              <div style="display: flex; gap: 6px;">
+                <input id="cfg-meta-test-to" type="text" placeholder="Ex: 5531999990000" style="flex: 1;" />
+                <button type="button" class="btn sm success" onclick="sendRealMetaTestMessage()">📤 Enviar WhatsApp Real</button>
+              </div>
             </div>
             <div id="diag-meta-webhook-box" class="log-item" style="display: none; font-size: 11.5px;"></div>
           </div>
@@ -1858,6 +1868,56 @@ const HTML_PAGE = `<!DOCTYPE html>
       if (data.outbound_preview) appendMessage('agent', data.outbound_preview, 'Meta Cloud API Webhook • wamid=' + (data.outbound_wamid || 'sim'));
       if (data.state) updateDashboard(data.state);
       showToast('Webhook Oficial Meta processado com sucesso!');
+    }
+
+    async function testMetaGraphConnection() {
+      await saveFullAgentConfig();
+      const box = document.getElementById('diag-meta-webhook-box');
+      if (box) {
+        box.style.display = 'block';
+        box.className = 'log-item';
+        box.innerHTML = '⏳ Validando Phone Number ID e Access Token na Meta Graph API (graph.facebook.com)...';
+      }
+      const res = await fetch('/api/integrations/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'whatsapp' })
+      });
+      const data = await res.json();
+      if (box) {
+        box.className = 'log-item ' + (data.ok ? '' : 'HIGH');
+        box.innerHTML = (data.ok ? '✅ ' : '❌ ') + '<strong>' + (data.title || 'Teste Meta Graph API') + '</strong><br/>' + (data.message || '');
+      }
+      if (data.state) updateDashboard(data.state);
+      showToast(data.title || 'Teste Meta concluído!');
+    }
+
+    async function sendRealMetaTestMessage() {
+      await saveFullAgentConfig();
+      const toInput = document.getElementById('cfg-meta-test-to');
+      const toPhone = toInput ? toInput.value.trim() : '';
+      if (!toPhone) {
+        showToast('Informe o número de destino com DDI+DDD (ex: 5531999990000)');
+        return;
+      }
+      const box = document.getElementById('diag-meta-webhook-box');
+      if (box) {
+        box.style.display = 'block';
+        box.className = 'log-item';
+        box.innerHTML = '⏳ Enviando mensagem real via Meta WhatsApp Cloud API para ' + toPhone + '...';
+      }
+      const res = await fetch('/api/whatsapp/send-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to_phone: toPhone })
+      });
+      const data = await res.json();
+      if (box) {
+        box.className = 'log-item ' + (data.ok ? '' : 'HIGH');
+        box.innerHTML = (data.ok ? '✅ ' : '❌ ') + '<strong>' + (data.title || 'Envio Meta Cloud API') + '</strong><br/>' + (data.message || '');
+      }
+      if (data.state) updateDashboard(data.state);
+      showToast(data.title || 'Disparo concluído!');
     }
 
     async function applyAgentPreset(phone, name, waba) {
@@ -3179,6 +3239,30 @@ const server = http.createServer(async (req, res) => {
         );
         return;
       }
+
+      if (provider === 'whatsapp') {
+        const waDiag = await metaCloudClient.testConnection();
+        const auditEv = buildCustomAuditEvent(
+          'whatsapp_meta_connection_test',
+          `Teste Meta WhatsApp Cloud API: ok=${waDiag.ok} mode=${waDiag.mode} status=${waDiag.status_code} latency=${waDiag.latency_ms}ms`,
+          waDiag.ok ? 'LOW' : 'MEDIUM'
+        );
+        dashboardService.recordEvent({ auditEvent: auditEv });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            ok: waDiag.ok,
+            title: waDiag.ok
+              ? waDiag.mode === 'graph_api_live'
+                ? `Meta Graph API Conectada (${waDiag.latency_ms}ms)`
+                : `Webhook Meta Homologado (${waDiag.latency_ms}ms)`
+              : `Falha Meta Graph API (HTTP ${waDiag.status_code})`,
+            message: waDiag.message,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
     }
 
     // Endpoint 0.7: Sincronizar Estado Completo (Sessões, Atendentes, Régua, Opt-Outs e Auditoria) no Supabase + Snapshot Local — Prioridade 2
@@ -3240,6 +3324,55 @@ const server = http.createServer(async (req, res) => {
 
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ ok: true, state: getFullState() }));
+      return;
+    }
+
+    // Endpoint 1.5: Disparo Real de Teste via Meta WhatsApp Cloud API (Texto ou Template hello_world)
+    if (req.method === 'POST' && req.url === '/api/whatsapp/send-test') {
+      const toPhone = String(payload.to_phone ?? '').replace(/\D+/g, '');
+      const textBody =
+        typeof payload.text_body === 'string' && payload.text_body.trim()
+          ? payload.text_body.trim()
+          : 'Olá! Aqui é o Consultor Digital da *BGR Benefícios* 🚗. Seu número oficial da Meta WhatsApp Cloud API está conectado e pronto para realizar cotações na Tabela FIPE!';
+
+      const outPayload = payload.use_hello_world_template
+        ? {
+            messaging_product: 'whatsapp',
+            to: toPhone,
+            type: 'template',
+            template: { name: 'hello_world', language: { code: 'en_US' } },
+          }
+        : {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: toPhone,
+            type: 'text',
+            text: { preview_url: false, body: textBody },
+          };
+
+      const sendRes = await metaCloudClient.sendOutboundMessage(outPayload);
+      const auditEv = buildCustomAuditEvent(
+        'whatsapp_meta_test_send',
+        `Disparo de teste Meta Cloud API para ${toPhone}: ok=${sendRes.ok} simulated=${sendRes.simulated} wamid=${sendRes.wamid}`,
+        sendRes.ok ? 'LOW' : 'MEDIUM'
+      );
+      dashboardService.recordEvent({ auditEvent: auditEv });
+
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          ok: sendRes.ok,
+          title: sendRes.ok
+            ? sendRes.simulated
+              ? `Disparo Simulado (Configure o Access Token para envio real)`
+              : `Mensagem Real Enviada via Meta Cloud API!`
+            : `Erro no Envio Meta Cloud API (HTTP ${sendRes.status_code})`,
+          message: sendRes.ok
+            ? `Destino: +${toPhone} | WAMID: ${sendRes.wamid}`
+            : `Detalhe da Meta Graph API: ${sendRes.error_message || 'Verifique se o número de destino está cadastrado como Test Number no painel Meta for Developers ou envie um "Oi" do seu celular para abrir a janela de 24h.'}`,
+          state: getFullState(),
+        })
+      );
       return;
     }
 
