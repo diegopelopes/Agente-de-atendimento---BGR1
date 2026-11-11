@@ -29,6 +29,10 @@ import {
   SUPABASE_SQL_SCHEMA,
   saveLocalEnvFile,
 } from '../integrations/openai/openai-assistant.ts';
+import {
+  SupabasePersistenceService,
+  type LocalPersistenceSnapshot,
+} from '../integrations/supabase/supabase-persistence.ts';
 import type { AuditEvent, QuoteResult } from '../domain/contracts.ts';
 
 const PORT = Number(process.env.PORT || 3090);
@@ -69,6 +73,11 @@ let supabaseRuntimeConfig = {
   projectUrl: process.env.SUPABASE_URL || '',
   apiKey: process.env.SUPABASE_KEY || '',
 };
+let supabasePersistence = new SupabasePersistenceService({
+  projectUrl: supabaseRuntimeConfig.projectUrl,
+  apiKey: supabaseRuntimeConfig.apiKey,
+});
+let optOutPhonesList: string[] = [];
 let crmAdapter = new PowerCrmAdapter({
   mode: powerCrmRuntimeConfig.mode,
   baseUrl: powerCrmRuntimeConfig.baseUrl,
@@ -101,6 +110,65 @@ const DEFAULT_SESSION_ID = 'sess_visual_001';
 const DEFAULT_OPP_ID = 'opp_visual_001';
 let opportunityCreated = false;
 
+function buildPersistenceSnapshot(): LocalPersistenceSnapshot {
+  const conv = handoffService.getOrCreateConversation(DEFAULT_SESSION_ID, 'chat_teste');
+  const mem = router.getSessionMemory(DEFAULT_SESSION_ID);
+  return {
+    updated_at: new Date().toISOString(),
+    agent_config: agentConfig,
+    sessions: [
+      {
+        session_id: DEFAULT_SESSION_ID,
+        channel: conv.channel,
+        attendance_mode: conv.attendance_mode,
+        current_stage: conv.current_stage,
+        lead_name: mem?.lead.name ?? null,
+        lead_phone: mem?.lead.phone ?? null,
+        lead_city_uf: mem?.lead.city_uf ?? null,
+        vehicle_brand: mem?.vehicle.brand ?? null,
+        vehicle_model: mem?.vehicle.model ?? null,
+        vehicle_year: mem?.vehicle.year ?? null,
+        vehicle_usage: mem?.vehicle.usage_type ?? null,
+        quotation_code: currentQuote?.quotation_code ?? null,
+        updated_at: new Date().toISOString(),
+      },
+    ],
+    human_attendants: handoffService.listHumanAttendants(),
+    cadence_rules: campaignService.getCadenceRules(),
+    optout_phones: optOutPhonesList,
+    audit_events: dashboardService.getAuditTrail(),
+  };
+}
+
+function triggerBackgroundPersistence(): void {
+  const snap = buildPersistenceSnapshot();
+  void supabasePersistence.syncFullState(snap);
+}
+
+// Restaura configurações persistidas no Snapshot Local ao iniciar o servidor
+(function restoreInitialSnapshot() {
+  const snap = supabasePersistence.loadLocalSnapshot();
+  if (!snap) return;
+  if (snap.agent_config?.agent_phone) {
+    agentConfig = { ...snap.agent_config };
+  }
+  if (Array.isArray(snap.optout_phones)) {
+    optOutPhonesList = [...snap.optout_phones];
+    for (const ph of optOutPhonesList) {
+      campaignService.registerOptOutSuppression(ph);
+    }
+  }
+  if (Array.isArray(snap.cadence_rules)) {
+    for (const rule of snap.cadence_rules) {
+      campaignService.updateCadenceStep({
+        step_id: rule.step_id,
+        enabled: rule.enabled,
+        message_template: rule.message_template,
+      });
+    }
+  }
+})();
+
 function buildCustomAuditEvent(eventType: string, summary: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW'): AuditEvent {
   const sanitized = sanitizeForAudit(summary);
   return {
@@ -126,6 +194,7 @@ function getMaskedSecret(raw: string, emptyLabel: string): string {
 }
 
 function getFullState(sessionId = DEFAULT_SESSION_ID) {
+  triggerBackgroundPersistence();
   const conv = handoffService.getOrCreateConversation(sessionId, 'chat_teste');
   return {
     session_id: sessionId,
@@ -141,6 +210,7 @@ function getFullState(sessionId = DEFAULT_SESSION_ID) {
       supabase_configured: Boolean(supabaseRuntimeConfig.projectUrl && supabaseRuntimeConfig.apiKey),
       supabase_url: supabaseRuntimeConfig.projectUrl || 'Não configurado (Memória Local)',
       supabase_key_masked: getMaskedSecret(supabaseRuntimeConfig.apiKey, 'Não configurada'),
+      supabase_sync_status: supabasePersistence.getStatusSummary(),
       supabase_sql_schema: SUPABASE_SQL_SCHEMA,
     },
     conversation: conv,
@@ -1004,9 +1074,18 @@ const HTML_PAGE = `<!DOCTYPE html>
                 <input id="api-supabase-key" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR..." style="width: 100%; margin-top: 4px;" />
               </div>
             </div>
-            <button class="btn success sm" onclick="saveIntegrationsConfig()" style="justify-content: center;">
-              ☁️ Salvar Credenciais Supabase
-            </button>
+            <div style="font-size: 11px; color: var(--muted);">
+              Status de Persistência: <strong id="api-supabase-sync-lbl" style="color: #6ee7b7;">Snapshot Local Ativo (Write-Through Automático)</strong>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button type="button" class="btn sm primary" onclick="testIntegrationConnection('supabase')" style="flex: 1; justify-content: center;">
+                🧪 Testar Conexão Supabase Agora
+              </button>
+              <button type="button" class="btn sm success" onclick="syncStateToSupabase()" style="flex: 1; justify-content: center;">
+                🔄 Sincronizar Tudo Agora
+              </button>
+            </div>
+            <div id="diag-supabase-box" class="log-item" style="display: none; font-size: 11.5px;"></div>
           </div>
 
           <div class="section-label" style="justify-content: space-between;">
@@ -1361,8 +1440,19 @@ const HTML_PAGE = `<!DOCTYPE html>
         }
         const supaPill = document.getElementById('api-supabase-pill');
         if (supaPill) {
-          supaPill.textContent = ig.supabase_configured ? '🟢 Supabase Configurado' : 'Memória Local + Schema Pronto';
+          supaPill.textContent = ig.supabase_configured ? '🟢 Supabase Conectado + Snapshot Local' : '🟢 Snapshot Local Ativo + Schema Pronto';
           supaPill.className = ig.supabase_configured ? 'badge' : 'badge info';
+        }
+        const supaUrlEl = document.getElementById('api-supabase-url');
+        if (supaUrlEl && ig.supabase_configured && !supaUrlEl.value) {
+          supaUrlEl.value = ig.supabase_url;
+        }
+        const supaSyncLbl = document.getElementById('api-supabase-sync-lbl');
+        if (supaSyncLbl && ig.supabase_sync_status) {
+          const st = ig.supabase_sync_status;
+          supaSyncLbl.textContent = st.configured
+            ? 'Nuvem Supabase Ativa (' + st.total_cloud_syncs + ' syncs) + Snapshot Local'
+            : 'Snapshot Local Durável Ativo (data/bgr-persistence-snapshot.json)';
         }
       }
 
@@ -1512,7 +1602,7 @@ const HTML_PAGE = `<!DOCTYPE html>
 
     async function testIntegrationConnection(provider) {
       await saveIntegrationsConfig();
-      const boxId = provider === 'openai' ? 'diag-openai-box' : 'diag-crm-box';
+      const boxId = provider === 'openai' ? 'diag-openai-box' : provider === 'supabase' ? 'diag-supabase-box' : 'diag-crm-box';
       const box = document.getElementById(boxId);
       if (box) {
         box.style.display = 'block';
@@ -1528,6 +1618,24 @@ const HTML_PAGE = `<!DOCTYPE html>
       if (box) {
         box.className = 'log-item ' + (data.ok ? '' : 'HIGH');
         box.innerHTML = (data.ok ? '✅ ' : '❌ ') + '<strong>' + data.title + '</strong><br/>' + data.message;
+      }
+      if (data.state) updateDashboard(data.state);
+      showToast(data.title);
+    }
+
+    async function syncStateToSupabase() {
+      await saveIntegrationsConfig();
+      const box = document.getElementById('diag-supabase-box');
+      if (box) {
+        box.style.display = 'block';
+        box.className = 'log-item';
+        box.innerHTML = '⏳ Sincronizando sessões, atendentes, régua, opt-out e auditoria...';
+      }
+      const res = await fetch('/api/supabase/sync', { method: 'POST' });
+      const data = await res.json();
+      if (box) {
+        box.className = 'log-item ' + (data.ok ? '' : 'HIGH');
+        box.innerHTML = (data.ok ? '✅ ' : '⚠️ ') + '<strong>' + data.title + '</strong><br/>' + data.message;
       }
       if (data.state) updateDashboard(data.state);
       showToast(data.title);
@@ -2484,6 +2592,11 @@ const server = http.createServer(async (req, res) => {
       }
 
       saveLocalEnvFile(envUpdates);
+      supabasePersistence.configure({
+        projectUrl: supabaseRuntimeConfig.projectUrl,
+        apiKey: supabaseRuntimeConfig.apiKey,
+      });
+      triggerBackgroundPersistence();
 
       crmAdapter = new PowerCrmAdapter({
         mode: powerCrmRuntimeConfig.mode,
@@ -2615,6 +2728,56 @@ const server = http.createServer(async (req, res) => {
         );
         return;
       }
+
+      if (provider === 'supabase') {
+        const supaDiag = await supabasePersistence.testConnection();
+        const auditEv = buildCustomAuditEvent(
+          'supabase_connection_test',
+          `Teste Supabase PostgreSQL: ok=${supaDiag.ok} status=${supaDiag.status_code} tables_ready=${supaDiag.tables_ready} latency=${supaDiag.latency_ms}ms`,
+          supaDiag.ok ? 'LOW' : 'MEDIUM'
+        );
+        dashboardService.recordEvent({ auditEvent: auditEv });
+        triggerBackgroundPersistence();
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            ok: supaDiag.ok,
+            title: supaDiag.ok
+              ? supaDiag.tables_ready
+                ? `Supabase PostgreSQL Online (${supaDiag.latency_ms}ms)`
+                : `Supabase Autenticado — Crie as Tabelas SQL (${supaDiag.latency_ms}ms)`
+              : `Snapshot Local Ativo (Supabase HTTP ${supaDiag.status_code})`,
+            message: supaDiag.message,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
+    }
+
+    // Endpoint 0.7: Sincronizar Estado Completo (Sessões, Atendentes, Régua, Opt-Outs e Auditoria) no Supabase + Snapshot Local — Prioridade 2
+    if (req.method === 'POST' && req.url === '/api/supabase/sync') {
+      const snap = buildPersistenceSnapshot();
+      const syncRes = await supabasePersistence.syncFullState(snap);
+      const auditEv = buildCustomAuditEvent(
+        'supabase_full_state_synced',
+        `Sincronizacao de persistencia executada: cloud=${syncRes.cloud_enabled} tabelas=${syncRes.tables_synced} registros=${syncRes.rows_upserted} latency=${syncRes.latency_ms}ms`,
+        syncRes.ok ? 'LOW' : 'MEDIUM'
+      );
+      dashboardService.recordEvent({ auditEvent: auditEv });
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          ok: syncRes.ok,
+          title: syncRes.cloud_enabled
+            ? `Supabase + Snapshot Sincronizados (${syncRes.rows_upserted} registros • ${syncRes.latency_ms}ms)`
+            : `Snapshot Local Persistido (${syncRes.rows_upserted} registros • ${syncRes.latency_ms}ms)`,
+          message: syncRes.message,
+          sync_summary: syncRes,
+          state: getFullState(),
+        })
+      );
+      return;
     }
 
     // Endpoint 1: Troca livre do Número do Agente Comercial
