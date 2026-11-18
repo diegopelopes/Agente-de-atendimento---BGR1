@@ -101,7 +101,32 @@ let campaignService = new CampaignFollowUpService({
   weekdaysOnly: false,
 });
 let dashboardService = new MetricsDashboardService();
-let lastActiveCustomerPhone = '+5511999990001';
+let lastActiveCustomerPhone = '+5521967354521';
+let lastActiveCustomerName = 'Cliente WhatsApp';
+
+interface LiveWhatsAppFeedItem {
+  feed_id: string;
+  timestamp: string;
+  direction: 'inbound' | 'outbound';
+  customer_phone: string;
+  customer_name: string;
+  text: string;
+  wamid: string;
+  module: string;
+}
+
+let liveWhatsAppFeed: LiveWhatsAppFeedItem[] = [];
+
+function recordLiveWhatsAppFeed(item: LiveWhatsAppFeedItem): void {
+  if (liveWhatsAppFeed.some((x) => x.feed_id === item.feed_id)) {
+    return;
+  }
+  liveWhatsAppFeed.push(item);
+  if (liveWhatsAppFeed.length > 80) {
+    liveWhatsAppFeed = liveWhatsAppFeed.slice(-80);
+  }
+}
+
 let metaModuleStats = {
   atendimento_qualificacao: 0,
   cotacao_proposta: 0,
@@ -126,8 +151,9 @@ async function dispatchViaMetaCloud(params: {
     | 'webhooks_crm';
   templateFallbackName?: 'bgr_saudacao' | 'bgr_cotacao_pronta' | 'bgr_followup' | 'bgr_reativacao';
   templateParams?: string[];
+  recordInLiveMonitor?: boolean;
 }): Promise<{ ok: boolean; wamid: string; simulated: boolean; used_template: boolean }> {
-  const targetPhone = (params.toPhone || lastActiveCustomerPhone || '+5511999990001').trim();
+  const targetPhone = (params.toPhone || lastActiveCustomerPhone || '+5521967354521').trim();
   const sessId = params.sessionId || WhatsAppChannelService.buildSessionIdForPhone(targetPhone);
 
   let outDec = whatsappService.prepareOutboundMessage({
@@ -157,6 +183,18 @@ async function dispatchViaMetaCloud(params: {
     metaModuleStats[params.moduleKey] += 1;
     metaModuleStats.last_wamid = sent.wamid;
     metaModuleStats.last_module = params.moduleKey;
+    if (params.recordInLiveMonitor === true) {
+      recordLiveWhatsAppFeed({
+        feed_id: sent.wamid || `out_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        timestamp: new Date().toISOString(),
+        direction: 'outbound',
+        customer_phone: targetPhone,
+        customer_name: lastActiveCustomerName || 'Cliente WhatsApp',
+        text: params.textBody,
+        wamid: sent.wamid || 'sim',
+        module: params.moduleKey,
+      });
+    }
     return {
       ok: sent.ok,
       wamid: sent.wamid,
@@ -268,9 +306,9 @@ let cronScheduler = new CadenceCronScheduler(async () => {
 let chatHistoryLog: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
 let agentConfig: AgentRuntimeConfig = {
-  agent_phone: '+55 31 99888-7766',
+  agent_phone: process.env.WHATSAPP_AGENT_PHONE ?? '+55 21 96957-3517',
   agent_display_name: 'Consultor Digital BGR Benefícios',
-  whatsapp_phone_number_id: 'waba_bgr_31998887766',
+  whatsapp_phone_number_id: process.env.WHATSAPP_PHONE_NUMBER_ID ?? '1324598387408794',
   updated_at: new Date().toISOString(),
 };
 
@@ -472,6 +510,9 @@ function getFullState(sessionId = DEFAULT_SESSION_ID) {
     kpis: dashboardService.getDashboardSnapshot(),
     alerts: dashboardService.getActiveAlerts().slice(-10).reverse(),
     audit_trail: dashboardService.getAuditTrail().slice(-18).reverse(),
+    live_whatsapp_feed: liveWhatsAppFeed.slice(-60),
+    last_active_customer_phone: lastActiveCustomerPhone,
+    last_active_customer_name: lastActiveCustomerName,
   };
 }
 
@@ -968,12 +1009,34 @@ const HTML_PAGE = `<!DOCTYPE html>
         </form>
       </section>
 
-      <!-- Coluna 3: Resumo de KPIs com Ícones e Últimos Eventos -->
+      <!-- Coluna 3: Janela ao Vivo do WhatsApp Real + Resumo de KPIs e Auditoria -->
       <section class="col">
-        <div class="col-header">
-          <span>📊 Indicadores & Auditoria em Tempo Real</span>
+        <div class="col-header" style="background: linear-gradient(90deg, #064e3b, #0f172a); border-bottom: 1px solid #059669;">
+          <span>📲 Monitor ao Vivo — WhatsApp Real</span>
+          <span id="live-wa-status-pill" class="badge" style="background: rgba(16,185,129,0.22); color: #6ee7b7; border-color: #10b981;">🟢 AO VIVO (2s)</span>
         </div>
         <div class="col-body">
+          <!-- Janela Lateral de Atendimento Real do WhatsApp -->
+          <div style="background: #0b141a; border: 1px solid #00a884; border-radius: 11px; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="background: #202c33; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a3942;">
+              <div style="font-size: 12px; font-weight: 700; color: #e9edef; display: flex; align-items: center; gap: 6px;">
+                <span>📱 Bot: <span id="live-wa-agent-num" style="color: #00a884;">+55 21 96957-3517</span></span>
+              </div>
+              <div style="font-size: 11px; color: #93c5fd;" id="live-wa-active-client">Cliente: Aguardando msg...</div>
+            </div>
+            <div id="live-wa-feed-box" style="height: 250px; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 7px; font-size: 12.2px; background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0); background-size: 18px 18px;">
+              <div style="text-align: center; color: #8696a0; font-size: 11.5px; padding: 18px 8px;">
+                📡 Escutando mensagens reais do WhatsApp em tempo real...<br/>
+                Envie uma mensagem do celular para <strong>(21) 96957-3517</strong> para ver o atendimento do Bot aparecer aqui e no chat ao lado automaticamente!
+              </div>
+            </div>
+            <div style="background: #202c33; padding: 7px 9px; display: flex; gap: 6px; border-top: 1px solid #2a3942;">
+              <input id="live-wa-quick-input" type="text" placeholder="Enviar msg direta p/ WhatsApp do cliente..." style="flex: 1; background: #2a3942; border: 1px solid #3b4a54; color: #fff; padding: 6px 9px; border-radius: 7px; font-size: 12px;" />
+              <button type="button" class="btn sm success" onclick="sendDirectWhatsAppFromMonitor()" style="background: #00a884; border-color: #00a884; color: #111b21; font-weight: 800;">📤 Enviar</button>
+            </div>
+          </div>
+
+          <div class="section-label">📊 Indicadores Operacionais</div>
           <div class="kpi-grid">
             <div class="kpi-card">
               <div class="kpi-ico">💬</div>
@@ -2404,7 +2467,158 @@ const HTML_PAGE = `<!DOCTYPE html>
       sendChat(val);
     }
 
-    fetch('/api/state').then(r => r.json()).then(d => updateDashboard(d.state));
+    const seenLiveFeedIds = new Set();
+
+    function renderLiveWhatsAppMonitor(feedList, activePhone, activeName, agentPhone) {
+      const numEl = document.getElementById('live-wa-agent-num');
+      if (numEl && agentPhone) numEl.textContent = agentPhone;
+      const cliEl = document.getElementById('live-wa-active-client');
+      if (cliEl && activePhone) {
+        cliEl.textContent = 'Cliente: ' + (activeName || 'WhatsApp') + ' (' + activePhone + ')';
+      }
+      const box = document.getElementById('live-wa-feed-box');
+      if (!box || !Array.isArray(feedList)) return;
+
+      let addedNew = false;
+      for (const item of feedList) {
+        if (!item || !item.feed_id || seenLiveFeedIds.has(item.feed_id)) continue;
+        seenLiveFeedIds.add(item.feed_id);
+        addedNew = true;
+
+        // Também injeta automaticamente na janela principal de chat ao lado!
+        if (item.direction === 'inbound') {
+          appendMessage(
+            'user',
+            '📲 [WhatsApp Real • ' + (item.customer_name || item.customer_phone) + ']\n' + item.text
+          );
+        } else {
+          appendMessage(
+            'agent',
+            item.text,
+            '📲 Respondido no WhatsApp Real para ' + item.customer_phone + ' | WAMID: ' + (item.wamid || 'ok')
+          );
+        }
+      }
+
+      if (feedList.length === 0) return;
+
+      box.innerHTML = feedList
+        .map((m) => {
+          const isIn = m.direction === 'inbound';
+          const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('pt-BR') : '';
+          const align = isIn ? 'flex-start' : 'flex-end';
+          const bg = isIn ? '#202c33' : '#005c4b';
+          const borderCol = isIn ? '#3b82f6' : '#00a884';
+          const badgeTxt = isIn
+            ? '📥 Cliente: ' + (m.customer_name || '') + ' (' + m.customer_phone + ')'
+            : '🤖 Bot BGR → ' + m.customer_phone;
+          return (
+            '<div style="align-self:' +
+            align +
+            '; max-width:90%; background:' +
+            bg +
+            '; border-left:3px solid ' +
+            borderCol +
+            '; padding:7px 10px; border-radius:8px; color:#e9edef; box-shadow:0 1px 2px rgba(0,0,0,0.4);">' +
+            '<div style="font-size:10.5px; font-weight:700; color:' +
+            (isIn ? '#93c5fd' : '#6ee7b7') +
+            '; margin-bottom:3px; display:flex; justify-content:space-between; gap:8px;">' +
+            '<span>' +
+            badgeTxt +
+            '</span><span style="opacity:0.75;">' +
+            timeStr +
+            '</span></div>' +
+            '<div style="white-space:pre-wrap; line-height:1.35;">' +
+            String(m.text || '').replace(/</g, '&lt;') +
+            '</div>' +
+            '</div>'
+          );
+        })
+        .join('');
+
+      if (addedNew) {
+        box.scrollTop = box.scrollHeight;
+      }
+    }
+
+    async function sendDirectWhatsAppFromMonitor() {
+      const inp = document.getElementById('live-wa-quick-input');
+      const text = inp ? inp.value.trim() : '';
+      if (!text) return;
+      inp.value = '';
+      const targetPhone = latestState?.last_active_customer_phone || '5521967354521';
+      const targetUrl =
+        window.location.hostname === 'localhost'
+          ? 'https://agente-de-atendimento-bgr1.onrender.com/api/whatsapp/send-test'
+          : '/api/whatsapp/send-test';
+      try {
+        const res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to_phone: targetPhone, text_body: text })
+        });
+        const data = await res.json();
+        showToast(data.ok ? '📤 Mensagem enviada para o WhatsApp ' + targetPhone : '⚠️ ' + data.title);
+        await pollLiveWhatsAppState();
+      } catch (e) {
+        showToast('Erro ao enviar: ' + e.message);
+      }
+    }
+
+    async function pollLiveWhatsAppState() {
+      try {
+        const localRes = await fetch('/api/state');
+        const localData = await localRes.json();
+        let mergedFeed = Array.isArray(localData.state?.live_whatsapp_feed)
+          ? [...localData.state.live_whatsapp_feed]
+          : [];
+        let activePhone = localData.state?.last_active_customer_phone;
+        let activeName = localData.state?.last_active_customer_name;
+
+        // Se estiver aberto em localhost:3090, busca também em tempo real os eventos que chegaram no Webhook público do Render!
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          try {
+            const cloudRes = await fetch('https://agente-de-atendimento-bgr1.onrender.com/api/state');
+            if (cloudRes.ok) {
+              const cloudData = await cloudRes.json();
+              const cloudFeed = cloudData.state?.live_whatsapp_feed || [];
+              const existingIds = new Set(mergedFeed.map((x) => x.feed_id));
+              for (const item of cloudFeed) {
+                if (!existingIds.has(item.feed_id)) {
+                  mergedFeed.push(item);
+                }
+              }
+              if (cloudData.state?.last_active_customer_phone) {
+                activePhone = cloudData.state.last_active_customer_phone;
+                activeName = cloudData.state.last_active_customer_name;
+              }
+              if (cloudData.state?.integrations_status?.meta_module_stats && localData.state?.integrations_status) {
+                localData.state.integrations_status.meta_module_stats =
+                  cloudData.state.integrations_status.meta_module_stats;
+              }
+            }
+          } catch {
+            // Render offline ou sem rede externa no momento
+          }
+        }
+
+        if (localData.state) {
+          localData.state.live_whatsapp_feed = mergedFeed;
+          updateDashboard(localData.state);
+          renderLiveWhatsAppMonitor(
+            mergedFeed,
+            activePhone,
+            activeName,
+            localData.state.agent_config?.agent_phone
+          );
+        }
+      } catch {
+        // Ignora falha transitória de rede
+      }
+    }
+
+    pollLiveWhatsAppState();
+    setInterval(pollLiveWhatsAppState, 2500);
   </script>
 </body>
 </html>`;
@@ -3068,12 +3282,56 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
       syncHeader(data.state);
     }
 
-    fetch('/api/state').then(r => r.json()).then(d => syncHeader(d.state));
+    const waSeenFeedIds = new Set();
+
+    async function pollChatLiveWhatsApp() {
+      try {
+        const localRes = await fetch('/api/state');
+        const localData = await localRes.json();
+        let mergedFeed = Array.isArray(localData.state?.live_whatsapp_feed)
+          ? [...localData.state.live_whatsapp_feed]
+          : [];
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          try {
+            const cloudRes = await fetch('https://agente-de-atendimento-bgr1.onrender.com/api/state');
+            if (cloudRes.ok) {
+              const cloudData = await cloudRes.json();
+              const cloudFeed = cloudData.state?.live_whatsapp_feed || [];
+              const existingIds = new Set(mergedFeed.map((x) => x.feed_id));
+              for (const item of cloudFeed) {
+                if (!existingIds.has(item.feed_id)) mergedFeed.push(item);
+              }
+            }
+          } catch {}
+        }
+        for (const item of mergedFeed) {
+          if (!item || !item.feed_id || waSeenFeedIds.has(item.feed_id)) continue;
+          waSeenFeedIds.add(item.feed_id);
+          if (item.direction === 'inbound') {
+            addBubble('user', '📲 [' + (item.customer_name || item.customer_phone) + ']\n' + item.text);
+          } else {
+            addBubble('agent', item.text, '📲 WhatsApp Real (' + item.customer_phone + ')');
+          }
+        }
+        if (localData.state) syncHeader(localData.state);
+      } catch {}
+    }
+
+    pollChatLiveWhatsApp();
+    setInterval(pollChatLiveWhatsApp, 2500);
   </script>
 </body>
 </html>`;
 
 const server = http.createServer(async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
   try {
     if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -3533,6 +3791,19 @@ const server = http.createServer(async (req, res) => {
         sendRes.ok ? 'LOW' : 'MEDIUM'
       );
       dashboardService.recordEvent({ auditEvent: auditEv });
+      if (sendRes.ok) {
+        lastActiveCustomerPhone = toPhone;
+        recordLiveWhatsAppFeed({
+          feed_id: sendRes.wamid || `manual_${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          direction: 'outbound',
+          customer_phone: toPhone,
+          customer_name: lastActiveCustomerName || 'Cliente WhatsApp',
+          text: payload.use_hello_world_template ? '[Template Oficial hello_world]' : textBody,
+          wamid: sendRes.wamid || 'ok',
+          module: 'atendimento_qualificacao',
+        });
+      }
 
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(
@@ -3597,6 +3868,7 @@ const server = http.createServer(async (req, res) => {
 
         lastInboundText = effectiveText;
         lastActiveCustomerPhone = item.from_phone;
+        lastActiveCustomerName = item.profile_name || 'Cliente WhatsApp';
 
         const inboundDecision = whatsappService.processInboundWebhook({
           message_id: item.message_id,
@@ -3611,6 +3883,17 @@ const server = http.createServer(async (req, res) => {
           continue;
         }
 
+        recordLiveWhatsAppFeed({
+          feed_id: item.message_id,
+          timestamp: item.timestamp_iso || new Date().toISOString(),
+          direction: 'inbound',
+          customer_phone: item.from_phone,
+          customer_name: item.profile_name || 'Cliente WhatsApp',
+          text: effectiveText,
+          wamid: item.message_id,
+          module: 'whatsapp_oficial',
+        });
+
         if (inboundDecision.opt_out_processed) {
           if (!optOutPhonesList.includes(item.from_phone)) {
             optOutPhonesList.push(item.from_phone);
@@ -3623,6 +3906,7 @@ const server = http.createServer(async (req, res) => {
               toPhone: item.from_phone,
               textBody: lastOutboundPreview,
               moduleKey: 'webhooks_crm',
+              recordInLiveMonitor: true,
             });
             lastOutboundWamid = sentOpt.wamid;
           }
@@ -3637,6 +3921,7 @@ const server = http.createServer(async (req, res) => {
               toPhone: item.from_phone,
               textBody: lastOutboundPreview,
               moduleKey: 'handoff_humanos',
+              recordInLiveMonitor: true,
             });
             lastOutboundWamid = sentGate.wamid;
           }
@@ -3654,6 +3939,7 @@ const server = http.createServer(async (req, res) => {
             toPhone: item.from_phone,
             textBody: lastOutboundPreview,
             moduleKey: 'objecoes_travas',
+            recordInLiveMonitor: true,
           });
           lastOutboundWamid = sentObj.wamid;
           triggerBackgroundPersistence();
@@ -3668,6 +3954,7 @@ const server = http.createServer(async (req, res) => {
             toPhone: item.from_phone,
             textBody: lastOutboundPreview,
             moduleKey: 'objecoes_travas',
+            recordInLiveMonitor: true,
           });
           lastOutboundWamid = sentObj.wamid;
           triggerBackgroundPersistence();
@@ -3714,6 +4001,7 @@ const server = http.createServer(async (req, res) => {
             toPhone: item.from_phone,
             textBody: lastOutboundPreview,
             moduleKey: 'cotacao_proposta',
+            recordInLiveMonitor: true,
           });
           lastOutboundWamid = sentProp.wamid;
           triggerBackgroundPersistence();
@@ -3736,6 +4024,7 @@ const server = http.createServer(async (req, res) => {
             toPhone: item.from_phone,
             textBody: lastOutboundPreview,
             moduleKey: 'objecoes_travas',
+            recordInLiveMonitor: true,
           });
           lastOutboundWamid = sentClaim.wamid;
           triggerBackgroundPersistence();
@@ -3760,6 +4049,7 @@ const server = http.createServer(async (req, res) => {
             toPhone: item.from_phone,
             textBody: lastOutboundPreview,
             moduleKey: 'objecoes_travas',
+            recordInLiveMonitor: true,
           });
           lastOutboundWamid = sentSec.wamid;
           triggerBackgroundPersistence();
@@ -3818,6 +4108,7 @@ const server = http.createServer(async (req, res) => {
             toPhone: item.from_phone,
             textBody: lastOutboundPreview,
             moduleKey: 'handoff_humanos',
+            recordInLiveMonitor: true,
           });
           lastOutboundWamid = sentHdf.wamid;
           await notifyHumanAttendantViaMeta({
@@ -3877,6 +4168,7 @@ const server = http.createServer(async (req, res) => {
           toPhone: item.from_phone,
           textBody: replyText,
           moduleKey: moduleUsed,
+          recordInLiveMonitor: true,
         });
         lastOutboundWamid = sentTurn.wamid;
         triggerBackgroundPersistence();
