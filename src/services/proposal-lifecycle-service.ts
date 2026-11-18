@@ -70,6 +70,11 @@ export class ProposalLifecycleService {
     this.companyId = options?.companyId ?? 'bgr_beneficios';
   }
 
+  getOpportunity(opportunityId: string): Opportunity | undefined {
+    const found = this.opportunities.get(opportunityId);
+    return found ? { ...found } : undefined;
+  }
+
   /**
    * Inicia uma oportunidade vinculada a uma cotação oficial quando o cliente escolhe um plano.
    */

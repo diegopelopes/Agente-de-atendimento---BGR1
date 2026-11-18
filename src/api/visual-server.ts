@@ -344,18 +344,16 @@ function buildPersistenceSnapshot(): LocalPersistenceSnapshot {
     opportunities: oppObj
       ? [
           {
-            opportunity_id: oppObj.id,
+            opportunity_id: oppObj.opportunity_id ?? DEFAULT_OPP_ID,
             lead_id: `lead_${DEFAULT_SESSION_ID}`,
             quotation_code: currentQuote?.quotation_code ?? null,
-            selected_plan_id: oppObj.selected_plan_id ?? 'bgr_essencial',
-            selected_plan_name:
-              currentQuote?.plans.find((p) => p.plan_id === oppObj.selected_plan_id)?.plan_name ?? 'BGR Essencial',
-            monthly_fee_brl:
-              currentQuote?.plans.find((p) => p.plan_id === oppObj.selected_plan_id)?.monthly_fee_brl ?? 189.9,
+            selected_plan_id: currentQuote?.plans[0]?.plan_id ?? 'bgr_essencial',
+            selected_plan_name: currentQuote?.plans[0]?.plan_name ?? 'BGR Essencial',
+            monthly_fee_brl: currentQuote?.plans[0]?.monthly_fee_brl ?? 189.9,
             stage: oppObj.stage,
             signature_verified: oppObj.signature_verified,
             payment_confirmed: oppObj.payment_verified,
-            inspection_approved: oppObj.activation_confirmed,
+            inspection_approved: oppObj.inspection_verified,
             member_activated: oppObj.activation_confirmed,
             protection_active: oppObj.activation_confirmed,
           },
@@ -3662,7 +3660,7 @@ const server = http.createServer(async (req, res) => {
           continue;
         }
 
-        if (/\b(est[aá]\s+caro|achei\s+caro|muito\s+caro|vou\s+pensar)\b/i.test(effectiveText)) {
+        if (/\b(est[aá]\s+caro|t[aá]\s+caro|achei\s+(?:um\s+pouco\s+)?caro|muito\s+caro|pouco\s+caro|vou\s+pensar)\b/i.test(effectiveText)) {
           const objRes = quotationService.handleCommercialObjection('esta_caro');
           lastOutboundPreview = objRes.customer_message;
           const sentObj = await dispatchViaMetaCloud({
@@ -4375,7 +4373,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      if (/\b(est[aá]\s+caro|achei\s+caro|muito\s+caro|vou\s+pensar)\b/i.test(msgText)) {
+      if (/\b(est[aá]\s+caro|t[aá]\s+caro|achei\s+(?:um\s+pouco\s+)?caro|muito\s+caro|pouco\s+caro|vou\s+pensar)\b/i.test(msgText)) {
         const objRes = quotationService.handleCommercialObjection('esta_caro');
         const sentObj = await dispatchViaMetaCloud({
           sessionId: DEFAULT_SESSION_ID,
