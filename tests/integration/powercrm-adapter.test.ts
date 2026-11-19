@@ -253,6 +253,8 @@ describe('Fase 2 — PowerCRM Adapter (Leitura Controlada, Mocks, Resiliência H
     assert.equal(capturedCalls[0].url, 'https://api.powercrm.com.br/api/quotation/add');
     assert.equal(capturedCalls[0].body.name.includes('Diego Gomes'), true);
     assert.equal(capturedCalls[0].body.name.includes('(21) 96957-3517'), true);
+    assert.equal(capturedCalls[0].body.name.includes('FIAT'), true);
+    assert.equal(capturedCalls[0].body.name.includes('ARGO'), true);
     assert.equal(capturedCalls[0].body.phone, '21969573517');
     assert.equal(capturedCalls[0].body.phoneMobile1, '(21) 96957-3517');
     assert.equal(capturedCalls[0].body.plts, 'BRA2E19');
@@ -262,7 +264,9 @@ describe('Fase 2 — PowerCRM Adapter (Leitura Controlada, Mocks, Resiliência H
     assert.equal(capturedCalls[1].url, 'https://api.powercrm.com.br/rdstation/add/19266');
     assert.ok(capturedCalls[1].body.leads && capturedCalls[1].body.leads.length === 1);
     const capturedLead = capturedCalls[1].body.leads[0];
-    assert.equal(capturedLead.name, 'Diego Gomes');
+    assert.equal(capturedLead.name.includes('Diego Gomes'), true);
+    assert.equal(capturedLead.name.includes('FIAT'), true);
+    assert.equal(capturedLead.name.includes('ARGO'), true);
     assert.equal(capturedLead.email, 'diego@bgrbeneficios.com.br');
     assert.equal(capturedLead.first_conversion.content.placa, 'BRA2E19');
     assert.equal(capturedLead.first_conversion.content.codigo_fipe, '001509-1');

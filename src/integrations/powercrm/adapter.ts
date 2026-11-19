@@ -734,12 +734,51 @@ export class PowerCrmAdapter {
       .map((p) => `${p.plan_name}: R$ ${p.monthly_fee_brl.toFixed(2)}/mês`)
       .join(' | ');
 
+    const vehicleBrand = (params.vehicle.brand || '').trim();
+    const rawVehicleModel = (params.modelFullName || params.vehicle.model || '').trim();
+    const vehicleModel = rawVehicleModel.startsWith(vehicleBrand)
+      ? rawVehicleModel.slice(vehicleBrand.length).trim()
+      : rawVehicleModel;
+    const vehicleYear = params.vehicle.year ? String(params.vehicle.year) : '';
+
+    const vehicleParts: string[] = [];
+    if (vehicleBrand) vehicleParts.push(vehicleBrand.toUpperCase());
+    if (vehicleModel) vehicleParts.push(vehicleModel.toUpperCase());
+    if (vehicleYear) vehicleParts.push(vehicleYear);
+    const vehicleSummary = vehicleParts.join(' ');
+
+    const rawPhoneDigits = (params.lead.phone || '').replace(/\D/g, '');
+    let phoneWithDdd = rawPhoneDigits;
+    if (rawPhoneDigits.length >= 12 && rawPhoneDigits.startsWith('55')) {
+      phoneWithDdd = rawPhoneDigits.slice(2);
+    }
+    const formattedPhone =
+      phoneWithDdd.length === 11
+        ? `(${phoneWithDdd.slice(0, 2)}) ${phoneWithDdd.slice(2, 7)}-${phoneWithDdd.slice(7)}`
+        : phoneWithDdd.length === 10
+          ? `(${phoneWithDdd.slice(0, 2)}) ${phoneWithDdd.slice(2, 6)}-${phoneWithDdd.slice(6)}`
+          : phoneWithDdd;
+
+    const fullWhatsApp = `+55 ${formattedPhone}`;
+
+    const leadBaseName =
+      params.lead.name && params.lead.name.trim() !== 'Cliente BGR'
+        ? params.lead.name.trim()
+        : 'Cliente';
+
+    // No card do Power CRM (Kanban de Vendas), exibe Nome, WhatsApp e Veículo (Marca, Modelo e Ano)
+    const cardCustomerName = vehicleSummary
+      ? `${leadBaseName} • WhatsApp: ${formattedPhone} • ${vehicleSummary}`
+      : `${leadBaseName} • WhatsApp: ${formattedPhone}`;
+
+    const cleanPlate = (params.vehicle.plate_masked || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+
     const payload = {
       leads: [
         {
           id: `lead_${cleanPhone}_${params.quotationCode || Date.now()}`,
           email: effectiveEmail,
-          name: params.lead.name || 'Cliente BGR',
+          name: cardCustomerName,
           opportunity: 'true',
           number_conversions: '1',
           first_conversion: {
@@ -747,15 +786,16 @@ export class PowerCrmAdapter {
             content: {
               identificador: 'cotacao-whatsapp-bgr',
               email_lead: effectiveEmail,
-              nome: params.lead.name || 'Cliente BGR',
+              nome: cardCustomerName,
               telefone: cleanPhone,
               celular: cleanPhone,
               cidade: city || 'Rio de Janeiro',
               estado: state || 'RJ',
-              placa: params.vehicle.plate_masked || '',
-              marca: params.vehicle.brand || '',
-              modelo: params.modelFullName || params.vehicle.model || '',
-              ano: String(params.vehicle.year || ''),
+              placa: cleanPlate || params.vehicle.plate_masked || '',
+              marca: vehicleBrand || params.vehicle.brand || '',
+              modelo: vehicleModel || params.modelFullName || params.vehicle.model || '',
+              veiculo: vehicleSummary,
+              ano: vehicleYear,
               codigo_fipe: params.fipeCode || params.vehicle.fipe_code || '',
               valor_fipe: params.fipeValueFormatted || '',
               codigo_cotacao: params.quotationCode,
@@ -767,15 +807,16 @@ export class PowerCrmAdapter {
             content: {
               identificador: 'cotacao-whatsapp-bgr',
               email_lead: effectiveEmail,
-              nome: params.lead.name || 'Cliente BGR',
+              nome: cardCustomerName,
               telefone: cleanPhone,
               celular: cleanPhone,
               cidade: city || 'Rio de Janeiro',
               estado: state || 'RJ',
-              placa: params.vehicle.plate_masked || '',
-              marca: params.vehicle.brand || '',
-              modelo: params.modelFullName || params.vehicle.model || '',
-              ano: String(params.vehicle.year || ''),
+              placa: cleanPlate || params.vehicle.plate_masked || '',
+              marca: vehicleBrand || params.vehicle.brand || '',
+              modelo: vehicleModel || params.modelFullName || params.vehicle.model || '',
+              veiculo: vehicleSummary,
+              ano: vehicleYear,
               codigo_fipe: params.fipeCode || params.vehicle.fipe_code || '',
               valor_fipe: params.fipeValueFormatted || '',
               codigo_cotacao: params.quotationCode,
@@ -783,11 +824,11 @@ export class PowerCrmAdapter {
             },
           },
           custom_fields: {
-            Placa: params.vehicle.plate_masked || 'Não informada',
-            Marca: params.vehicle.brand || '',
-            Modelo: params.vehicle.model || '',
-            Ano: String(params.vehicle.year || ''),
-            Veiculo: `${params.vehicle.brand || ''} ${params.vehicle.model || ''} ${params.vehicle.year || ''}`.trim(),
+            Placa: cleanPlate || params.vehicle.plate_masked || 'Não informada',
+            Marca: vehicleBrand || params.vehicle.brand || 'Não informada',
+            Modelo: vehicleModel || params.modelFullName || params.vehicle.model || 'Não informado',
+            Ano: vehicleYear,
+            Veiculo: vehicleSummary || 'Não informado',
             FIPE: params.fipeCode || params.vehicle.fipe_code || 'N/D',
             'Valor FIPE': params.fipeValueFormatted || 'N/D',
             'Código Cotação': params.quotationCode,
@@ -807,28 +848,7 @@ export class PowerCrmAdapter {
     }
 
     const cleanBase = this.config.baseUrl.replace(/\/api\/?$/, '');
-    const cleanPlate = (params.vehicle.plate_masked || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
     const parsedOriginId = Number(originId) || 19266;
-
-    const rawPhoneDigits = (params.lead.phone || '').replace(/\D/g, '');
-    let phoneWithDdd = rawPhoneDigits;
-    if (rawPhoneDigits.length >= 12 && rawPhoneDigits.startsWith('55')) {
-      phoneWithDdd = rawPhoneDigits.slice(2);
-    }
-    const formattedPhone =
-      phoneWithDdd.length === 11
-        ? `(${phoneWithDdd.slice(0, 2)}) ${phoneWithDdd.slice(2, 7)}-${phoneWithDdd.slice(7)}`
-        : phoneWithDdd.length === 10
-          ? `(${phoneWithDdd.slice(0, 2)}) ${phoneWithDdd.slice(2, 6)}-${phoneWithDdd.slice(6)}`
-          : phoneWithDdd;
-
-    const fullWhatsApp = `+55 ${formattedPhone}`;
-
-    // No card do Power CRM, inclui o contato WhatsApp diretamente no título do card para visibilidade imediata
-    const cardCustomerName =
-      params.lead.name && params.lead.name.trim() !== 'Cliente BGR'
-        ? `${params.lead.name.trim()} • WhatsApp: ${formattedPhone}`
-        : `Cliente WhatsApp: ${formattedPhone}`;
 
     let crmQuotationCode = '';
     let crmNegotiationCode = '';
@@ -844,13 +864,23 @@ export class PowerCrmAdapter {
         email: effectiveEmail,
         origemId: parsedOriginId,
         workVehicle: params.vehicle.usage !== 'particular',
-        noteContract: `Contato WhatsApp: ${fullWhatsApp} (${formattedPhone}) | Lead: ${params.lead.name || 'Cliente'} | Cotação: ${params.quotationCode}`,
+        noteContract: `Contato WhatsApp: ${fullWhatsApp} (${formattedPhone}) | Veículo: ${vehicleSummary || 'N/D'} | Placa: ${cleanPlate || 'N/D'} | Lead: ${leadBaseName} | Cotação: ${params.quotationCode} | Planos: ${plansSummary || 'Em análise'}`,
       };
       if (cleanPlate.length >= 7) {
         quotationAddPayload.plts = cleanPlate;
       }
       if (params.vehicle.year) {
         quotationAddPayload.mdlYr = Number(params.vehicle.year);
+      }
+      if (vehicleBrand) {
+        quotationAddPayload.brand = vehicleBrand;
+      }
+      if (vehicleModel) {
+        quotationAddPayload.model = vehicleModel;
+        quotationAddPayload.carModel = vehicleModel;
+      }
+      if (params.fipeCode) {
+        quotationAddPayload.fipeCode = params.fipeCode;
       }
 
       const addHeaders: Record<string, string> = {
