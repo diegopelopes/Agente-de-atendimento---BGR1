@@ -837,6 +837,7 @@ const HTML_PAGE = `<!DOCTYPE html>
       <a href="/blueprint.pdf" download="DOCUMENTO_TECNICO_BLUEPRINT_AGENTE_SETOR.pdf" class="btn primary sm" style="text-decoration: none;" title="Baixar Especificação Técnica e Blueprint em PDF">📄 Baixar PDF Técnico</a>
       <button id="openai-status-badge" class="btn warn sm" onclick="switchView('apis')" title="Configurar Chave OpenAI, Power CRM e Supabase">🔑 APIs: Modo Local</button>
       <a href="/chat" target="_blank" class="btn success sm" style="text-decoration: none;">💬 Abrir Chat Cliente (Nova Aba)</a>
+      <button class="btn success sm" onclick="openManualMessageModal()" style="font-weight: 700; background: #00a884; border-color: #00a884; color: #fff;" title="Enviar mensagem oficial da BGR para qualquer número de WhatsApp">📱 Enviar para Número</button>
       <span id="mode-badge" class="badge">🤖 IA ATIVA</span>
       <span id="stage-badge" class="badge warn">📍 contato_iniciado</span>
       <button class="btn danger sm" onclick="resetSimulator()">↺ Reiniciar</button>
@@ -881,12 +882,15 @@ const HTML_PAGE = `<!DOCTYPE html>
       <!-- Coluna 1: Lista de Conversas do WhatsApp -->
       <section class="col">
         <div class="col-header" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
             <span style="font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 6px;">
               📥 Conversas WhatsApp
               <span id="inbox-total-badge" class="badge" style="font-size: 11px; padding: 2px 7px;">0</span>
             </span>
-            <button class="btn sm" onclick="pollLiveWhatsAppState()" title="Atualizar agora" style="padding: 3px 8px; font-size: 11px;">🔄</button>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn success sm" onclick="openManualMessageModal()" title="Iniciar conversa ou enviar mensagem manual para um número" style="padding: 3px 8px; font-size: 11px; font-weight: 700;">➕ Novo Envio</button>
+              <button class="btn sm" onclick="pollLiveWhatsAppState()" title="Atualizar agora" style="padding: 3px 8px; font-size: 11px;">🔄</button>
+            </div>
           </div>
           <input id="inbox-search" type="text" placeholder="🔍 Buscar por nome ou telefone..." style="width: 100%; font-size: 12px; padding: 6px 10px; border-radius: 6px; background: #060b16; border: 1px solid var(--border); color: #fff;" oninput="renderInboxConversationList()" />
           <div style="display: flex; gap: 4px;">
@@ -918,6 +922,9 @@ const HTML_PAGE = `<!DOCTYPE html>
             </div>
           </div>
           <div style="display: flex; gap: 6px;">
+            <button class="btn sm success" onclick="openManualMessageModal(activeInboxPhone, document.getElementById('inbox-active-name')?.textContent)" title="Enviar mensagem manual ou alterar destinatário">
+              📲 Enviar para Número
+            </button>
             <button id="inbox-btn-takeover" class="btn sm warn" onclick="toggleInboxAiForActivePhone()" title="Pausar ou reativar IA para este cliente">
               👤 Assumir Atendimento
             </button>
@@ -1746,6 +1753,49 @@ const HTML_PAGE = `<!DOCTYPE html>
           <div id="audit-list-full" style="display: flex; flex-direction: column; gap: 6px;"></div>
         </div>
       </section>
+    </div>
+  </div>
+
+  <!-- Modal: Enviar Mensagem Manual para Número WhatsApp -->
+  <div id="modal-manual-msg" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.78); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#0f172a; border:1px solid #00a884; border-radius:12px; width:100%; max-width:490px; box-shadow:0 10px 30px rgba(0,0,0,0.8); overflow:hidden; display:flex; flex-direction:column;">
+      <div style="background:#1e293b; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
+        <div style="font-weight:700; font-size:14px; color:#fff; display:flex; align-items:center; gap:8px;">
+          <span>📲</span>
+          <span>Enviar Mensagem Manual no WhatsApp</span>
+        </div>
+        <button type="button" class="btn sm" onclick="closeManualMessageModal()" style="padding:2px 8px; font-size:14px; background:transparent; border:none; color:#94a3b8; cursor:pointer;">✕</button>
+      </div>
+      <div style="padding:16px; display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <label style="font-size:11.5px; font-weight:700; color:#93c5fd; display:block; margin-bottom:4px;">NÚMERO DO WHATSAPP COM DDD</label>
+          <input id="manual-phone-input" type="text" placeholder="Ex: (21) 96957-3517 ou 5521969573517" style="width:100%; font-size:13px; padding:8px 10px; border-radius:7px; background:#060b16; border:1px solid var(--border); color:#fff;" />
+          <span style="font-size:10.5px; color:var(--muted); margin-top:2px; display:block;">Pode digitar com ou sem +55 / parênteses / traço.</span>
+        </div>
+        <div>
+          <label style="font-size:11.5px; font-weight:700; color:#93c5fd; display:block; margin-bottom:4px;">NOME DO CONTATO / LEAD (OPCIONAL)</label>
+          <input id="manual-name-input" type="text" placeholder="Ex: Roberto Silva" style="width:100%; font-size:13px; padding:8px 10px; border-radius:7px; background:#060b16; border:1px solid var(--border); color:#fff;" />
+        </div>
+        <div>
+          <label style="font-size:11.5px; font-weight:700; color:#93c5fd; display:block; margin-bottom:4px;">MODELOS RÁPIDOS DE MENSAGEM</label>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            <button type="button" class="btn sm" style="font-size:11px; padding:3px 7px;" onclick="setManualTemplate('intro')">👋 Apresentação</button>
+            <button type="button" class="btn sm" style="font-size:11px; padding:3px 7px;" onclick="setManualTemplate('plans')">💰 Planos BGR</button>
+            <button type="button" class="btn sm" style="font-size:11px; padding:3px 7px;" onclick="setManualTemplate('fipe')">🚗 Pedir Placa / FIPE</button>
+            <button type="button" class="btn sm" style="font-size:11px; padding:3px 7px;" onclick="setManualTemplate('contract')">📄 Link de Adesão</button>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11.5px; font-weight:700; color:#93c5fd; display:block; margin-bottom:4px;">MENSAGEM A ENVIAR</label>
+          <textarea id="manual-msg-input" rows="4" placeholder="Digite a mensagem oficial da BGR para este cliente..." style="width:100%; font-size:12.5px; padding:8px 10px; border-radius:7px; background:#060b16; border:1px solid var(--border); color:#fff; resize:vertical;"></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
+          <button type="button" class="btn sm" onclick="closeManualMessageModal()">Cancelar</button>
+          <button type="button" id="manual-send-btn" class="btn primary sm" onclick="executeManualMessageSend()" style="font-weight:700; padding:8px 16px;">
+            🚀 Disparar Mensagem Agora
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3048,6 +3098,110 @@ const HTML_PAGE = `<!DOCTYPE html>
         }
       } catch (e) {
         showToast('Erro ao enviar mensagem: ' + e.message);
+      }
+    }
+
+    function openManualMessageModal(prefillPhone, prefillName) {
+      const modal = document.getElementById('modal-manual-msg');
+      if (!modal) return;
+      const phoneInput = document.getElementById('manual-phone-input');
+      const nameInput = document.getElementById('manual-name-input');
+      const msgInput = document.getElementById('manual-msg-input');
+      if (phoneInput && prefillPhone) phoneInput.value = prefillPhone;
+      if (nameInput && prefillName) nameInput.value = prefillName;
+      if (msgInput && !msgInput.value.trim()) {
+        setManualTemplate('intro');
+      }
+      modal.style.display = 'flex';
+      if (phoneInput && !prefillPhone) phoneInput.focus();
+      else if (msgInput) msgInput.focus();
+    }
+
+    function closeManualMessageModal() {
+      const modal = document.getElementById('modal-manual-msg');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function setManualTemplate(type) {
+      const msgInput = document.getElementById('manual-msg-input');
+      if (!msgInput) return;
+      const tpls = {
+        intro: 'Olá! Sou o consultor da BGR Benefícios. Vi seu interesse em proteção veicular e estou à disposição para apresentar nossos planos completos de 100% da Tabela FIPE com assistência 24h em todo o Brasil. Qual é o modelo do seu carro?',
+        plans: '🛡️ *Planos Oficiais BGR Benefícios:*\\n• *Plano Prata:* R$ 119,90/mês (Roubo, furto, colisão e assistência 24h)\\n• *Plano Ouro:* R$ 149,90/mês (Completo + proteção a terceiros e vidros)\\n• *Plano Diamante:* R$ 189,90/mês (Proteção Total 100% FIPE + Guincho ilimitado)\\n\\nQual dessas opções atende melhor você?',
+        fipe: 'Olá! Para calcularmos o valor exato da proteção na Tabela FIPE para o seu veículo, você poderia me informar a *placa* ou o *modelo e ano* do carro?',
+        contract: '📝 Segue o link seguro para você conferir e assinar digitalmente a sua adesão à BGR Benefícios:\\nhttps://bgrbeneficios.com.br/proposta-digital\\nLeva menos de 1 minuto!'
+      };
+      msgInput.value = tpls[type] || '';
+      msgInput.focus();
+    }
+
+    async function executeManualMessageSend() {
+      const phoneInp = document.getElementById('manual-phone-input');
+      const nameInp = document.getElementById('manual-name-input');
+      const msgInp = document.getElementById('manual-msg-input');
+      const btn = document.getElementById('manual-send-btn');
+
+      const rawPhone = phoneInp ? phoneInp.value.trim() : '';
+      const rawMsg = msgInp ? msgInp.value.trim() : '';
+      const rawName = nameInp ? nameInp.value.trim() : '';
+
+      if (!rawPhone) {
+        showToast('⚠️ Informe o número do WhatsApp com DDD');
+        if (phoneInp) phoneInp.focus();
+        return;
+      }
+      if (!rawMsg) {
+        showToast('⚠️ Digite a mensagem que deseja enviar');
+        if (msgInp) msgInp.focus();
+        return;
+      }
+
+      let cleanPhone = rawPhone.replace(/\\D/g, '');
+      if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
+        cleanPhone = '55' + cleanPhone;
+      }
+      if (cleanPhone.length < 12) {
+        showToast('⚠️ Número inválido. Digite DDD + Telefone (ex: 21969573517)');
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Enviando...';
+      }
+
+      try {
+        const targetUrl = window.location.hostname === 'localhost'
+          ? 'https://agente-de-atendimento-bgr1.onrender.com/api/inbox/send-message'
+          : '/api/inbox/send-message';
+        const res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to_phone: cleanPhone,
+            text_body: rawMsg,
+            customer_name: rawName || 'Cliente WhatsApp',
+            attendant_name: 'Consultor BGR'
+          })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('📤 Mensagem enviada para ' + cleanPhone);
+          closeManualMessageModal();
+          activeInboxPhone = cleanPhone;
+          if (msgInp) msgInp.value = '';
+          switchView('inbox');
+          await pollLiveWhatsAppState();
+        } else {
+          showToast('Erro: ' + (data.error || 'Falha no envio'));
+        }
+      } catch (err) {
+        showToast('Erro de conexão: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '🚀 Disparar Mensagem Agora';
+        }
       }
     }
 
@@ -5155,14 +5309,21 @@ const server = http.createServer(async (req, res) => {
 
     // Endpoint Cockpit 2: Envio direto de mensagem do Atendente Humano para o WhatsApp Oficial do cliente
     if (req.method === 'POST' && req.url === '/api/inbox/send-message') {
-      const targetPhone = String(payload.to_phone || lastActiveCustomerPhone || '').trim();
+      let targetPhone = String(payload.to_phone || lastActiveCustomerPhone || '').trim();
       const textMsg = String(payload.text_body ?? '').trim();
       if (!textMsg || !targetPhone) {
         res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ ok: false, error: 'Telefone e mensagem são obrigatórios' }));
         return;
       }
+      let cleanPhone = targetPhone.replace(/\D/g, '');
+      if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
+        cleanPhone = '55' + cleanPhone;
+      }
+      targetPhone = cleanPhone;
+      const customerName = String(payload.customer_name || lastActiveCustomerName || 'Cliente WhatsApp').trim();
       const attendantName = String(payload.attendant_name || 'Consultor BGR').trim();
+
       const sent = await dispatchViaMetaCloud({
         toPhone: targetPhone,
         textBody: textMsg,
@@ -5170,12 +5331,15 @@ const server = http.createServer(async (req, res) => {
         recordInLiveMonitor: false,
       });
 
+      lastActiveCustomerPhone = targetPhone;
+      lastActiveCustomerName = customerName;
+
       recordLiveWhatsAppFeed({
         feed_id: sent.wamid || `feed_att_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         timestamp: new Date().toISOString(),
         direction: 'outbound',
         customer_phone: targetPhone,
-        customer_name: lastActiveCustomerName || 'Cliente WhatsApp',
+        customer_name: customerName,
         text: `👨‍💼 [${attendantName}]: ${textMsg}`,
         wamid: sent.wamid || 'sim.human',
         module: 'handoff_humanos',
