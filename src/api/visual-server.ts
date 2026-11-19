@@ -69,10 +69,12 @@ export interface CadenceDispatchRecord {
 let router = new AgentRouterService({ environment: 'teste' });
 let openAiAssistant = new OpenAiCommercialAssistant();
 let powerCrmRuntimeConfig = {
-  mode: (process.env.POWERCRM_MODE === 'http' ? 'http' : 'mock') as 'mock' | 'http',
+  mode: (process.env.POWERCRM_MODE === 'mock' ? 'mock' : 'http') as 'mock' | 'http',
   baseUrl: process.env.POWERCRM_BASE_URL || 'https://api.powercrm.com.br/api',
   quotationPathTemplate: process.env.POWERCRM_PATH_TEMPLATE || '/quotation/{code}',
-  bearerToken: process.env.POWERCRM_BEARER_TOKEN || '',
+  bearerToken:
+    process.env.POWERCRM_BEARER_TOKEN ||
+    'elI3apUqtodItXXHpXDYLGuimRJaN1XUzhZI7cSx7zi7wgNImYM68hLZ5NMDdBDjMFh4AaciMbNAxjqHOZVWQObCqJRmNihHLj1yQeywiLLX4qBeIlJbZC5RyUEGoRoI9r0TRgz5dwDzWFEPyjoDH2SbbZdh7KQnBfPXVrYQUrjJl84PfFxvoBG25BSv1UboDF74wURbfKGucDJFmYgAqj9i',
 };
 let supabaseRuntimeConfig = {
   projectUrl: process.env.SUPABASE_URL || '',
@@ -824,7 +826,7 @@ const HTML_PAGE = `<!DOCTYPE html>
     <!-- Troca Livre do Número do Agente direto no Topo -->
     <div class="agent-phone-bar" title="Altere livremente o número de WhatsApp remetente do Agente Comercial">
       <label for="header-agent-phone">📱 Nº do Agente:</label>
-      <input id="header-agent-phone" type="text" value="+55 31 99888-7766" aria-label="Número do Agente" />
+      <input id="header-agent-phone" type="text" value="+55 21 96957-3517" aria-label="Número do Agente" />
       <button class="btn primary sm" onclick="saveAgentPhoneFromHeader()">💾 Trocar Número</button>
     </div>
 
@@ -1126,7 +1128,7 @@ const HTML_PAGE = `<!DOCTYPE html>
               <div style="font-size: 11.5px; color: #8696a0; display: flex; align-items: center; gap: 6px;">
                 <span style="color: #00a884; font-weight: 600;">online</span>
                 <span>•</span>
-                <span id="chat-agent-phone-pill">📱 +55 31 99888-7766</span>
+                <span id="chat-agent-phone-pill">📱 +55 21 96957-3517</span>
               </div>
             </div>
           </div>
@@ -1232,7 +1234,7 @@ const HTML_PAGE = `<!DOCTYPE html>
         </div>
         <div class="col-body">
           <div style="font-size: 12px; color: var(--muted); margin-bottom: 4px;">
-            Cadência automática para conversão de leads, cotações em aberto e reativação comercial usando o número <strong id="regua-vendas-phone-lbl">+55 31 99888-7766</strong>.
+            Cadência automática para conversão de leads, cotações em aberto e reativação comercial usando o número <strong id="regua-vendas-phone-lbl">+55 21 96957-3517</strong>.
           </div>
           <div id="cadence-vendas-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
         </div>
@@ -1410,7 +1412,7 @@ const HTML_PAGE = `<!DOCTYPE html>
             </div>
             <div>
               <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">📱 Número WhatsApp do Agente (Livre Edição)</label>
-              <input id="cfg-agent-phone" type="text" value="+55 31 99888-7766" style="width: 100%; margin-top: 4px; font-size: 15px; font-weight: 700;" />
+              <input id="cfg-agent-phone" type="text" value="+55 21 96957-3517" style="width: 100%; margin-top: 4px; font-size: 15px; font-weight: 700;" />
             </div>
             <div>
               <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🪪 Nome de Exibição do Agente</label>
@@ -1418,14 +1420,14 @@ const HTML_PAGE = `<!DOCTYPE html>
             </div>
             <div>
               <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🔗 WhatsApp Business Phone ID (Meta Cloud / Evolution)</label>
-              <input id="cfg-agent-waba" type="text" value="waba_bgr_31998887766" style="width: 100%; margin-top: 4px;" />
+              <input id="cfg-agent-waba" type="text" value="1324598387408794" style="width: 100%; margin-top: 4px;" />
             </div>
             <button class="btn primary" onclick="saveFullAgentConfig()">💾 Salvar Novo Número do Agente</button>
           </div>
 
           <div class="section-label">⚡ Presets Rápidos de Números BGR (1-Click)</div>
-          <button class="btn" onclick="applyAgentPreset('+55 31 99888-7766', 'BGR Comercial Matriz BH', 'waba_bgr_matriz_bh')">
-            <span>📱 +55 31 99888-7766 — Matriz Comercial BH</span><span>Usar ▶</span>
+          <button class="btn" onclick="applyAgentPreset('+55 21 96957-3517', 'BGR Benefícios Oficial RJ', '1324598387408794')">
+            <span>📱 +55 21 96957-3517 — BGR Benefícios Oficial RJ</span><span>Usar ▶</span>
           </button>
           <button class="btn" onclick="applyAgentPreset('+55 11 97777-5544', 'BGR Expansão Comercial SP', 'waba_bgr_sp_01')">
             <span>📱 +55 11 97777-5544 — Plantão Vendas SP</span><span>Usar ▶</span>
@@ -1444,9 +1446,9 @@ const HTML_PAGE = `<!DOCTYPE html>
           <div class="form-box">
             <div style="font-size: 13px; font-weight: 700; color: #6ee7b7;">✅ Canal WhatsApp Homologado e Ativo</div>
             <div style="font-size: 12.5px; color: var(--text); line-height: 1.6;">
-              • <strong>Número Remetente Atual:</strong> <span id="status-agent-phone">+55 31 99888-7766</span><br/>
+              • <strong>Número Remetente Atual:</strong> <span id="status-agent-phone">+55 21 96957-3517</span><br/>
               • <strong>Nome do Agente:</strong> <span id="status-agent-name">Consultor Digital BGR Benefícios</span><br/>
-              • <strong>Phone Number ID:</strong> <span id="status-agent-waba">waba_bgr_31998887766</span><br/>
+              • <strong>Phone Number ID:</strong> <span id="status-agent-waba">1324598387408794</span><br/>
               • <strong>Última Atualização:</strong> <span id="status-agent-updated">Agora</span>
             </div>
           </div>
@@ -1595,21 +1597,21 @@ const HTML_PAGE = `<!DOCTYPE html>
               <div>
                 <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">⚙️ Modo de Operação</label>
                 <select id="api-crm-mode" style="width: 100%; margin-top: 4px;" aria-label="Modo Power CRM">
+                  <option value="http" selected>🌐 Produção HTTP (Power CRM Real Oficial)</option>
                   <option value="mock">🧪 Mock Homologação (Local)</option>
-                  <option value="http">🌐 Produção HTTP (Power CRM Real)</option>
                 </select>
               </div>
               <div>
                 <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🛣️ Rota de Cotação (Path Template)</label>
                 <select id="api-crm-path" style="width: 100%; margin-top: 4px;" aria-label="Rota Power CRM">
-                  <option value="/quotations/{code}">/quotations/{code} (Plural Padrão)</option>
-                  <option value="/quotation/{code}">/quotation/{code} (Singular)</option>
+                  <option value="/quotation/{code}" selected>/quotation/{code} (Oficial BGR)</option>
+                  <option value="/quotations/{code}">/quotations/{code} (Plural Alternativo)</option>
                 </select>
               </div>
             </div>
             <div>
               <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🌐 Base URL Power CRM</label>
-              <input id="api-crm-url" type="text" value="https://api.powercrm.com.br/api/v1" style="width: 100%; margin-top: 4px;" />
+              <input id="api-crm-url" type="text" value="https://api.powercrm.com.br/api" style="width: 100%; margin-top: 4px;" />
             </div>
             <div>
               <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🔐 Power CRM Bearer Token</label>
@@ -2221,8 +2223,8 @@ const HTML_PAGE = `<!DOCTYPE html>
                 value: {
                   messaging_product: 'whatsapp',
                   metadata: {
-                    display_phone_number: latestState?.agent_config?.agent_phone || '+55 31 99888-7766',
-                    phone_number_id: latestState?.agent_config?.whatsapp_phone_number_id || 'waba_bgr_31998887766'
+                    display_phone_number: latestState?.agent_config?.agent_phone || '+55 21 96957-3517',
+                    phone_number_id: latestState?.agent_config?.whatsapp_phone_number_id || '1324598387408794'
                   },
                   contacts: [
                     {
@@ -3378,7 +3380,7 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
             <div style="font-size: 12px; color: #8696a0; display: flex; align-items: center; gap: 6px;">
               <span id="wa-online-status" style="color: #00a884; font-weight: 500;">online</span>
               <span>•</span>
-              <strong id="wa-agent-phone" style="color: #d1d7db; font-weight: 500;">+55 31 99888-7766</strong>
+              <strong id="wa-agent-phone" style="color: #d1d7db; font-weight: 500;">+55 21 96957-3517</strong>
               <span>•</span>
               <span id="wa-stage">contato_iniciado</span>
             </div>
@@ -4579,41 +4581,53 @@ const server = http.createServer(async (req, res) => {
 
         // 6. Cotação Oficial FIPE + Placa Power CRM no WhatsApp Oficial
         let moduleUsed: 'atendimento_qualificacao' | 'cotacao_proposta' = 'atendimento_qualificacao';
-        if (
-          finalNextAction === 'consultar_crm' &&
-          finalLead.name &&
-          finalLead.city_uf &&
-          finalVehicle.brand &&
-          finalVehicle.model &&
-          finalVehicle.year &&
-          finalVehicle.usage
-        ) {
-          const qOut = await quotationService.processQuotationRequest({
-            sessionId: DEFAULT_SESSION_ID,
-            lead: { name: finalLead.name, city_uf: finalLead.city_uf, phone: item.from_phone },
-            vehicle: {
-              brand: finalVehicle.brand,
-              model: finalVehicle.model,
-              year: finalVehicle.year,
-              usage: finalVehicle.usage,
-              plate_masked: finalVehicle.plate_masked ?? null,
-            },
-          });
-          if (qOut.fipe_data) {
-            latestFipeData = qOut.fipe_data;
-            finalVehicle.fipe_code = qOut.fipe_data.fipe_code;
-            if (qOut.fipe_data.plate_info) {
-              finalVehicle.brand = qOut.fipe_data.brand_name;
-              finalVehicle.model = qOut.fipe_data.plate_info.detran_model;
-              finalVehicle.year = qOut.fipe_data.plate_info.model_year;
-            }
-            router.syncSessionMemory(DEFAULT_SESSION_ID, 'whatsapp_oficial', finalLead, finalVehicle);
+        const plateMatchInbound = effectiveText.match(/\b([A-Za-z]{3}-?[0-9][0-9A-Za-z][0-9]{2})\b/);
+        const shouldTriggerQuotation =
+          Boolean(plateMatchInbound) ||
+          finalNextAction === 'consultar_crm' ||
+          (finalVehicle.brand && finalVehicle.model) ||
+          (finalVehicle.model && finalVehicle.year);
+
+        if (shouldTriggerQuotation) {
+          finalLead.name = finalLead.name || item.profile_name || 'Cliente BGR';
+          finalLead.city_uf = finalLead.city_uf || 'Rio de Janeiro/RJ';
+          finalVehicle.usage = finalVehicle.usage || 'particular';
+
+          if (plateMatchInbound) {
+            finalVehicle.plate_masked = plateMatchInbound[1].replace('-', '').toUpperCase();
+            finalVehicle.brand = finalVehicle.brand || 'Consulte FIPE';
+            finalVehicle.model = finalVehicle.model || `Placa ${finalVehicle.plate_masked}`;
+            finalVehicle.year = finalVehicle.year || 2022;
           }
-          if (qOut.quote_result) {
-            currentQuote = qOut.quote_result;
-            conv.current_stage = qOut.stage;
-            replyText = qOut.customer_message;
-            moduleUsed = 'cotacao_proposta';
+
+          if (finalVehicle.brand && finalVehicle.model && finalVehicle.year) {
+            const qOut = await quotationService.processQuotationRequest({
+              sessionId: DEFAULT_SESSION_ID,
+              lead: { name: finalLead.name, city_uf: finalLead.city_uf, phone: item.from_phone },
+              vehicle: {
+                brand: finalVehicle.brand,
+                model: finalVehicle.model,
+                year: finalVehicle.year,
+                usage: finalVehicle.usage,
+                plate_masked: finalVehicle.plate_masked ?? null,
+              },
+            });
+            if (qOut.fipe_data) {
+              latestFipeData = qOut.fipe_data;
+              finalVehicle.fipe_code = qOut.fipe_data.fipe_code;
+              if (qOut.fipe_data.plate_info) {
+                finalVehicle.brand = qOut.fipe_data.brand_name;
+                finalVehicle.model = qOut.fipe_data.plate_info.detran_model;
+                finalVehicle.year = qOut.fipe_data.plate_info.model_year;
+              }
+              router.syncSessionMemory(DEFAULT_SESSION_ID, 'whatsapp_oficial', finalLead, finalVehicle);
+            }
+            if (qOut.quote_result) {
+              currentQuote = qOut.quote_result;
+              conv.current_stage = qOut.stage;
+              replyText = qOut.customer_message;
+              moduleUsed = 'cotacao_proposta';
+            }
           }
         }
 
