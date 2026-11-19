@@ -188,8 +188,7 @@ describe('Fase 2 — PowerCRM Adapter (Leitura Controlada, Mocks, Resiliência H
   });
 
   test('Sincronização no Power CRM: Registra cotação e lead no funil sob a origem 19266 (BGR - DIEGO)', async () => {
-    let capturedUrl = '';
-    let capturedBody: any = null;
+    const capturedCalls: Array<{ url: string; body: any }> = [];
 
     const adapter = new PowerCrmAdapter({
       mode: 'http',
@@ -197,8 +196,14 @@ describe('Fase 2 — PowerCRM Adapter (Leitura Controlada, Mocks, Resiliência H
       originId: '19266',
       bearerToken: 'token_teste_123',
       fetchImpl: async (url, init) => {
-        capturedUrl = String(url);
-        capturedBody = JSON.parse(String(init?.body || '{}'));
+        const u = String(url);
+        const b = JSON.parse(String(init?.body || '{}'));
+        capturedCalls.push({ url: u, body: b });
+        if (u.includes('/quotation/add')) {
+          return new Response(JSON.stringify({ quotationCode: 'COT-TEST01', negotiationCode: 'NEG-TEST01' }), {
+            status: 200,
+          });
+        }
         return new Response('ok', { status: 200 });
       },
     });
@@ -242,9 +247,18 @@ describe('Fase 2 — PowerCRM Adapter (Leitura Controlada, Mocks, Resiliência H
 
     assert.equal(syncRes.ok, true);
     assert.equal(syncRes.status, 200);
-    assert.equal(capturedUrl, 'https://api.powercrm.com.br/rdstation/add/19266');
-    assert.ok(capturedBody.leads && capturedBody.leads.length === 1);
-    const capturedLead = capturedBody.leads[0];
+    assert.equal(capturedCalls.length, 2);
+
+    // Chamada 1: Ingestão direta na coluna "Cotações recebidas" do Kanban de Vendas
+    assert.equal(capturedCalls[0].url, 'https://api.powercrm.com.br/api/quotation/add');
+    assert.equal(capturedCalls[0].body.name, 'Diego Gomes');
+    assert.equal(capturedCalls[0].body.plts, 'BRA2E19');
+    assert.equal(capturedCalls[0].body.origemId, 19266);
+
+    // Chamada 2: Ingestão de metadados no RD Station / Power CRM
+    assert.equal(capturedCalls[1].url, 'https://api.powercrm.com.br/rdstation/add/19266');
+    assert.ok(capturedCalls[1].body.leads && capturedCalls[1].body.leads.length === 1);
+    const capturedLead = capturedCalls[1].body.leads[0];
     assert.equal(capturedLead.name, 'Diego Gomes');
     assert.equal(capturedLead.email, 'diego@bgrbeneficios.com.br');
     assert.equal(capturedLead.first_conversion.content.placa, 'BRA2E19');

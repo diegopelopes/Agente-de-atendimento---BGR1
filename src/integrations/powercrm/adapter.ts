@@ -807,6 +807,52 @@ export class PowerCrmAdapter {
     }
 
     const cleanBase = this.config.baseUrl.replace(/\/api\/?$/, '');
+    const cleanPlate = (params.vehicle.plate_masked || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    const parsedOriginId = Number(originId) || 19266;
+
+    let crmQuotationCode = '';
+    let crmNegotiationCode = '';
+
+    // 1. Cria a negociação diretamente no Kanban de Vendas ("Cotações recebidas") do Power CRM
+    try {
+      const quotationAddPayload: Record<string, unknown> = {
+        name: params.lead.name || 'Cliente BGR',
+        phone: cleanPhone,
+        email: effectiveEmail,
+        origemId: parsedOriginId,
+        workVehicle: params.vehicle.usage !== 'particular',
+      };
+      if (cleanPlate.length >= 7) {
+        quotationAddPayload.plts = cleanPlate;
+      }
+      if (params.vehicle.year) {
+        quotationAddPayload.mdlYr = Number(params.vehicle.year);
+      }
+
+      const addHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      };
+      if (this.config.bearerToken) {
+        addHeaders['Authorization'] = `Bearer ${this.config.bearerToken}`;
+      }
+
+      const addRes = await this.config.fetchImpl!(`${this.config.baseUrl}/quotation/add`, {
+        method: 'POST',
+        headers: addHeaders,
+        body: JSON.stringify(quotationAddPayload),
+      });
+
+      if (addRes.ok) {
+        const addJson = (await addRes.json()) as { quotationCode?: string; negotiationCode?: string };
+        crmQuotationCode = addJson.quotationCode || '';
+        crmNegotiationCode = addJson.negotiationCode || '';
+      }
+    } catch (addErr) {
+      console.warn('[PowerCRM] Aviso ao adicionar cotação nativa via /quotation/add:', addErr);
+    }
+
+    // 2. Ingestão completa no Funil RD Station / Power CRM (metadados FIPE, marca, modelo e planos)
     const url = `${cleanBase}/rdstation/add/${originId}`;
 
     try {
@@ -827,11 +873,13 @@ export class PowerCrmAdapter {
       const responseText = await res.text();
       const isOk = res.ok || res.status === 200;
 
+      const codeInfo = crmQuotationCode ? ` (Cotação Kanban: ${crmQuotationCode} / Negociação: ${crmNegotiationCode})` : '';
+
       return {
         ok: isOk,
         status: res.status,
         message: isOk
-          ? `Pedido de cotação registrado no Power CRM sob a origem BGR - DIEGO (${originId}): ${responseText}`
+          ? `Cotação registrada em 'Cotações recebidas'${codeInfo} sob a origem ID ${originId}: ${responseText}`
           : `Erro HTTP ${res.status} ao sincronizar no Power CRM: ${responseText}`,
       };
     } catch (err) {
