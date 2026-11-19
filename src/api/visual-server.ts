@@ -317,6 +317,9 @@ let agentConfig: AgentRuntimeConfig = {
 
 let cadenceDispatchHistory: CadenceDispatchRecord[] = [];
 let currentQuote: QuoteResult | null = null;
+const clientQuotes = new Map<string, QuoteResult>();
+const clientOpportunities = new Map<string, string>();
+const clientChatHistories = new Map<string, Array<{ role: 'user' | 'assistant'; content: string }>>();
 let latestFipeData: {
   vehicle_type_id?: number;
   brand_id?: number;
@@ -4432,14 +4435,17 @@ const server = http.createServer(async (req, res) => {
           continue;
         }
 
-        const conv = handoffService.getOrCreateConversation(DEFAULT_SESSION_ID, 'whatsapp_oficial');
+        const clientSessionId = inboundDecision.session_id || WhatsAppChannelService.buildSessionIdForPhone(item.from_phone);
+        const conv = handoffService.getOrCreateConversation(clientSessionId, 'whatsapp_oficial');
+        const clientQuote = clientQuotes.get(clientSessionId) || null;
+        const clientOppId = clientOpportunities.get(clientSessionId) || `opp_${clientSessionId.replace(/\D/g, '').slice(-8)}_${Date.now().toString().slice(-4)}`;
 
         // 1. Contorno Comercial de Objeções no WhatsApp Oficial (desconto / está caro)
         if (/\b(desconto|mais\s+barato|50%|abatimento)\b/i.test(effectiveText)) {
           const objRes = quotationService.handleCommercialObjection('pedido_desconto');
           lastOutboundPreview = objRes.customer_message;
           const sentObj = await dispatchViaMetaCloud({
-            sessionId: inboundDecision.session_id,
+            sessionId: clientSessionId,
             toPhone: item.from_phone,
             textBody: lastOutboundPreview,
             moduleKey: 'objecoes_travas',
@@ -4454,7 +4460,7 @@ const server = http.createServer(async (req, res) => {
           const objRes = quotationService.handleCommercialObjection('esta_caro');
           lastOutboundPreview = objRes.customer_message;
           const sentObj = await dispatchViaMetaCloud({
-            sessionId: inboundDecision.session_id,
+            sessionId: clientSessionId,
             toPhone: item.from_phone,
             textBody: lastOutboundPreview,
             moduleKey: 'objecoes_travas',
@@ -4466,42 +4472,51 @@ const server = http.createServer(async (req, res) => {
         }
 
         // 2. Escolha de Plano & Criação de Proposta Oficial no WhatsApp Oficial
+        const hasExistingQuote = clientQuote !== null;
         const wantsPlan2 =
           /\b(plano\s*2|op[cç][aã]o\s*2|bgr\s+completo|completo|segundo\s+plano)\b/i.test(effectiveText) ||
-          (currentQuote !== null && /^2$/.test(effectiveText.trim()));
+          (hasExistingQuote && /^2$/.test(effectiveText.trim()));
         const wantsPlan1 =
           /\b(quero\s+contratar|plano\s*1|op[cç][aã]o\s*1|bgr\s+essencial|essencial|primeiro\s+plano|fechar\s+agora|quero\s+esse)\b/i.test(
             effectiveText
           ) ||
-          (currentQuote !== null && /^1$/.test(effectiveText.trim()));
+          (hasExistingQuote && /^1$/.test(effectiveText.trim()));
 
         if (wantsPlan1 || wantsPlan2) {
-          if (!currentQuote) {
-            const autoQuote = await quotationService.processQuotationRequest({
-              sessionId: DEFAULT_SESSION_ID,
-              lead: { id: 'lead_wa_001', name: item.profile_name || 'Cliente BGR', phone: item.from_phone, city_uf: 'Belo Horizonte/MG' },
-              vehicle: { brand: 'Honda', model: 'Civic', year: 2022, usage: 'particular' },
+          if (!hasExistingQuote) {
+            lastOutboundPreview = 'Excelente escolha! Para gerarmos sua proposta oficial com os valores exatos para o seu caso, qual é a placa ou o modelo e ano do seu veículo?';
+            const sentAsk = await dispatchViaMetaCloud({
+              sessionId: clientSessionId,
+              toPhone: item.from_phone,
+              textBody: lastOutboundPreview,
+              moduleKey: 'atendimento_qualificacao',
+              recordInLiveMonitor: true,
             });
-            currentQuote = autoQuote.quote_result;
+            lastOutboundWamid = sentAsk.wamid;
+            triggerBackgroundPersistence();
+            continue;
           }
+
+          const activeQuote = clientQuote!;
           const chosenPlanId =
-            wantsPlan2 && currentQuote!.plans[1] ? currentQuote!.plans[1].plan_id : currentQuote!.plans[0].plan_id;
+            wantsPlan2 && activeQuote.plans[1] ? activeQuote.plans[1].plan_id : activeQuote.plans[0].plan_id;
           const oppOut = lifecycleService.createOpportunityFromQuote({
-            opportunityId: DEFAULT_OPP_ID,
-            leadId: 'lead_wa_001',
-            quote: currentQuote!,
+            opportunityId: clientOppId,
+            leadId: `lead_${clientSessionId}`,
+            quote: activeQuote,
             selectedPlanId: chosenPlanId,
-            sessionId: DEFAULT_SESSION_ID,
+            sessionId: clientSessionId,
           });
+          clientOpportunities.set(clientSessionId, clientOppId);
           opportunityCreated = true;
           conv.current_stage = oppOut.stage;
           dashboardService.recordEvent({
             auditEvent: oppOut.audit_event,
-            proposalOpportunityId: DEFAULT_OPP_ID,
+            proposalOpportunityId: clientOppId,
           });
           lastOutboundPreview = oppOut.customer_message;
           const sentProp = await dispatchViaMetaCloud({
-            sessionId: inboundDecision.session_id,
+            sessionId: clientSessionId,
             toPhone: item.from_phone,
             textBody: lastOutboundPreview,
             moduleKey: 'cotacao_proposta',
@@ -4513,18 +4528,18 @@ const server = http.createServer(async (req, res) => {
         }
 
         // 3. Trava Anti-Ativação Prematura (T27 "já assinei" / T28 "fiz o PIX / comprovante") no WhatsApp Oficial
-        if (/\b(j[aá]\s+assinei|fiz\s+o\s+pix|comprovante|j[aá]\s+paguei|j[aá]\s+estou\s+protegido)\b/i.test(effectiveText) && opportunityCreated) {
+        if (/\b(j[aá]\s+assinei|fiz\s+o\s+pix|comprovante|j[aá]\s+paguei|j[aá]\s+estou\s+protegido)\b/i.test(effectiveText) && clientOpportunities.has(clientSessionId)) {
           const isPix = /\b(pix|comprovante|paguei)\b/i.test(effectiveText);
           const claimOut = lifecycleService.handleCustomerUnverifiedClaim({
-            opportunityId: DEFAULT_OPP_ID,
-            sessionId: DEFAULT_SESSION_ID,
+            opportunityId: clientOppId,
+            sessionId: clientSessionId,
             claimType: isPix ? 'enviou_comprovante_pagamento' : 'alega_assinatura_concluida',
           });
           conv.current_stage = claimOut.stage;
           dashboardService.recordEvent({ auditEvent: claimOut.audit_event });
           lastOutboundPreview = claimOut.customer_message;
           const sentClaim = await dispatchViaMetaCloud({
-            sessionId: inboundDecision.session_id,
+            sessionId: clientSessionId,
             toPhone: item.from_phone,
             textBody: lastOutboundPreview,
             moduleKey: 'objecoes_travas',
@@ -4539,7 +4554,8 @@ const server = http.createServer(async (req, res) => {
         const rtOut = router.routeMessage({
           message: effectiveText,
           channelId: 'whatsapp_oficial',
-          sessionId: DEFAULT_SESSION_ID,
+          sessionId: clientSessionId,
+          leadUpdate: item.profile_name ? { name: item.profile_name } : undefined,
         });
         dashboardService.recordEvent({
           auditEvent: rtOut.audit_event,
@@ -4549,7 +4565,7 @@ const server = http.createServer(async (req, res) => {
         if (rtOut.security_blocked) {
           lastOutboundPreview = rtOut.response;
           const sentSec = await dispatchViaMetaCloud({
-            sessionId: inboundDecision.session_id,
+            sessionId: clientSessionId,
             toPhone: item.from_phone,
             textBody: lastOutboundPreview,
             moduleKey: 'objecoes_travas',
@@ -4565,6 +4581,11 @@ const server = http.createServer(async (req, res) => {
         let finalLead = { ...rtOut.memory_snapshot.lead, phone: item.from_phone };
         let finalVehicle = { ...rtOut.memory_snapshot.vehicle };
 
+        if (!clientChatHistories.has(clientSessionId)) {
+          clientChatHistories.set(clientSessionId, []);
+        }
+        const clientHistory = clientChatHistories.get(clientSessionId)!;
+
         if (openAiAssistant.isConfigured()) {
           try {
             const aiOut = await openAiAssistant.processCustomerTurn({
@@ -4573,17 +4594,17 @@ const server = http.createServer(async (req, res) => {
                 lead: finalLead,
                 vehicle: finalVehicle,
                 currentStage: conv.current_stage,
-                hasOfficialQuote: currentQuote !== null,
-                officialQuoteSummary: currentQuote
-                  ? currentQuote.plans.map((p) => `${p.plan_name}: R$ ${p.monthly_fee_brl.toFixed(2)}/mês`).join(' | ')
+                hasOfficialQuote: clientQuote !== null,
+                officialQuoteSummary: clientQuote
+                  ? clientQuote.plans.map((p) => `${p.plan_name}: R$ ${p.monthly_fee_brl.toFixed(2)}/mês`).join(' | ')
                   : undefined,
               },
-              conversationHistory: chatHistoryLog,
+              conversationHistory: clientHistory,
             });
             replyText = aiOut.replyText;
             finalLead = { ...aiOut.extractedLead, phone: item.from_phone };
             finalVehicle = aiOut.extractedVehicle;
-            router.syncSessionMemory(DEFAULT_SESSION_ID, 'whatsapp_oficial', finalLead, finalVehicle);
+            router.syncSessionMemory(clientSessionId, 'whatsapp_oficial', finalLead, finalVehicle);
             if (aiOut.wantsHumanHandoff) {
               finalNextAction = 'transferir_humano';
             } else if (aiOut.readyForCrmQuote) {
@@ -4594,21 +4615,23 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
+        clientHistory.push({ role: 'user', content: effectiveText });
         chatHistoryLog.push({ role: 'user', content: effectiveText });
 
         // 5. Transbordo para Atendente Humano + Alerta no WhatsApp do Atendente via Meta Cloud API
         if (finalNextAction === 'transferir_humano') {
           const hdfOut = handoffService.initiateHandoff({
-            sessionId: DEFAULT_SESSION_ID,
+            sessionId: clientSessionId,
             channel: 'whatsapp_oficial',
             trigger: 'solicitacao_explicita_cliente',
             conversationSummary: `Cliente ${finalLead.name || item.profile_name} (${item.from_phone}) solicitou atendente humano no WhatsApp: "${effectiveText}"`,
           });
+          clientHistory.push({ role: 'assistant', content: hdfOut.customer_message });
           chatHistoryLog.push({ role: 'assistant', content: hdfOut.customer_message });
           dashboardService.recordEvent({ auditEvent: hdfOut.audit_event });
           lastOutboundPreview = hdfOut.customer_message;
           const sentHdf = await dispatchViaMetaCloud({
-            sessionId: inboundDecision.session_id,
+            sessionId: clientSessionId,
             toPhone: item.from_phone,
             textBody: lastOutboundPreview,
             moduleKey: 'handoff_humanos',
@@ -4627,12 +4650,19 @@ const server = http.createServer(async (req, res) => {
 
         // 6. Cotação Oficial FIPE + Placa Power CRM no WhatsApp Oficial
         let moduleUsed: 'atendimento_qualificacao' | 'cotacao_proposta' = 'atendimento_qualificacao';
+        const isGreeting = /^(ol[aá]|oi|bom\s+dia|boa\s+tarde|boa\s+noite|opa|ol[aá].*|tudo\s+bem|como\s+vai|e\s+a[ií])$/i.test(effectiveText.trim());
         const plateMatchInbound = effectiveText.match(/\b([A-Za-z]{3}-?[0-9][0-9A-Za-z][0-9]{2})\b/);
+        const hasExplicitVehicle = Boolean(
+          finalVehicle.brand &&
+          finalVehicle.model &&
+          finalVehicle.year &&
+          finalVehicle.brand !== 'Consulte FIPE'
+        );
         const shouldTriggerQuotation =
-          Boolean(plateMatchInbound) ||
-          finalNextAction === 'consultar_crm' ||
-          (finalVehicle.brand && finalVehicle.model) ||
-          (finalVehicle.model && finalVehicle.year);
+          !isGreeting &&
+          (Boolean(plateMatchInbound) ||
+            finalNextAction === 'consultar_crm' ||
+            hasExplicitVehicle);
 
         if (shouldTriggerQuotation) {
           finalLead.name = finalLead.name || item.profile_name || 'Cliente BGR';
@@ -4648,7 +4678,7 @@ const server = http.createServer(async (req, res) => {
 
           if (finalVehicle.brand && finalVehicle.model && finalVehicle.year) {
             const qOut = await quotationService.processQuotationRequest({
-              sessionId: DEFAULT_SESSION_ID,
+              sessionId: clientSessionId,
               lead: { name: finalLead.name, city_uf: finalLead.city_uf, phone: item.from_phone },
               vehicle: {
                 brand: finalVehicle.brand,
@@ -4666,9 +4696,10 @@ const server = http.createServer(async (req, res) => {
                 finalVehicle.model = qOut.fipe_data.plate_info.detran_model;
                 finalVehicle.year = qOut.fipe_data.plate_info.model_year;
               }
-              router.syncSessionMemory(DEFAULT_SESSION_ID, 'whatsapp_oficial', finalLead, finalVehicle);
+              router.syncSessionMemory(clientSessionId, 'whatsapp_oficial', finalLead, finalVehicle);
             }
             if (qOut.quote_result) {
+              clientQuotes.set(clientSessionId, qOut.quote_result);
               currentQuote = qOut.quote_result;
               conv.current_stage = qOut.stage;
               replyText = qOut.customer_message;
@@ -4677,10 +4708,11 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
+        clientHistory.push({ role: 'assistant', content: replyText });
         chatHistoryLog.push({ role: 'assistant', content: replyText });
         lastOutboundPreview = replyText;
         const sentTurn = await dispatchViaMetaCloud({
-          sessionId: inboundDecision.session_id,
+          sessionId: clientSessionId,
           toPhone: item.from_phone,
           textBody: replyText,
           moduleKey: moduleUsed,
