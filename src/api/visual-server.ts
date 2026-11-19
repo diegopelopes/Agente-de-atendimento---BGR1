@@ -2673,7 +2673,7 @@ const HTML_PAGE = `<!DOCTYPE html>
         if (item.direction === 'inbound') {
           appendMessage(
             'user',
-            '📲 [WhatsApp Real • ' + (item.customer_name || item.customer_phone) + ']\n' + item.text
+            '📲 [WhatsApp Real • ' + (item.customer_name || item.customer_phone) + ']\\n' + item.text
           );
         } else {
           appendMessage(
@@ -2791,17 +2791,17 @@ const HTML_PAGE = `<!DOCTYPE html>
       if (!inp) return;
       const replies = {
         plans:
-          '🛡️ *Planos Oficiais BGR Benefícios:*\n' +
-          '• *Plano Prata:* R$ 119,90/mês (Roubo, furto, colisão e assistência 24h)\n' +
-          '• *Plano Ouro:* R$ 149,90/mês (Completo + proteção a terceiros e vidros)\n' +
-          '• *Plano Diamante:* R$ 189,90/mês (Proteção Total 100% FIPE + Guincho ilimitado)\n\n' +
+          '🛡️ *Planos Oficiais BGR Benefícios:*\\n' +
+          '• *Plano Prata:* R$ 119,90/mês (Roubo, furto, colisão e assistência 24h)\\n' +
+          '• *Plano Ouro:* R$ 149,90/mês (Completo + proteção a terceiros e vidros)\\n' +
+          '• *Plano Diamante:* R$ 189,90/mês (Proteção Total 100% FIPE + Guincho ilimitado)\\n\\n' +
           'Qual dessas opções atende melhor você?',
         fipe:
           'Olá! Para calcular a cotação exata da proteção na Tabela FIPE do seu veículo, você poderia me informar a *placa* ou o *modelo e ano* do carro?',
         pix:
           '💳 Para formalizar a adesão da sua proteção, a chave PIX oficial da BGR Benefícios é nosso CNPJ. Assim que realizar o pagamento, basta me enviar o comprovante por aqui!',
         contract:
-          '📝 Segue o link seguro para você conferir e assinar digitalmente a sua adesão à BGR Benefícios:\nhttps://bgrbeneficios.com.br/proposta-digital\nLeva menos de 1 minuto!',
+          '📝 Segue o link seguro para você conferir e assinar digitalmente a sua adesão à BGR Benefícios:\\nhttps://bgrbeneficios.com.br/proposta-digital\\nLeva menos de 1 minuto!',
         human_intro:
           'Olá! Aqui é o consultor comercial da BGR Benefícios assumindo o seu atendimento humano no WhatsApp. Como posso te ajudar agora?'
       };
@@ -2892,7 +2892,7 @@ const HTML_PAGE = `<!DOCTYPE html>
           : '<span class="badge" style="font-size: 10px; padding: 1px 5px;">🤖 IA</span>';
 
         cardsHtml.unshift(
-          '<div class="inbox-chat-card ' + (isSelected ? 'active' : '') + '" onclick="selectInboxConversation(\'' + phone + '\')">' +
+          '<div class="inbox-chat-card ' + (isSelected ? 'active' : '') + '" data-phone="' + phone + '" onclick="selectInboxConversation(this.dataset.phone)">' +
             '<div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, ' +
             (conv.isAiPaused ? '#f59e0b, #ef4444' : '#10b981, #2563eb') +
             '); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">' +
@@ -3810,7 +3810,7 @@ const CHAT_ONLY_HTML = `<!DOCTYPE html>
           if (!item || !item.feed_id || waSeenFeedIds.has(item.feed_id)) continue;
           waSeenFeedIds.add(item.feed_id);
           if (item.direction === 'inbound') {
-            addBubble('user', '📲 [' + (item.customer_name || item.customer_phone) + ']\n' + item.text);
+            addBubble('user', '📲 [' + (item.customer_name || item.customer_phone) + ']\\n' + item.text);
           } else {
             addBubble('agent', item.text, '📲 WhatsApp Real (' + item.customer_phone + ')');
           }
