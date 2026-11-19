@@ -157,7 +157,7 @@ export function formatOfficialQuotationPresentation(
     `${plansText}\n\n` +
     `📅 *Validade desta cotação*: até ${validDate}.\n` +
     `⚠️ *Importante*: O recebimento desta cotação não ativa a proteção automaticamente. A cobertura passa a vigorar somente após escolha do plano, vistoria aprovada, assinatura digital da proposta e confirmação oficial do pagamento.\n\n` +
-    `Qual das opções faz mais sentido para você hoje?`
+    `Qual das opções faz mais sentido para você hoje, ou gostaria de cotar outro veículo?`
   );
 }
 

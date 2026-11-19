@@ -4829,6 +4829,36 @@ const server = http.createServer(async (req, res) => {
           continue;
         }
 
+        // 5.5. Solicitação de Cotação de Outro Veículo (quebra o loop e reseta o veículo da sessão)
+        const wantsAnotherQuote =
+          /\b(cotar\s+outro|outro\s+ve[ií]culo|outro\s+carro|outra\s+moto|outra\s+cota[cç][aã]o|mais\s+um\s+ve[ií]culo|mais\s+um\s+carro|tenho\s+outro|tenho\s+outra|quero\s+cotar\s+outro|nova\s+cota[cç][aã]o|novo\s+ve[ií]culo)\b/i.test(
+            effectiveText
+          );
+
+        if (wantsAnotherQuote) {
+          clientQuotes.delete(clientSessionId);
+          clientOpportunities.delete(clientSessionId);
+          conv.current_stage = 'qualificacao';
+          finalVehicle = { usage: 'particular' };
+          router.syncSessionMemory(clientSessionId, 'whatsapp_oficial', finalLead, finalVehicle);
+
+          const rawFirstName = (finalLead.name || item.profile_name || 'Cliente').split(/\s+/)[0];
+          replyText = `Perfeito, ${rawFirstName}! Vamos fazer a cotação do seu outro veículo agora mesmo. Me informe por favor a placa ou o modelo e ano dele!`;
+          clientHistory.push({ role: 'assistant', content: replyText });
+          chatHistoryLog.push({ role: 'assistant', content: replyText });
+          lastOutboundPreview = replyText;
+          const sentAnother = await dispatchViaMetaCloud({
+            sessionId: clientSessionId,
+            toPhone: item.from_phone,
+            textBody: replyText,
+            moduleKey: 'atendimento_qualificacao',
+            recordInLiveMonitor: true,
+          });
+          lastOutboundWamid = sentAnother.wamid;
+          triggerBackgroundPersistence();
+          continue;
+        }
+
         // 6. Cotação Oficial FIPE + Placa Power CRM no WhatsApp Oficial
         let moduleUsed: 'atendimento_qualificacao' | 'cotacao_proposta' = 'atendimento_qualificacao';
         const isGreeting = /^(ol[aá]|oi|bom\s+dia|boa\s+tarde|boa\s+noite|opa|ol[aá].*|tudo\s+bem|como\s+vai|e\s+a[ií])$/i.test(effectiveText.trim());
@@ -4841,9 +4871,10 @@ const server = http.createServer(async (req, res) => {
         );
         const shouldTriggerQuotation =
           !isGreeting &&
+          !wantsAnotherQuote &&
           (Boolean(plateMatchInbound) ||
             finalNextAction === 'consultar_crm' ||
-            hasExplicitVehicle);
+            (conv.current_stage !== 'cotacao_enviada' && hasExplicitVehicle));
 
         if (shouldTriggerQuotation) {
           finalLead.name = finalLead.name || item.profile_name || 'Cliente BGR';
@@ -5673,6 +5704,33 @@ const server = http.createServer(async (req, res) => {
           JSON.stringify({
             reply: hdfOut.customer_message,
             meta: `📱 agente: ${agentConfig.agent_phone} | Meta Cloud API (${sentHdf.wamid || 'sim'}) | motor: ${engineLabel} | protocolo: ${hdfOut.handoff.ticket_id} | fila: ${hdfOut.handoff.target_queue}`,
+            state: getFullState(),
+          })
+        );
+        return;
+      }
+
+      // Solicitação de Cotação de Outro Veículo no Chat (quebra o loop e reseta o veículo da sessão)
+      const wantsAnotherQuoteChat =
+        /\b(cotar\s+outro|outro\s+ve[ií]culo|outro\s+carro|outra\s+moto|outra\s+cota[cç][aã]o|mais\s+um\s+ve[ií]culo|mais\s+um\s+carro|tenho\s+outro|tenho\s+outra|quero\s+cotar\s+outro|nova\s+cota[cç][aã]o|novo\s+ve[ií]culo)\b/i.test(
+          msgText
+        );
+
+      if (wantsAnotherQuoteChat) {
+        currentQuote = null;
+        opportunityCreated = false;
+        conv.current_stage = 'qualificacao';
+        finalVehicle = { usage: 'particular' };
+        router.syncSessionMemory(DEFAULT_SESSION_ID, 'chat_teste', finalLead, finalVehicle);
+
+        const rawFirstName = (finalLead.name || 'Cliente').split(/\s+/)[0];
+        const replyText = `Perfeito, ${rawFirstName}! Vamos fazer a cotação do seu outro veículo agora mesmo. Me informe por favor a placa ou o modelo e ano dele!`;
+        chatHistoryLog.push({ role: 'assistant', content: replyText });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            reply: replyText,
+            meta: `📱 agente: ${agentConfig.agent_phone} | motor: ${engineLabel} | etapa: qualificacao`,
             state: getFullState(),
           })
         );

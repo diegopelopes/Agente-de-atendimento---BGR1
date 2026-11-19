@@ -251,7 +251,10 @@ describe('Fase 2 — PowerCRM Adapter (Leitura Controlada, Mocks, Resiliência H
 
     // Chamada 1: Ingestão direta na coluna "Cotações recebidas" do Kanban de Vendas
     assert.equal(capturedCalls[0].url, 'https://api.powercrm.com.br/api/quotation/add');
-    assert.equal(capturedCalls[0].body.name, 'Diego Gomes');
+    assert.equal(capturedCalls[0].body.name.includes('Diego Gomes'), true);
+    assert.equal(capturedCalls[0].body.name.includes('(21) 96957-3517'), true);
+    assert.equal(capturedCalls[0].body.phone, '21969573517');
+    assert.equal(capturedCalls[0].body.phoneMobile1, '(21) 96957-3517');
     assert.equal(capturedCalls[0].body.plts, 'BRA2E19');
     assert.equal(capturedCalls[0].body.origemId, 19266);
 

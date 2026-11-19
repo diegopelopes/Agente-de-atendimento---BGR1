@@ -810,17 +810,41 @@ export class PowerCrmAdapter {
     const cleanPlate = (params.vehicle.plate_masked || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
     const parsedOriginId = Number(originId) || 19266;
 
+    const rawPhoneDigits = (params.lead.phone || '').replace(/\D/g, '');
+    let phoneWithDdd = rawPhoneDigits;
+    if (rawPhoneDigits.length >= 12 && rawPhoneDigits.startsWith('55')) {
+      phoneWithDdd = rawPhoneDigits.slice(2);
+    }
+    const formattedPhone =
+      phoneWithDdd.length === 11
+        ? `(${phoneWithDdd.slice(0, 2)}) ${phoneWithDdd.slice(2, 7)}-${phoneWithDdd.slice(7)}`
+        : phoneWithDdd.length === 10
+          ? `(${phoneWithDdd.slice(0, 2)}) ${phoneWithDdd.slice(2, 6)}-${phoneWithDdd.slice(6)}`
+          : phoneWithDdd;
+
+    const fullWhatsApp = `+55 ${formattedPhone}`;
+
+    // No card do Power CRM, inclui o contato WhatsApp diretamente no título do card para visibilidade imediata
+    const cardCustomerName =
+      params.lead.name && params.lead.name.trim() !== 'Cliente BGR'
+        ? `${params.lead.name.trim()} • WhatsApp: ${formattedPhone}`
+        : `Cliente WhatsApp: ${formattedPhone}`;
+
     let crmQuotationCode = '';
     let crmNegotiationCode = '';
 
     // 1. Cria a negociação diretamente no Kanban de Vendas ("Cotações recebidas") do Power CRM
     try {
       const quotationAddPayload: Record<string, unknown> = {
-        name: params.lead.name || 'Cliente BGR',
-        phone: cleanPhone,
+        name: cardCustomerName,
+        phone: phoneWithDdd,
+        phoneMobile1: formattedPhone,
+        phoneHome: formattedPhone,
+        phoneWork: fullWhatsApp,
         email: effectiveEmail,
         origemId: parsedOriginId,
         workVehicle: params.vehicle.usage !== 'particular',
+        noteContract: `Contato WhatsApp: ${fullWhatsApp} (${formattedPhone}) | Lead: ${params.lead.name || 'Cliente'} | Cotação: ${params.quotationCode}`,
       };
       if (cleanPlate.length >= 7) {
         quotationAddPayload.plts = cleanPlate;
