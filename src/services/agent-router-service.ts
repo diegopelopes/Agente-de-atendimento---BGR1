@@ -724,18 +724,71 @@ export class AgentRouterService {
   }
 
   private matchKnowledgeBaseQuestion(text: string): string | null {
-    if (/\b(guincho|assist[eê]ncia\s*24|reboque|chaveiro|pane)\b/i.test(text)) {
-      return '🛠️ *Assistência 24h BGR*: Todos os nossos planos contam com assistência 24 horas em todo o território nacional (guincho/reboque, socorro elétrico/mecânico, troca de pneus, chaveiro e auxílio falta de combustível).';
+    // 1. Guincho & Assistência 24h
+    if (/\b(guincho|assist[eê]ncia\s*24|reboque|chaveiro|pane|troca\s+de\s+pneu|bateria)\b/i.test(text)) {
+      return '🛠️ *Assistência 24h BGR*: Todos os nossos planos contam com assistência 24 horas em todo o território nacional (guincho/reboque com raio ampliado, socorro elétrico/mecânico, troca de pneus, chaveiro 24h e auxílio para pane seca/combustível).';
     }
-    if (/\b(spc|serasa|nome\s+sujo|restri[cç][aã]o|consulta\s+cpf|perfil\s+de\s+condutor)\b/i.test(text)) {
-      return '✅ *Sem Burocracia*: Na BGR Benefícios não fazemos consulta ao SPC/Serasa e não exigimos perfil de condutor principal (qualquer pessoa habilitada pode conduzir o veículo com segurança).';
+
+    // 2. Associação / Proteção Veicular vs Seguradora
+    if (/\b(seguradora|associa[cç][aã]o|diferen[cç]a|susep|cooperativa|m[uú]tuo|clube|por\s+que\s+(n[aã]o\s+)?seguro)\b/i.test(text)) {
+      return '🤝 *Associação vs Seguradora*: A BGR Benefícios é um Clube de Benefícios mútuo legalmente respaldado pela legislação brasileira. A grande vantagem é que *não temos análise de perfil de condutor* (qualquer pessoa habilitada pode dirigir seu carro), *não consultamos SPC/Serasa* e o custo é até 50% mais acessível que as seguradoras tradicionais com as mesmas coberturas essenciais de 100% da Tabela FIPE!';
     }
-    if (/\b(cobre\s+o\s+qu[eê]|quais\s+(as\s+)?coberturas|roubo|furto|colis[aã]o|terceiros|inc[eê]ndio|granizo|alagamento)\b/i.test(text)) {
-      return '🛡️ *Coberturas BGR Benefícios*: Oferecemos proteção completa até 100% da Tabela FIPE contra Roubo, Furto, Colisão, Perda Total, Incêndio e Fenômenos da Natureza, além de cobertura para Danos a Terceiros e Carro Reserva conforme o plano escolhido.';
+
+    // 3. SPC / Serasa / Perfil de Condutor
+    if (/\b(spc|serasa|nome\s+sujo|restri[cç][aã]o|consulta\s+cpf|perfil\s+de\s+condutor|idade|quem\s+pode\s+dirigir)\b/i.test(text)) {
+      return '✅ *Sem Burocracia*: Na BGR Benefícios nós NÃO consultamos SPC/Serasa para aprovar a sua proteção e não exigimos perfil de condutor. O veículo estando protegido, qualquer pessoa legalmente habilitada pode dirigir com total segurança.';
     }
+
+    // 4. Carro Reserva
+    if (/\b(carro\s*reserva|ve[ií]culo\s*reserva|reserva)\b/i.test(text)) {
+      return '🚗 *Carro Reserva BGR*: Sim! Em caso de sinistro (colisão, roubo ou furto com abertura de processo), associados com planos Ouro e Diamante têm direito a carro reserva por 7, 14 ou até 30 dias para não ficar a pé enquanto o veículo estiver na oficina.';
+    }
+
+    // 5. Franquia / Cota de Participação
+    if (/\b(franquia|cota\s*(de\s*)?participa[cç][aã]o|quanto\s*pago\s*(se|caso)\s*bater|se\s*bater|bata\s*o\s*carro)\b/i.test(text)) {
+      return '⚖️ *Cota de Participação (Franquia)*: Em caso de Roubo, Furto ou Perda Total (PT), você *NÃO paga cota de participação* (recebe 100% da FIPE limpo). Em caso de colisão parcial, você participa apenas com uma cota fixa reduzida prevista no regulamento, sem taxas surpresa nem cobrança extra por idade.';
+    }
+
+    // 6. Uber / 99 / Táxi / Motorista de Aplicativo
+    if (/\b(uber|99|aplicativo|app|t[aá]xi|taxi|motorista\s*de\s*app|trabalho\s*com\s*o\s*carro)\b/i.test(text)) {
+      return '🚕 *Motoristas de App e Táxi*: Sim! A BGR Benefícios aceita e protege motoristas de aplicativo (Uber, 99, táxi e comerciais). Seu instrumento de trabalho fica resguardado 24 horas por dia com cobertura completa e assistência nacional.';
+    }
+
+    // 7. Indenização FIPE / Pagamento em caso de Perda Total ou Roubo
+    if (/\b(indeniza[cç][aã]o|tempo\s*paga|prazo\s*de\s*pagamento|recebo\s*a\s*fipe|como\s*recebo|pagamento\s*do\s*sinistro)\b/i.test(text)) {
+      return '💰 *Indenização 100% Tabela FIPE*: Em caso de Perda Total, Roubo ou Furto sem recuperação, a indenização integral de 100% do valor FIPE do veículo é paga diretamente pela BGR Benefícios com agilidade, mediante entrega da documentação regularizada.';
+    }
+
+    // 8. Cobertura para Terceiros e Vidros
+    if (/\b(terceiros|bater\s*em\s*outro|carro\s*dos\s*outros|vidro|para-brisa|farol|retrovisor)\b/i.test(text)) {
+      return '🛡️ *Terceiros e Vidros*: Oferecemos cobertura contra Danos Materiais causados a Terceiros (até R$ 50.000 ou R$ 100.000 conforme o plano) e proteção para vidros, para-brisa, faróis e lanternas.';
+    }
+
+    // 9. Formas de Pagamento & Cobrança
+    if (/\b(forma\s*(de\s*)?pagamento|como\s*paga|boleto|cart[aã]o|pix|mensalidade)\b/i.test(text)) {
+      return '💳 *Pagamento Facilitado*: A taxa de adesão pode ser paga via PIX ou cartão, e as mensalidades são cobradas via boleto bancário mensal com vencimento programado, sem comprometer o limite do seu cartão de crédito.';
+    }
+
+    // 10. Cancelamento / Carência / Fidelidade
+    if (/\b(car[eê]ncia|fidelidade|multa|cancelar|cancelamento|tempo\s*m[ií]nimo)\b/i.test(text)) {
+      return '📋 *Sem Carência e Transparência Total*: Não há carência para eventos de colisão, roubo ou furto após a vistoria e ativação do plano. E o contrato é transparente: se precisar cancelar, basta solicitar com antecedência conforme o regulamento, sem multas abusivas.';
+    }
+
+    // 11. Coberturas Gerais
+    if (/\b(cobre\s+o\s+qu[eê]|quais\s+(as\s+)?coberturas|roubo|furto|colis[aã]o|inc[eê]ndio|granizo|alagamento|enchente)\b/i.test(text)) {
+      return '🛡️ *Coberturas BGR Benefícios*: Oferecemos proteção completa até 100% da Tabela FIPE contra Roubo, Furto, Colisão, Perda Total, Incêndio decorrente de colisão e Fenômenos da Natureza (enchente, alagamento, granizo, queda de árvore), além de Danos a Terceiros, Carro Reserva e Vidros conforme o plano escolhido.';
+    }
+
+    // 12. Vistoria Prévia
     if (/\b(vistoria|precisa\s+levar\s+o\s+carro|como\s+funciona\s+a\s+vistoria)\b/i.test(text)) {
-      return '📸 *Vistoria Simplificada*: A vistoria prévia pode ser realizada de forma rápida (digital/guiada pelo celular ou presencial conforme a região) logo após a assinatura digital da proposta.';
+      return '📸 *Vistoria Rápida pelo Celular*: A vistoria prévia é 100% digital e prática! Você tira fotos do veículo guiadas pelo próprio celular, sem precisar deslocar o carro até uma oficina física.';
     }
+
+    // 13. Carros de Leilão / Sinistro Recuperado
+    if (/\b(leil[aã]o|recuperado|sinistrado|aceita\s*leil[aã]o)\b/i.test(text)) {
+      return '🔍 *Veículos de Leilão*: A BGR Benefícios aceita veículos com histórico de leilão ou recuperados de financiamento, sujeitos à aprovação na vistoria prévia e percentual FIPE correspondente.';
+    }
+
     return null;
   }
 

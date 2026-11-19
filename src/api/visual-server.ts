@@ -985,6 +985,31 @@ const HTML_PAGE = `<!DOCTYPE html>
             </div>
           </div>
 
+          <!-- Bloco FAQ Comercial BGR (Dúvidas do Setor) -->
+          <div class="form-box" style="gap: 6px;">
+            <div style="font-size: 11px; color: #93c5fd; font-weight: 700; text-transform: uppercase;">💡 Dúvidas Frequentes do Setor</div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <button class="btn sm" style="font-size: 11px; text-align: left; justify-content: flex-start; padding: 4px 6px;" onclick="insertFaqReply('assoc')">
+                🤝 Associação vs Seguradora
+              </button>
+              <button class="btn sm" style="font-size: 11px; text-align: left; justify-content: flex-start; padding: 4px 6px;" onclick="insertFaqReply('guincho')">
+                🛠️ Guincho & Assistência 24h
+              </button>
+              <button class="btn sm" style="font-size: 11px; text-align: left; justify-content: flex-start; padding: 4px 6px;" onclick="insertFaqReply('reserva')">
+                🚗 Carro Reserva (7 a 30 dias)
+              </button>
+              <button class="btn sm" style="font-size: 11px; text-align: left; justify-content: flex-start; padding: 4px 6px;" onclick="insertFaqReply('franquia')">
+                ⚖️ Cota de Participação (Franquia)
+              </button>
+              <button class="btn sm" style="font-size: 11px; text-align: left; justify-content: flex-start; padding: 4px 6px;" onclick="insertFaqReply('spc')">
+                ✅ Sem Consulta SPC / Perfil
+              </button>
+              <button class="btn sm" style="font-size: 11px; text-align: left; justify-content: flex-start; padding: 4px 6px;" onclick="insertFaqReply('uber')">
+                🚕 Motoristas de App (Uber/99)
+              </button>
+            </div>
+          </div>
+
           <div style="display: flex; flex-direction: column; gap: 6px;">
             <button class="btn primary sm" style="justify-content: center;" onclick="insertQuickReply('plans'); sendInboxMessage();">
               📤 Disparar Planos no WhatsApp
@@ -2778,6 +2803,27 @@ const HTML_PAGE = `<!DOCTYPE html>
           'Olá! Aqui é o consultor comercial da BGR Benefícios assumindo o seu atendimento humano no WhatsApp. Como posso te ajudar agora?'
       };
       inp.value = replies[type] || '';
+      inp.focus();
+    }
+
+    function insertFaqReply(type) {
+      const inp = document.getElementById('inbox-input-msg');
+      if (!inp) return;
+      const faqs = {
+        assoc:
+          '🤝 *Associação vs Seguradora*: A BGR Benefícios é um Clube de Benefícios mútuo legalmente respaldado. Diferente das seguradoras tradicionais, nós *não fazemos perfil de condutor* (qualquer pessoa habilitada pode dirigir o seu carro), *não consultamos SPC/Serasa* e o valor da mensalidade é até 50% mais acessível mantendo as mesmas coberturas essenciais de 100% da Tabela FIPE!',
+        guincho:
+          '🛠️ *Assistência 24h BGR*: Todos os nossos planos contam com assistência 24 horas em todo o Brasil (guincho/reboque com raio ampliado, socorro elétrico/mecânico, troca de pneus, chaveiro 24h e auxílio para pane seca de combustível).',
+        reserva:
+          '🚗 *Carro Reserva BGR*: Sim! Em caso de sinistro (colisão, roubo ou furto com abertura de processo), associados dos planos Ouro e Diamante contam com carro reserva de 7, 14 ou até 30 dias para você não ficar a pé.',
+        franquia:
+          '⚖️ *Cota de Participação (Franquia)*: Em caso de Roubo, Furto ou Perda Total (PT), você *NÃO paga cota de participação* (recebe 100% da FIPE limpo). Em caso de colisão parcial, participa apenas com a cota fixa reduzida prevista no regulamento, sem surpresas nem cobrança extra por idade.',
+        spc:
+          '✅ *Sem Burocracia*: Na BGR Benefícios não consultamos SPC/Serasa para aprovar a sua proteção e não exigimos perfil de condutor. Estando protegido, qualquer pessoa habilitada pode dirigir com total segurança.',
+        uber:
+          '🚕 *Motoristas de App e Táxi*: Sim! A BGR Benefícios aceita e incentiva motoristas de aplicativo (Uber, 99, táxi e frotas). Seu instrumento de trabalho fica resguardado 24 horas por dia com cobertura completa e assistência nacional.'
+      };
+      inp.value = faqs[type] || '';
       inp.focus();
     }
 
