@@ -531,88 +531,121 @@ const HTML_PAGE = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#090f1c" />
   <title>BGR Benefícios — Console Visual do Agente Comercial IA</title>
   <style>
     :root {
-      --bg: #0b1120;
-      --panel: #151f32;
-      --panel-alt: #1e293b;
+      --bg: #090f1c;
+      --panel: #0f1a2d;
+      --panel2: #122139;
+      --panel3: #192942;
       --card: #0f172a;
-      --text: #f8fafc;
-      --muted: #94a3b8;
+      --stroke: #253750;
+      --txt: #eaf2ff;
+      --muted: #9cb0cd;
+      --blue: #3d82fa;
+      --blue2: #195bb5;
+      --green: #32d09a;
+      --amber: #f7c26a;
+      --danger: #f27d83;
       --primary: #3b82f6;
       --primary-hover: #2563eb;
       --success: #10b981;
       --warning: #f59e0b;
-      --danger: #ef4444;
       --purple: #8b5cf6;
-      --border: #283548;
+      --border: #253750;
+      --radius: 13px;
+      --shadow: 0 16px 50px rgba(0,0,0,0.28);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
-    body { background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    *, *:before, *:after { box-sizing: border-box; }
+    html, body {
+      height: 100%; margin: 0; padding: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg); color: var(--txt);
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 2px solid #78adff; outline-offset: 2px;
+    }
+    svg { vertical-align: middle; }
 
-    /* Top Header com Troca Livre de Número do Agente */
-    header {
-      background: #060b16;
-      border-bottom: 1px solid var(--border);
-      padding: 10px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      flex-shrink: 0;
-    }
-    .brand { display: flex; align-items: center; gap: 12px; }
-    .brand-icon {
-      width: 42px; height: 42px; border-radius: 10px;
-      background: linear-gradient(135deg, #2563eb, #10b981);
-      display: flex; align-items: center; justify-content: center; font-size: 22px;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
-    }
-    .agent-phone-bar {
-      display: flex; align-items: center; gap: 8px;
-      background: var(--panel); border: 1px solid #3b82f666;
-      padding: 6px 12px; border-radius: 10px;
-    }
-    .agent-phone-bar label { font-size: 12px; color: #93c5fd; font-weight: 600; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-    .agent-phone-bar input {
-      background: #060b16; border: 1px solid var(--border); color: #fff;
-      padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; width: 175px;
-    }
-    .badge {
-      padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 600;
-      background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.4);
-      display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
-    }
-    .badge.warn { background: rgba(245, 158, 11, 0.15); color: var(--warning); border-color: rgba(245, 158, 11, 0.4); }
-    .badge.danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border-color: rgba(239, 68, 68, 0.4); }
-    .badge.info { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: rgba(59, 130, 246, 0.4); }
-
-    /* Workspace Layout com Barra Lateral de Ícones */
-    .workspace {
-      display: flex; flex: 1; overflow: hidden;
-    }
-    .icon-rail {
-      width: 96px; background: #060b16; border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; align-items: center; padding: 14px 8px; gap: 10px; flex-shrink: 0;
-    }
-    .nav-item {
-      width: 80px; padding: 10px 6px; border-radius: 12px; border: 1px solid transparent;
-      background: transparent; color: var(--muted); cursor: pointer;
-      display: flex; flex-direction: column; align-items: center; gap: 5px;
-      font-size: 11px; font-weight: 600; text-align: center; transition: all 0.18s;
-    }
-    .nav-item .ico { font-size: 22px; line-height: 1; }
-    .nav-item:hover { background: var(--panel); color: var(--text); border-color: var(--border); }
-    .nav-item.active {
-      background: rgba(59, 130, 246, 0.18); color: #60a5fa;
-      border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 2px 10px rgba(59, 130, 246, 0.2);
+    .app {
+      height: 100dvh; min-height: 640px; display: flex; flex-direction: column; overflow: hidden;
     }
 
-    /* Views */
-    .view-container { flex: 1; display: none; overflow: hidden; padding: 14px; gap: 14px; }
+    /* Topbar Global (70px) */
+    .topbar {
+      height: 70px; min-height: 70px; display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 0 20px; background: #0b1424; border-bottom: 1px solid var(--stroke); flex-shrink: 0;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .logo {
+      width: 40px; height: 40px; border-radius: 11px;
+      background: linear-gradient(145deg, #2476fa, #13a48c);
+      display: grid; place-items: center; font-size: 18px; font-weight: 900; color: #fff;
+      box-shadow: 0 5px 22px rgba(25, 109, 218, 0.3);
+    }
+    .brand-title { font-size: 15px; font-weight: 750; white-space: nowrap; color: #fff; }
+    .brand-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .brand-divider { width: 1px; height: 30px; background: var(--stroke); margin: 0 8px; }
+    .page-title { font-size: 16px; font-weight: 750; white-space: nowrap; color: #eaf2ff; }
+
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .tag {
+      border: 1px solid var(--stroke); color: var(--muted); background: rgba(255,255,255,0.025);
+      display: inline-flex; gap: 7px; align-items: center; padding: 7px 11px; border-radius: 999px;
+      font-size: 12px; white-space: nowrap;
+    }
+    .tag.success { color: #95f2cd; border-color: #28664f; background: #113327; }
+    .tag.secondary { color: #c9dcff; border-color: #2b4260; background: #122137; }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+      display: inline-block; box-shadow: 0 0 0 3px rgba(50, 208, 154, 0.13);
+    }
+    .avatar {
+      width: 36px; height: 36px; flex: 0 0 36px; border-radius: 11px;
+      background: linear-gradient(135deg, #274d94, #4b58bc);
+      display: grid; place-items: center; font-weight: 800; color: #dceaff; font-size: 13px;
+    }
+    .icon-btn {
+      border: 1px solid transparent; background: transparent; color: var(--muted);
+      height: 36px; width: 36px; display: inline-grid; place-items: center; border-radius: 9px; cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .icon-btn:hover { background: var(--panel3); color: var(--txt); }
+
+    /* Workspace */
+    .workspace { flex: 1; min-height: 0; display: flex; overflow: hidden; position: relative; }
+
+    /* Barra Lateral de Módulos (76px) */
+    .rail {
+      width: 76px; flex: 0 0 76px; border-right: 1px solid var(--stroke); background: #0b1424;
+      display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+      padding: 16px 8px 12px; z-index: 10;
+    }
+    .rail-items { display: flex; flex-direction: column; gap: 8px; width: 100%; align-items: center; }
+    .rail-btn {
+      position: relative; border: 1px solid transparent; background: transparent; color: #8ea6c6;
+      border-radius: 11px; width: 60px; height: 57px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 5px; padding: 5px 0; cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .rail-btn span { font-size: 10px; line-height: 1.08; text-align: center; }
+    .rail-btn:hover { background: var(--panel3); color: var(--txt); }
+    .rail-btn.active { background: #18365e; border-color: #306ed0; color: #e8f2ff; }
+    .rail-btn.active:before {
+      content: ""; height: 22px; width: 3px; background: #4b91ff; border-radius: 3px;
+      position: absolute; left: -8px; top: 18px;
+    }
+
+    /* Views Containers */
+    .view-container { flex: 1; min-height: 0; display: none; overflow: hidden; padding: 14px; gap: 14px; }
     .view-container.active { display: grid; }
-    #view-inbox.active { grid-template-columns: 320px 1fr 330px; }
+    #view-inbox.active {
+      display: grid; grid-template-columns: 298px minmax(355px, 1fr) 316px;
+      padding: 0; gap: 0; min-height: 0; height: 100%;
+    }
     #view-atendimento.active { grid-template-columns: 350px 1fr 370px; }
     #view-regua.active { grid-template-columns: 1fr 1fr 380px; }
     #view-humanos.active { grid-template-columns: 430px 1fr; }
@@ -620,40 +653,243 @@ const HTML_PAGE = `<!DOCTYPE html>
     #view-apis.active { grid-template-columns: 480px 1fr; }
     #view-kpis.active { grid-template-columns: 1fr 1fr; }
 
-    /* Estilos do Cockpit / Inbox do Atendente */
-    .inbox-filter-btn {
-      flex: 1; padding: 4px 6px; font-size: 11px; font-weight: 600; border-radius: 6px;
-      background: #0b1120; border: 1px solid var(--border); color: var(--muted); cursor: pointer; text-align: center;
+    /* Coluna 1: Inbox (Conversas) */
+    .inbox {
+      background: #101a2b; border-right: 1px solid var(--stroke);
+      display: flex; flex-direction: column; min-width: 0; min-height: 0;
+    }
+    .inbox-head { padding: 16px 15px 12px; border-bottom: 1px solid var(--stroke); }
+    .pane-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .pane-title h2 { font-size: 15px; line-height: 1.1; margin: 0; font-weight: 750; color: #fff; }
+    .mini-count {
+      font-size: 11px; color: #93a8c7; padding: 2px 7px; background: #1b2d46;
+      border: 1px solid #2a4360; border-radius: 99px;
+    }
+    .new-btn {
+      border: 1px solid #4b94ff; background: #3279eb; color: #fff; font-size: 12px;
+      font-weight: 700; border-radius: 9px; padding: 7px 11px; display: inline-flex; align-items: center;
+      gap: 6px; white-space: nowrap; transition: background 0.15s;
+    }
+    .new-btn:hover { background: #4b8efa; }
+    .searchbox {
+      height: 38px; border-radius: 9px; border: 1px solid #30425c; background: #0b1525;
+      display: flex; gap: 8px; align-items: center; margin-top: 13px; padding: 0 10px; color: #7e99bb;
+    }
+    .searchbox input {
+      outline: 0; background: transparent; border: 0; color: var(--txt); font-size: 12px; width: 100%; min-width: 0;
+    }
+    .searchbox input::placeholder { color: #718aa9; }
+    .filters { display: flex; gap: 6px; margin-top: 11px; }
+    .filter {
+      border: 1px solid #30435f; background: transparent; color: #afbfda; border-radius: 8px;
+      padding: 7px 10px; font-size: 12px; flex: 1; white-space: nowrap; text-align: center; cursor: pointer;
       transition: all 0.15s;
     }
-    .inbox-filter-btn.active {
-      background: rgba(59, 130, 246, 0.2); color: #93c5fd; border-color: #3b82f6; font-weight: 700;
+    .filter.active { background: #173d74; border-color: #377ce3; color: #e9f4ff; font-weight: 650; }
+    .inbox-list {
+      flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;
     }
-    .inbox-chat-card {
-      padding: 10px 12px; border-radius: 10px; background: rgba(11, 17, 32, 0.7);
-      border: 1px solid var(--border); cursor: pointer; transition: all 0.15s;
-      display: flex; gap: 10px; align-items: flex-start;
+    .conv {
+      display: flex; align-items: flex-start; gap: 10px; width: 100%; background: #13243a;
+      border: 1px solid #253750; border-radius: 11px; text-align: left; padding: 12px 10px;
+      color: var(--txt); cursor: pointer; transition: all 0.15s;
     }
-    .inbox-chat-card:hover {
-      background: rgba(30, 41, 59, 0.8); border-color: #3b82f688;
+    .conv:hover { background: #19304e; border-color: #355883; }
+    .conv.active { background: #183457; border-color: #377ce3; box-shadow: 0 0 12px rgba(55,124,227,0.22); }
+    .conv .avatar {
+      width: 36px; height: 36px; flex: 0 0 36px; border-radius: 50%; background: #174f7d;
+      color: #d8f5ff; display: grid; place-items: center; font-weight: 700; font-size: 14px;
     }
-    .inbox-chat-card.active {
-      background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+    .conv-details { min-width: 0; flex: 1; }
+    .conv-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .conv-title { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; }
+    .conv-time { font-size: 10px; color: #8298b6; white-space: nowrap; }
+    .conv-snippet { font-size: 11px; color: #8da6c7; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .conv-status { font-size: 10px; color: #7ce9b5; margin-top: 7px; display: inline-block; }
+    .conv-status.human { color: var(--amber); }
+    .inbox-foot {
+      border-top: 1px solid var(--stroke); padding: 11px 15px; display: flex; align-items: center;
+      justify-content: space-between; font-size: 11px; color: #8fa4c0;
+    }
+    .inbox-foot b { color: #d5e7ff; }
+
+    /* Coluna 2: Chat Prioritário */
+    .chat { background: #0b1422; display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
+    .chat-head {
+      height: 75px; min-height: 75px; padding: 12px 16px; display: flex; align-items: center;
+      justify-content: space-between; border-bottom: 1px solid var(--stroke); gap: 8px;
+    }
+    .chat-person { display: flex; gap: 10px; align-items: center; min-width: 0; }
+    .chat-person .avatar {
+      border-radius: 50%; width: 42px; height: 42px; flex: 0 0 42px; font-size: 17px;
+      background: linear-gradient(145deg, #184e7b, #365baf); display: grid; place-items: center;
+      color: #fff; font-weight: 700;
+    }
+    .chat-person h1 { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0 0 3px; font-weight: 750; color: #fff; }
+    .chat-person .phone { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-controls { display: flex; align-items: center; gap: 8px; position: relative; }
+    .small-state {
+      display: inline-block; background: #10392d; color: #84edbc; border: 1px solid #286c53;
+      border-radius: 6px; padding: 5px 8px; font-size: 10.5px; font-weight: 650; white-space: nowrap;
+    }
+    .small-state.human { color: #ffe1a4; background: #3b2d16; border-color: #7d5c29; }
+    .btn-assume {
+      background: #292516; color: #ffd48a; border: 1px solid #876426; padding: 9px 12px;
+      border-radius: 9px; font-size: 12px; font-weight: 750; white-space: nowrap; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-assume:hover { background: #3c3018; }
+    .btn-assume.to-ai { background: #113327; color: #95f2cd; border-color: #28664f; }
+    .btn-assume.to-ai:hover { background: #184736; }
+
+    .menu-wrap { position: relative; }
+    .dropdown {
+      position: absolute; top: 42px; right: 0; width: 225px; border: 1px solid #355073;
+      background: #16253d; border-radius: 11px; padding: 5px; box-shadow: var(--shadow);
+      z-index: 40; display: none;
+    }
+    .dropdown.open { display: block; }
+    .dropdown button {
+      display: block; width: 100%; text-align: left; padding: 11px 10px; border: 0;
+      border-radius: 7px; color: #d2e3fa; background: transparent; font-size: 12px; cursor: pointer;
+    }
+    .dropdown button:hover { background: #263956; }
+    .dropdown button.danger { color: #ffa7ab; }
+
+    .chat-content {
+      flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;
+      padding: 20px 22px; gap: 12px;
+    }
+    .chat-empty { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .chat-empty-card { text-align: center; max-width: 340px; margin: auto; }
+    .illustration {
+      width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 18px;
+      display: grid; place-items: center; color: #7cafef; border: 1px solid #355179;
+      background: linear-gradient(145deg, #173352, #11243b);
+    }
+    .chat-empty-card h3 { font-size: 16px; margin: 0 0 8px; font-weight: 700; color: #fff; }
+    .chat-empty-card p { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 0 0 17px; }
+    .chat-empty-card button {
+      border: 1px solid #3e6eaa; background: #18385e; color: #d8ecff; font-size: 12px;
+      font-weight: 650; padding: 10px 14px; border-radius: 9px; cursor: pointer;
     }
 
+    .message {
+      max-width: 78%; width: max-content; padding: 11px 13px; background: #1e3653;
+      border: 1px solid #355575; border-radius: 11px 11px 11px 3px; font-size: 13px;
+      line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; align-self: flex-start;
+      color: #eaf2ff;
+    }
+    .message.outgoing {
+      align-self: flex-end; background: #164a48; border: 1px solid #267969;
+      border-radius: 11px 11px 3px 11px;
+    }
+    .message.human-outgoing {
+      align-self: flex-end; background: #26214d; border: 1px solid #4a3e87;
+      border-radius: 11px 11px 3px 11px;
+    }
+    .message small { display: block; color: #9ec1ca; text-align: right; margin-top: 6px; font-size: 10px; }
+
+    .composer {
+      padding: 12px 16px 14px; border-top: 1px solid var(--stroke); background: #0f1b2e;
+    }
+    .quick-actions { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+    .quick {
+      border: 1px solid #2b4360; background: #182941; color: #c7dafa; border-radius: 7px;
+      padding: 7px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; display: inline-flex;
+      align-items: center; gap: 6px; cursor: pointer; transition: all 0.15s;
+    }
+    .quick:hover { background: #244366; border-color: #4e78a9; }
+    .compose-line { display: flex; align-items: flex-end; gap: 9px; }
+    .compose-input {
+      background: #0a1526; color: var(--txt); border: 1px solid #334b69; padding: 12px 13px;
+      resize: none; outline: none; border-radius: 10px; min-width: 0; flex: 1; min-height: 47px;
+      max-height: 125px; font-size: 13px; line-height: 1.5;
+    }
+    .compose-input::placeholder { color: #738aa9; }
+    .btn-primary.send {
+      height: 47px; padding: 0 18px; font-size: 13px; font-weight: 700; display: inline-flex;
+      align-items: center; gap: 6px; border-radius: 10px; border: 1px solid #4b94ff; background: #3279eb;
+      color: #fff; cursor: pointer;
+    }
+    .btn-primary.send:hover { background: #4b8efa; }
+    .composer-note { font-size: 10px; color: #6f85a6; margin: 7px 0 0 1px; }
+
+    /* Coluna 3: Ficha Comercial / Contexto (316px) */
+    .context {
+      background: #101b2e; border-left: 1px solid var(--stroke); display: flex;
+      flex-direction: column; min-width: 0; min-height: 0;
+    }
+    .context-head {
+      height: 75px; min-height: 75px; padding: 14px 15px; border-bottom: 1px solid var(--stroke);
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .context-head h2 { font-size: 15px; line-height: 1.1; margin: 0; font-weight: 750; color: #fff; }
+    .context-head p { font-size: 11px; color: var(--muted); margin: 5px 0 0; }
+    .context-tabs {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 12px 12px 0;
+      padding: 4px; background: #0a1423; border: 1px solid #243751; border-radius: 9px;
+    }
+    .ctx-tab {
+      border: 0; border-radius: 6px; background: transparent; color: #97aec9; font-size: 12px;
+      padding: 8px 5px; cursor: pointer; text-align: center;
+    }
+    .ctx-tab.active { background: #203e69; color: #e7f2ff; font-weight: 700; }
+    .ctx-scroll { padding: 14px 12px; flex: 1; min-height: 0; overflow-y: auto; }
+    .section {
+      border: 1px solid #283f5b; background: #111f34; border-radius: 11px; padding: 13px; margin-bottom: 12px;
+    }
+    .section-top {
+      font-size: 11px; color: #74b3ff; font-weight: 800; letter-spacing: 0.035em;
+      text-transform: uppercase; margin-bottom: 11px;
+    }
+    .field { margin-bottom: 11px; }
+    .field:last-child { margin-bottom: 0; }
+    .field-label { font-size: 11px; color: #8ca4c3; margin-bottom: 4px; }
+    .field-value { font-size: 13px; color: #e1edfd; font-weight: 650; }
+    .field-value.pending { color: #8eabc9; font-weight: 500; font-style: italic; }
+
+    .progress { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 13px; }
+    .step { height: 4px; border-radius: 9px; background: #293d58; }
+    .step.current { background: #4a92ff; }
+    .step.done { background: #3dc89b; }
+    .fine { font-size: 11px; line-height: 1.55; color: #9bb1ce; margin: 0; }
+    .ctx-button {
+      width: 100%; border: 1px solid #3b79cf; background: #193c70; color: #daedff;
+      font-size: 12px; font-weight: 750; padding: 10px 8px; border-radius: 8px; margin-top: 11px;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .ctx-button:hover { background: #23538f; }
+    .subtle { color: #a4bad5; font-size: 11px; line-height: 1.5; margin-bottom: 10px; }
+    .plan { border: 1px solid #325273; border-radius: 10px; padding: 12px; margin-top: 10px; background: #182d46; }
+    .plan h3 { font-size: 13px; margin: 0 0 5px; color: #fff; }
+    .plan p { font-size: 11px; color: #abc1df; margin: 0; }
+    .plan .value { font-size: 15px; font-weight: 800; color: #eef5ff; margin-top: 8px; }
+    .plan .small-note { font-size: 10px; color: #8da6c2; margin-top: 3px; }
+    .plan button {
+      margin-top: 10px; background: #1d4a78; color: #e8f4ff; border: 1px solid #427cb3;
+      border-radius: 7px; padding: 8px 10px; font-size: 11px; width: 100%; cursor: pointer;
+    }
+    .faq-row {
+      width: 100%; background: #1a2a42; border: 1px solid #2e4869; border-radius: 8px;
+      color: #d4e6fd; font-size: 12px; padding: 10px; margin: 7px 0; text-align: left; cursor: pointer;
+    }
+    .faq-answer { display: none; padding: 4px 10px 12px; color: #a5bedc; font-size: 11px; line-height: 1.55; }
+    .faq-answer.open { display: block; }
+    .context-footer { padding: 10px 13px; border-top: 1px solid var(--stroke); color: #7b93b2; font-size: 10px; text-align: center; }
+
+    /* Estilos Legados Preservados para Módulos Secundários */
     .col {
-      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      background: var(--panel); border: 1px solid var(--stroke); border-radius: 14px;
       display: flex; flex-direction: column; overflow: hidden;
     }
     .col-header {
-      padding: 12px 16px; background: rgba(6, 11, 22, 0.6); border-bottom: 1px solid var(--border);
+      padding: 12px 16px; background: rgba(6, 11, 22, 0.6); border-bottom: 1px solid var(--stroke);
       font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
     }
     .col-body { padding: 14px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; }
-
-    /* Botões baseados em ícones */
     .btn {
-      background: var(--panel-alt); color: var(--text); border: 1px solid #334155;
+      background: var(--panel3); color: var(--txt); border: 1px solid #334155;
       padding: 9px 12px; border-radius: 9px; cursor: pointer; text-align: left;
       font-size: 13px; transition: all 0.15s; display: inline-flex; justify-content: space-between; align-items: center; gap: 8px;
     }
@@ -661,378 +897,395 @@ const HTML_PAGE = `<!DOCTYPE html>
     .btn.primary { background: var(--primary); border-color: var(--primary); font-weight: 600; justify-content: center; color: #fff; }
     .btn.primary:hover { background: var(--primary-hover); }
     .btn.success { background: rgba(16, 185, 129, 0.18); border-color: var(--success); color: #6ee7b7; font-weight: 600; }
-    .btn.success:hover { background: var(--success); color: #022c22; }
     .btn.warn { background: rgba(245, 158, 11, 0.18); border-color: var(--warning); color: #fcd34d; font-weight: 600; }
-    .btn.warn:hover { background: var(--warning); color: #451a03; }
     .btn.danger { background: rgba(239, 68, 68, 0.18); border-color: var(--danger); color: #fca5a5; }
-    .btn.danger:hover { background: var(--danger); color: #fff; }
     .btn.sm { padding: 6px 10px; font-size: 12px; border-radius: 7px; }
-
+    .badge {
+      padding: 4px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+      background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.4);
+      display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+    }
+    .badge.warn { background: rgba(245, 158, 11, 0.15); color: var(--warning); border-color: rgba(245, 158, 11, 0.4); }
+    .badge.danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border-color: rgba(239, 68, 68, 0.4); }
+    .badge.info { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: rgba(59, 130, 246, 0.4); }
     .icon-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .icon-card-btn {
-      background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px;
+      background: var(--card); border: 1px solid var(--stroke); border-radius: 10px; padding: 10px;
       cursor: pointer; display: flex; align-items: center; gap: 10px; color: var(--text); text-align: left; transition: all 0.15s;
     }
-    .icon-card-btn:hover { border-color: var(--primary); background: rgba(59, 130, 246, 0.14); transform: translateY(-1px); }
+    .icon-card-btn:hover { border-color: var(--primary); background: rgba(59, 130, 246, 0.14); }
     .icon-card-btn .ic {
-      width: 34px; height: 34px; border-radius: 8px; background: var(--panel-alt);
+      width: 34px; height: 34px; border-radius: 8px; background: var(--panel2);
       display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
     }
     .icon-card-btn .lbl { font-size: 12px; font-weight: 600; line-height: 1.25; }
     .icon-card-btn .sub { font-size: 10px; color: var(--muted); display: block; margin-top: 2px; }
-
     .section-label {
       font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #93c5fd;
       margin-top: 6px; font-weight: 700; display: flex; align-items: center; gap: 6px;
     }
-
-    /* Chat estilo WhatsApp Oficial */
-    .wa-col { background: #0b141a; border-color: #222e35; }
-    .wa-chat-header {
-      padding: 10px 16px; background: #202c33; border-bottom: 1px solid #2a3942;
-      display: flex; justify-content: space-between; align-items: center; gap: 10px;
-    }
-    .wa-contact-info { display: flex; align-items: center; gap: 11px; }
-    .wa-contact-avatar {
-      width: 40px; height: 40px; border-radius: 50%;
-      background: linear-gradient(135deg, #00a884, #0284c7);
-      display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative;
-    }
-    .wa-online-dot {
-      position: absolute; bottom: 0; right: 0; width: 11px; height: 11px;
-      background: #00a884; border: 2px solid #202c33; border-radius: 50%;
-    }
-    #chat-messages {
-      flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;
-      background-color: #0b141a;
-      background-image: radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 0);
-      background-size: 22px 22px;
-    }
-    .wa-date-Divider {
-      align-self: center; background: #182229; color: #8696a0; font-size: 11px; font-weight: 600;
-      padding: 4px 12px; border-radius: 8px; margin: 4px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-    }
-    .msg {
-      max-width: 82%; padding: 8px 11px 6px 11px; border-radius: 8px; font-size: 13.5px;
-      line-height: 1.42; white-space: pre-wrap; position: relative; box-shadow: 0 1px 1.5px rgba(0,0,0,0.35);
-      color: #e9edef;
-    }
-    .msg.user {
-      align-self: flex-end; background: #005c4b; color: #e9edef; border-top-right-radius: 0;
-    }
-    .msg.user::after {
-      content: ''; position: absolute; top: 0; right: -8px; width: 0; height: 0;
-      border-top: 0px solid transparent; border-bottom: 10px solid transparent; border-left: 8px solid #005c4b;
-    }
-    .msg.agent {
-      align-self: flex-start; background: #202c33; color: #e9edef; border-top-left-radius: 0;
-    }
-    .msg.agent::before {
-      content: ''; position: absolute; top: 0; left: -8px; width: 0; height: 0;
-      border-top: 0px solid transparent; border-bottom: 10px solid transparent; border-right: 8px solid #202c33;
-    }
-    .msg-sender-name {
-      font-size: 11.5px; font-weight: 700; color: #00a884; margin-bottom: 3px; display: flex; align-items: center; gap: 4px;
-    }
-    .msg.system {
-      align-self: center; max-width: 92%; background: #182229; border: 1px solid rgba(255, 210, 121, 0.2);
-      color: #ffd279; font-size: 11.5px; text-align: center; border-radius: 8px; padding: 7px 14px;
-    }
-    .msg-footer {
-      display: flex; justify-content: flex-end; align-items: center; gap: 4px;
-      font-size: 10.5px; color: rgba(233, 237, 239, 0.65); margin-top: 3px;
-    }
-    .wa-ticks { color: #53bdeb; font-size: 12px; font-weight: 900; letter-spacing: -2px; margin-left: 2px; }
-    .msg-meta {
-      font-size: 10.5px; color: #8696a0; margin-top: 5px; padding-top: 4px;
-      border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 6px;
-    }
-    .chat-input-bar {
-      padding: 10px 14px; background: #202c33; border-top: 1px solid #2a3942;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .wa-icon-btn {
-      background: transparent; border: none; color: #8696a0; font-size: 20px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; padding: 4px;
-    }
-    .wa-icon-btn:hover { color: #d1d7db; }
-    .chat-input-bar input {
-      flex: 1; background: #2a3942; border: none; color: #e9edef; padding: 10px 14px;
-      border-radius: 8px; font-size: 14px; outline: none;
-    }
-    .chat-input-bar input::placeholder { color: #8696a0; }
-    .wa-send-circle {
-      width: 40px; height: 40px; border-radius: 50%; background: #00a884; border: none;
-      color: #111b21; font-size: 17px; font-weight: 800; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.12s;
-    }
-    .wa-send-circle:hover { background: #06cf9c; transform: scale(1.04); }
-
-    /* KPIs & Logs */
-    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .kpi-card {
-      background: var(--card); border: 1px solid var(--border); padding: 10px 12px; border-radius: 10px;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .kpi-ico {
-      width: 36px; height: 36px; border-radius: 9px; background: rgba(59, 130, 246, 0.15);
-      display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
-    }
-    .kpi-val { font-size: 17px; font-weight: 700; color: #60a5fa; }
-    .kpi-lbl { font-size: 11px; color: var(--muted); }
-    .log-item { background: var(--card); border-left: 3px solid var(--primary); padding: 8px 10px; border-radius: 6px; font-size: 12px; }
-    .log-item.CRITICAL { border-left-color: var(--danger); background: rgba(239, 68, 68, 0.08); }
-    .log-item.HIGH { border-left-color: var(--warning); }
-
-    /* Cards da Régua de Mensagens (Vendas e Cobranças) */
-    .cadence-step-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 12px;
-      display: flex; flex-direction: column; gap: 8px; position: relative;
-    }
-    .cadence-step-card.disabled { opacity: 0.55; border-style: dashed; }
-    .cadence-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .day-pill {
-      padding: 3px 9px; border-radius: 6px; font-weight: 800; font-size: 12px;
-      background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4);
-    }
-    .day-pill.cobranca { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border-color: rgba(245, 158, 11, 0.4); }
-    .cadence-textarea {
-      width: 100%; min-height: 62px; background: #060b16; border: 1px solid var(--border);
-      color: var(--text); border-radius: 7px; padding: 8px; font-size: 12px; resize: vertical;
-    }
     .form-box {
-      background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+      background: #060b16; border: 1px solid var(--stroke); border-radius: 9px; padding: 12px;
       display: flex; flex-direction: column; gap: 8px;
     }
-    .form-box input, .form-box select, .form-box textarea {
-      background: #060b16; border: 1px solid #334155; color: #fff; padding: 8px 10px; border-radius: 7px; font-size: 12.5px;
+
+    /* Toast e Responsividade */
+    .toast-banner, .toast {
+      position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+      background: #234164; border: 1px solid #4f83c4; color: #fff; border-radius: 10px;
+      padding: 11px 16px; box-shadow: var(--shadow); font-size: 12px; z-index: 99999;
+      display: none; max-width: 90vw;
     }
-    .toast-banner {
-      position: fixed; bottom: 18px; right: 18px; background: #065f46; border: 1px solid #10b981;
-      color: #ecfdf5; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.45); display: none; z-index: 999;
+    .toast-banner.show, .toast.show { display: block; }
+    .mobile-back, .ctx-open, .backdrop { display: none; }
+
+    @media(max-width: 1220px) {
+      #view-inbox.active { grid-template-columns: 280px minmax(340px, 1fr); }
+      .context {
+        position: fixed; z-index: 50; right: 0; top: 70px; bottom: 0; width: 330px;
+        transform: translateX(102%); transition: transform 0.2s ease; box-shadow: var(--shadow);
+      }
+      .context.is-open { transform: translateX(0); }
+      .ctx-open { display: inline-grid; }
+      .backdrop.is-open { display: block; position: fixed; z-index: 40; inset: 70px 0 0; background: rgba(0,0,0,0.6); }
+    }
+    @media(max-width: 770px) {
+      .topbar { padding: 0 12px; height: 62px; min-height: 62px; }
+      .brand-sub, .brand-divider, .page-title, .brand > .tag, .top-actions .tag.secondary { display: none; }
+      .brand-title { font-size: 13px; }
+      .workspace { position: relative; }
+      .rail { width: 62px; flex: 0 0 62px; padding: 10px 4px; }
+      .rail-btn { width: 52px; height: 54px; }
+      #view-inbox.active { grid-template-columns: 1fr; display: block; }
+      .inbox { width: 100%; height: 100%; }
+      .chat { display: none; width: 100%; height: 100%; }
+      .workspace.chat-active .chat { display: flex; }
+      .workspace.chat-active .inbox { display: none; }
+      .mobile-back { display: inline-grid; }
+      .chat-head { padding: 10px; }
+      .chat-person h1 { font-size: 12px; }
+      .chat-person .phone { font-size: 10px; }
+      .chat-controls { gap: 4px; }
+      .chat-controls .small-state { display: none; }
+      .btn-assume { font-size: 10px; padding: 8px 7px; }
+      .quick { font-size: 10px; padding: 6px 8px; }
+      .composer { padding: 9px; }
+      .context { top: 62px; width: min(360px, 88vw); }
+      .backdrop.is-open { inset: 62px 0 0; }
     }
   </style>
 </head>
 <body>
-  <header>
+<div class="app">
+  <header class="topbar">
     <div class="brand">
-      <div class="brand-icon">🚗</div>
+      <div class="logo" aria-hidden="true">B</div>
       <div>
-        <div style="font-weight: 800; font-size: 15px; display: flex; align-items: center; gap: 8px;">
-          <span>BGR Benefícios — Console Visual IA</span>
-          <span class="badge info">✨ Layout Baseado em Ícones v2.0</span>
-        </div>
-        <div style="font-size: 11.5px; color: var(--muted);">
-          Homologação Interativa • Troca Livre de Número • Régua de Vendas & Cobranças • Power CRM
-        </div>
+        <div class="brand-title">BGR Benefícios</div>
+        <div class="brand-sub">Console Visual IA</div>
       </div>
+      <span class="brand-divider"></span>
+      <div class="page-title" id="topbar-page-title">Central de Atendimento</div>
     </div>
-
-    <!-- Troca Livre do Número do Agente direto no Topo -->
-    <div class="agent-phone-bar" title="Altere livremente o número de WhatsApp remetente do Agente Comercial">
-      <label for="header-agent-phone">📱 Nº do Agente:</label>
-      <input id="header-agent-phone" type="text" value="+55 21 96957-3517" aria-label="Número do Agente" />
-      <button class="btn primary sm" onclick="saveAgentPhoneFromHeader()">💾 Trocar Número</button>
-    </div>
-
-    <div style="display: flex; gap: 8px; align-items: center;">
-      <a href="/blueprint.pdf" download="DOCUMENTO_TECNICO_BLUEPRINT_AGENTE_SETOR.pdf" class="btn primary sm" style="text-decoration: none;" title="Baixar Especificação Técnica e Blueprint em PDF">📄 Baixar PDF Técnico</a>
-      <button id="openai-status-badge" class="btn warn sm" onclick="switchView('apis')" title="Configurar Chave OpenAI, Power CRM e Supabase">🔑 APIs: Modo Local</button>
-      <a href="/chat" target="_blank" class="btn success sm" style="text-decoration: none;">💬 Abrir Chat Cliente (Nova Aba)</a>
-      <button class="btn success sm" onclick="openManualMessageModal()" style="font-weight: 700; background: #00a884; border-color: #00a884; color: #fff;" title="Enviar mensagem oficial da BGR para qualquer número de WhatsApp">📱 Enviar para Número</button>
-      <span id="mode-badge" class="badge">🤖 IA ATIVA</span>
-      <span id="stage-badge" class="badge warn">📍 contato_iniciado</span>
-      <button class="btn danger sm" onclick="resetSimulator()">↺ Reiniciar</button>
+    <div class="top-actions">
+      <span id="topbar-wa-tag" class="tag success"><i class="dot"></i> WhatsApp conectado</span>
+      <span id="topbar-ia-tag" class="tag secondary">✦ IA ativa</span>
+      <button class="icon-btn settings-icon" type="button" aria-label="Configurações e APIs" title="Configurações e APIs" onclick="switchView('apis')">
+        <span data-icon="settings"></span>
+      </button>
+      <div class="avatar" title="Operador">BG</div>
     </div>
   </header>
 
-  <div class="workspace">
-    <!-- Barra Lateral de Navegação Baseada em Ícones -->
-    <nav class="icon-rail" aria-label="Navegação Principal por Ícones">
-      <button id="nav-inbox" class="nav-item active" onclick="switchView('inbox')">
-        <span class="ico">📥</span>
-        <span>Cockpit Atendente</span>
-      </button>
-      <button id="nav-atendimento" class="nav-item" onclick="switchView('atendimento')">
-        <span class="ico">🧪</span>
-        <span>Simulador & Testes</span>
-      </button>
-      <button id="nav-regua" class="nav-item" onclick="switchView('regua')">
-        <span class="ico">📅</span>
-        <span>Régua Vendas & Cobrança</span>
-      </button>
-      <button id="nav-humanos" class="nav-item" onclick="switchView('humanos')">
-        <span class="ico">👨‍💼</span>
-        <span>Atendentes Humanos</span>
-      </button>
-      <button id="nav-agente" class="nav-item" onclick="switchView('agente')">
-        <span class="ico">📱</span>
-        <span>Número do Agente</span>
-      </button>
-      <button id="nav-apis" class="nav-item" onclick="switchView('apis')">
-        <span class="ico">🔑</span>
-        <span>APIs & Supabase</span>
-      </button>
-      <button id="nav-kpis" class="nav-item" onclick="switchView('kpis')">
-        <span class="ico">📊</span>
-        <span>KPIs & LGPD</span>
+  <div class="workspace" id="workspace">
+    <!-- Barra Lateral de Navegação Unificada por Ícones SVG -->
+    <nav class="rail" aria-label="Menu de módulos">
+      <div class="rail-items">
+        <button id="nav-inbox" class="rail-btn active" title="Atendimento" data-nav="inbox" onclick="switchView('inbox')">
+          <span data-icon="messages"></span><span>Atendimento</span>
+        </button>
+        <button id="nav-cockpit" class="rail-btn" title="Cockpit Operacional" data-nav="kpis" onclick="switchView('kpis')">
+          <span data-icon="layout"></span><span>Cockpit</span>
+        </button>
+        <button id="nav-atendimento" class="rail-btn" title="Simulador & Testes" data-nav="atendimento" onclick="switchView('atendimento')">
+          <span data-icon="calculator"></span><span>Simulador</span>
+        </button>
+        <button id="nav-regua" class="rail-btn" title="Régua de Vendas e Cobrança" data-nav="regua" onclick="switchView('regua')">
+          <span data-icon="repeat"></span><span>Régua</span>
+        </button>
+        <button id="nav-humanos" class="rail-btn" title="Equipe & Atendentes" data-nav="humanos" onclick="switchView('humanos')">
+          <span data-icon="users"></span><span>Equipe</span>
+        </button>
+        <button id="nav-agente" class="rail-btn" title="Número do Agente" data-nav="agente" onclick="switchView('agente')">
+          <span data-icon="phone"></span><span>Número</span>
+        </button>
+        <button id="nav-apis" class="rail-btn" title="APIs, Supabase & Power CRM" data-nav="apis" onclick="switchView('apis')">
+          <span data-icon="plug"></span><span>APIs</span>
+        </button>
+        <button id="nav-kpis" class="rail-btn" title="KPIs & LGPD" data-nav="kpis" onclick="switchView('kpis')">
+          <span data-icon="chart"></span><span>KPIs</span>
+        </button>
+      </div>
+      <button id="nav-ajuda" class="rail-btn" title="Ajuda & Blueprint" data-nav="ajuda" onclick="openHelpModal()">
+        <span data-icon="help"></span><span>Ajuda</span>
       </button>
     </nav>
 
-    <!-- ABA 0: COCKPIT / INBOX DO ATENDENTE (WHATSAPP WEB LIVE) -->
+    <!-- MÓDULO 0: CENTRAL DE ATENDIMENTO AO VIVO (REDESIGN COMPLETO) -->
     <div id="view-inbox" class="view-container active">
-      <!-- Coluna 1: Lista de Conversas do WhatsApp -->
-      <section class="col">
-        <div class="col-header" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
-            <span style="font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 6px;">
-              📥 Conversas WhatsApp
-              <span id="inbox-total-badge" class="badge" style="font-size: 11px; padding: 2px 7px;">0</span>
-            </span>
-            <div style="display: flex; gap: 4px;">
-              <button class="btn success sm" onclick="openManualMessageModal()" title="Iniciar conversa ou enviar mensagem manual para um número" style="padding: 3px 8px; font-size: 11px; font-weight: 700;">➕ Novo Envio</button>
-              <button class="btn sm" onclick="pollLiveWhatsAppState()" title="Atualizar agora" style="padding: 3px 8px; font-size: 11px;">🔄</button>
+      <!-- Coluna 1: Conversas (298px) -->
+      <aside class="inbox" aria-label="Lista de conversas">
+        <div class="inbox-head">
+          <div class="pane-title">
+            <div style="display:flex;align-items:center;gap:8px">
+              <h2>Conversas</h2>
+              <span class="mini-count" id="inbox-total-badge">0</span>
             </div>
+            <button class="new-btn" type="button" id="inbox-new-btn" onclick="openManualMessageModal()">
+              <span data-icon="plus"></span> Novo
+            </button>
           </div>
-          <input id="inbox-search" type="text" placeholder="🔍 Buscar por nome ou telefone..." style="width: 100%; font-size: 12px; padding: 6px 10px; border-radius: 6px; background: #060b16; border: 1px solid var(--border); color: #fff;" oninput="renderInboxConversationList()" />
-          <div style="display: flex; gap: 4px;">
-            <button class="inbox-filter-btn active" id="filter-btn-all" onclick="setInboxFilter('all')">Todas</button>
-            <button class="inbox-filter-btn" id="filter-btn-human" onclick="setInboxFilter('human')">🚨 Humano</button>
-            <button class="inbox-filter-btn" id="filter-btn-ai" onclick="setInboxFilter('ai')">🤖 Com IA</button>
+          <label class="searchbox">
+            <span data-icon="search"></span>
+            <input id="inbox-search" aria-label="Buscar conversas" placeholder="Buscar nome ou telefone" autocomplete="off" oninput="renderInboxConversationList()">
+          </label>
+          <div class="filters" role="tablist" aria-label="Filtrar conversas">
+            <button class="filter active" id="filter-btn-all" onclick="setInboxFilter('all')">Todas</button>
+            <button class="filter" id="filter-btn-ai" onclick="setInboxFilter('ai')">Com IA</button>
+            <button class="filter" id="filter-btn-human" onclick="setInboxFilter('human')">Humano</button>
           </div>
         </div>
-        <div class="col-body" id="inbox-conversations-list" style="padding: 8px; gap: 6px; overflow-y: auto;">
+        <div class="inbox-list" id="inbox-conversations-list">
           <div style="text-align: center; color: var(--muted); font-size: 12px; padding: 24px 8px;">
             Aguardando mensagens dos clientes...
           </div>
         </div>
-      </section>
+        <div class="inbox-foot">
+          <span>Visualização: <b>atendimentos</b></span>
+          <span>Atualização em tempo real*</span>
+        </div>
+      </aside>
 
-      <!-- Coluna 2: Chat Ao Vivo com o Cliente -->
-      <section class="col" style="display: flex; flex-direction: column;">
-        <div class="col-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(15, 23, 42, 0.9);">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div id="inbox-active-avatar" style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #2563eb); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #fff;">
-              👤
+      <!-- Coluna 2: Chat Ao Vivo Prioritário -->
+      <main class="chat" id="chatArea" aria-label="Área de mensagens">
+        <div class="chat-head">
+          <div class="chat-person">
+            <button class="icon-btn mobile-back" aria-label="Voltar às conversas" id="goBack" onclick="closeMobileChat()">
+              <span data-icon="arrow-left"></span>
+            </button>
+            <div class="avatar" id="inbox-active-avatar">C</div>
+            <div style="min-width:0">
+              <h1 id="inbox-active-name">Cliente WhatsApp</h1>
+              <div class="phone" id="inbox-active-phone">+55 21 96735-4521</div>
             </div>
-            <div>
-              <div id="inbox-active-name" style="font-weight: 700; font-size: 14px; color: #fff;">Cliente WhatsApp</div>
-              <div style="font-size: 11.5px; color: var(--muted); display: flex; align-items: center; gap: 6px;">
-                <span id="inbox-active-phone">+55 21 96735-4521</span>
-                <span id="inbox-active-ai-badge" class="badge" style="font-size: 10px; padding: 1px 6px;">🤖 IA Respondendo</span>
+          </div>
+          <div class="chat-controls">
+            <span class="small-state" id="inbox-active-ai-badge">● IA respondendo</span>
+            <button class="btn-assume" id="inbox-btn-takeover" type="button" onclick="toggleInboxAiForActivePhone()">Assumir</button>
+            <button class="icon-btn ctx-open" type="button" id="showContext" title="Abrir ficha do lead" aria-label="Abrir ficha do lead" onclick="openContext()">
+              <span data-icon="panel-right"></span>
+            </button>
+            <div class="menu-wrap">
+              <button class="icon-btn" id="inbox-more-menu-btn" aria-label="Mais ações" title="Mais ações" aria-expanded="false" onclick="toggleInboxMenu()">
+                <span data-icon="more"></span>
+              </button>
+              <div class="dropdown" id="inbox-dropdown-menu">
+                <button type="button" onclick="openManualFromActiveChat()">Enviar para número</button>
+                <button type="button" onclick="window.open('/chat', '_blank')">Abrir chat cliente</button>
+                <button type="button" onclick="copyActivePhone()">Copiar telefone</button>
+                <button type="button" onclick="resetSimulator()" class="danger">Reiniciar atendimento</button>
               </div>
             </div>
           </div>
-          <div style="display: flex; gap: 6px;">
-            <button class="btn sm success" onclick="openManualMessageModal(activeInboxPhone, document.getElementById('inbox-active-name')?.textContent)" title="Enviar mensagem manual ou alterar destinatário">
-              📲 Enviar para Número
-            </button>
-            <button id="inbox-btn-takeover" class="btn sm warn" onclick="toggleInboxAiForActivePhone()" title="Pausar ou reativar IA para este cliente">
-              👤 Assumir Atendimento
-            </button>
+        </div>
+
+        <div class="chat-content" id="inbox-chat-messages" aria-live="polite">
+          <div class="chat-empty" id="chatEmpty">
+            <div class="chat-empty-card">
+              <div class="illustration"><span data-icon="messages" data-size="32"></span></div>
+              <h3>Pronto para atender</h3>
+              <p>As mensagens deste cliente aparecerão aqui. As informações e ações importantes ficam ao alcance, sem ocupar a conversa.</p>
+              <button id="beginChatBtn" type="button" onclick="focusInboxInput()">Escrever primeira mensagem</button>
+            </div>
           </div>
         </div>
 
-        <!-- Área de Histórico das Mensagens estilo WhatsApp -->
-        <div id="inbox-chat-messages" style="flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #070d18;">
-          <div style="text-align: center; color: var(--muted); font-size: 12px; margin: auto;">
-            Histórico de conversa em tempo real conectado ao número oficial da BGR.
+        <div class="composer">
+          <div class="quick-actions" aria-label="Ações rápidas">
+            <button type="button" class="quick" onclick="insertQuickReply('plans')"><span data-icon="send"></span> Enviar planos</button>
+            <button type="button" class="quick" onclick="insertQuickReply('fipe')"><span data-icon="car"></span> Solicitar placa</button>
+            <button type="button" class="quick" onclick="insertQuickReply('pix')"><span data-icon="wallet"></span> Dados PIX</button>
+            <button type="button" class="quick" onclick="insertQuickReply('contract')"><span data-icon="file"></span> Adesão digital</button>
           </div>
+          <form class="compose-line" id="inboxMessageForm" onsubmit="event.preventDefault(); sendInboxMessage();">
+            <textarea class="compose-input" id="inbox-input-msg" rows="1" placeholder="Escreva uma mensagem para o cliente…" aria-label="Mensagem" onkeydown="handleComposerKey(event)"></textarea>
+            <button class="btn-primary send" type="submit">Enviar <span data-icon="send"></span></button>
+          </form>
+          <div class="composer-note">Enter para enviar · Shift + Enter para quebrar linha</div>
         </div>
+      </main>
 
-        <!-- Barra Inferior de Atalhos Rápidos & Envio -->
-        <div style="padding: 10px 12px; background: rgba(15, 23, 42, 0.95); border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px;">
-          <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;">
-            <button class="btn sm" style="font-size: 11px; padding: 3px 8px; white-space: nowrap;" onclick="insertQuickReply('plans')">💰 Enviar Planos BGR</button>
-            <button class="btn sm" style="font-size: 11px; padding: 3px 8px; white-space: nowrap;" onclick="insertQuickReply('fipe')">🚗 Pedir Placa e Modelo</button>
-            <button class="btn sm" style="font-size: 11px; padding: 3px 8px; white-space: nowrap;" onclick="insertQuickReply('pix')">💳 Dados Chave PIX</button>
-            <button class="btn sm" style="font-size: 11px; padding: 3px 8px; white-space: nowrap;" onclick="insertQuickReply('contract')">📄 Link de Adesão Digital</button>
-            <button class="btn sm" style="font-size: 11px; padding: 3px 8px; white-space: nowrap;" onclick="insertQuickReply('human_intro')">👋 Sou o Consultor BGR</button>
+      <div class="backdrop" id="backdrop" onclick="closeContext()"></div>
+
+      <!-- Coluna 3: Ficha Comercial / Contexto (316px / Drawer em telas <= 1220px) -->
+      <aside class="context" id="context" aria-label="Ficha do cliente e cotação">
+        <div class="context-head">
+          <div>
+            <h2>Ficha do lead</h2>
+            <p>Informações e ferramentas comerciais</p>
           </div>
-          <div style="display: flex; gap: 8px; align-items: flex-end;">
-            <textarea id="inbox-input-msg" rows="2" placeholder="Digite sua resposta oficial da BGR (pressione Enter para enviar)..." style="flex: 1; resize: none; background: #060b16; border: 1px solid var(--border); border-radius: 8px; color: #fff; padding: 8px 10px; font-size: 12.5px;" onkeydown="if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); sendInboxMessage(); }"></textarea>
-            <button class="btn primary" onclick="sendInboxMessage()" style="padding: 10px 16px; font-weight: 700; height: 50px;">
-              Enviar 🚀
-            </button>
-          </div>
+          <button class="icon-btn ctx-open" aria-label="Fechar ficha" id="closeContext" onclick="closeContext()">
+            <span data-icon="x"></span>
+          </button>
         </div>
-      </section>
-
-      <!-- Coluna 3: Ficha Rápida do Lead & Proposta BGR -->
-      <section class="col" style="padding: 0;">
-        <div class="col-header" style="padding: 10px 14px;">
-          <span>📋 Ficha do Lead & Cotação</span>
-          <span id="inbox-lead-status-pill" class="badge info">Qualificação</span>
+        <div class="context-tabs" role="tablist">
+          <button class="ctx-tab active" id="ctx-tab-dados" data-tab="dados" type="button" onclick="switchCtxTab('dados')">Dados</button>
+          <button class="ctx-tab" id="ctx-tab-cotacao" data-tab="cotacao" type="button" onclick="switchCtxTab('cotacao')">Cotação</button>
+          <button class="ctx-tab" id="ctx-tab-faq" data-tab="faq" type="button" onclick="switchCtxTab('faq')">Dúvidas</button>
         </div>
-        <div class="col-body" style="padding: 14px; gap: 12px; overflow-y: auto;">
-          <div class="form-box" style="gap: 6px;">
-            <div style="font-size: 11px; color: #93c5fd; font-weight: 700; text-transform: uppercase;">👤 Dados do Contato</div>
-            <div style="font-size: 12.5px; color: #fff;"><strong id="inbox-ficha-nome">Cliente WhatsApp</strong></div>
-            <div style="font-size: 11.5px; color: var(--muted);">📱 WhatsApp: <span id="inbox-ficha-phone" style="color: #6ee7b7;">-</span></div>
-            <div style="font-size: 11.5px; color: var(--muted);">📍 Localidade: <span id="inbox-ficha-city" style="color: #fff;">Rio de Janeiro / RJ</span></div>
-          </div>
-
-          <div class="form-box" style="gap: 6px;">
-            <div style="font-size: 11px; color: #93c5fd; font-weight: 700; text-transform: uppercase;">🚗 Veículo Consultado</div>
-            <div style="font-size: 12.5px; color: #fff;"><strong id="inbox-ficha-veiculo">Consultando...</strong></div>
-            <div style="font-size: 11.5px; color: var(--muted);">Placa: <strong id="inbox-ficha-placa" style="color: #facc15;">-</strong></div>
-            <div style="font-size: 11.5px; color: var(--muted);">Tabela FIPE: <strong id="inbox-ficha-fipe" style="color: #6ee7b7;">-</strong></div>
-          </div>
-
-          <div class="form-box" style="gap: 8px;">
-            <div style="font-size: 11px; color: #93c5fd; font-weight: 700; text-transform: uppercase;">🛡️ Planos Oficiais BGR</div>
-            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
-              <div style="padding: 6px 8px; border-radius: 6px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
-                <strong>🥉 Plano Prata:</strong> R$ 119,90/mês
-                <div style="font-size: 10.5px; color: var(--muted);">Roubo, furto, colisão e assistência 24h</div>
+        <div class="ctx-scroll" id="ctxScroll">
+          <!-- Aba Dados -->
+          <div class="tab-panel" id="panel-dados" data-panel="dados">
+            <div class="section">
+              <div class="section-top">Contato</div>
+              <div class="field">
+                <div class="field-label">Nome</div>
+                <div class="field-value" id="inbox-ficha-nome">Cliente WhatsApp</div>
               </div>
-              <div style="padding: 6px 8px; border-radius: 6px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);">
-                <strong>🥈 Plano Ouro:</strong> R$ 149,90/mês
-                <div style="font-size: 10.5px; color: var(--muted);">Cobertura completa + terceiros + vidros</div>
+              <div class="field">
+                <div class="field-label">Telefone</div>
+                <div class="field-value" id="inbox-ficha-phone">+55 21 96735-4521</div>
               </div>
-              <div style="padding: 6px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
-                <strong>🥇 Plano Diamante:</strong> R$ 189,90/mês
-                <div style="font-size: 10.5px; color: var(--muted);">Proteção Total 100% FIPE + Guincho ilimitado</div>
+              <div class="field">
+                <div class="field-label">Cidade / UF</div>
+                <div class="field-value" id="inbox-ficha-city">Rio de Janeiro / RJ</div>
+              </div>
+            </div>
+            <div class="section">
+              <div class="section-top">Qualificação</div>
+              <div class="progress" id="inbox-lead-progress">
+                <div class="step done" id="step-1"></div>
+                <div class="step current" id="step-2"></div>
+                <div class="step" id="step-3"></div>
+                <div class="step" id="step-4"></div>
+              </div>
+              <div class="field">
+                <div class="field-label">Veículo</div>
+                <div class="field-value pending" id="inbox-ficha-veiculo">Aguardando identificação</div>
+              </div>
+              <div class="field">
+                <div class="field-label">Placa</div>
+                <div class="field-value pending" id="inbox-ficha-placa">Não informada</div>
+              </div>
+              <div class="field">
+                <div class="field-label">Tabela FIPE</div>
+                <div class="field-value pending" id="inbox-ficha-fipe">Não consultada</div>
+              </div>
+              <button class="ctx-button" type="button" id="requestVehicle" onclick="insertQuickReply('fipe')">Solicitar dados do veículo</button>
+            </div>
+            <div class="section">
+              <div class="section-top">Próxima etapa</div>
+              <p class="fine">Coletar placa, modelo e ano para seguir com a cotação. Evite mostrar preços antes da consulta ao sistema oficial.</p>
+              <button class="ctx-button" type="button" id="gotoQuote" onclick="switchCtxTab('cotacao')">Ver painel de cotação</button>
+            </div>
+          </div>
+
+          <!-- Aba Cotação -->
+          <div class="tab-panel" id="panel-cotacao" data-panel="cotacao" style="display:none;">
+            <div class="section">
+              <div class="section-top">Consulta e proposta</div>
+              <div class="field">
+                <div class="field-label">Status</div>
+                <div class="field-value pending" id="inbox-cotacao-status">Cotação oficial vinculada ao Power CRM</div>
+              </div>
+              <p class="fine">Apresentar valores somente com base nas regras comerciais oficiais da BGR.</p>
+              <button class="ctx-button" type="button" id="requestQuote" onclick="insertQuickReply('plans')">Apresentar opções de planos</button>
+            </div>
+            <div class="section">
+              <div class="section-top">Planos Oficiais BGR</div>
+              <div class="subtle">Valores da tabela oficial de proteção veicular BGR Benefícios.</div>
+              <div class="plan">
+                <h3>🥉 Plano Prata</h3>
+                <p>Roubo, furto, colisão e assistência 24h</p>
+                <div class="value">R$ 119,90 / mês</div>
+                <div class="small-note">Proteção Essencial</div>
+                <button type="button" onclick="preparePlanMessage('Prata', 'R$ 119,90/mês')">Preparar mensagem</button>
+              </div>
+              <div class="plan">
+                <h3>🥈 Plano Ouro</h3>
+                <p>Cobertura completa + terceiros + vidros</p>
+                <div class="value">R$ 149,90 / mês</div>
+                <div class="small-note">Mais Escolhido</div>
+                <button type="button" onclick="preparePlanMessage('Ouro', 'R$ 149,90/mês')">Preparar mensagem</button>
+              </div>
+              <div class="plan">
+                <h3>🥇 Plano Diamante</h3>
+                <p>Proteção total 100% FIPE + guincho ilimitado</p>
+                <div class="value">R$ 189,90 / mês</div>
+                <div class="small-note">Proteção Premium</div>
+                <button type="button" onclick="preparePlanMessage('Diamante', 'R$ 189,90/mês')">Preparar mensagem</button>
               </div>
             </div>
           </div>
 
-          <!-- Bloco FAQ Comercial BGR (Dúvidas do Setor) -->
-          <div class="form-box" style="gap: 6px;">
-            <div style="font-size: 11px; color: #93c5fd; font-weight: 700; text-transform: uppercase;">💡 Dúvidas Frequentes do Setor</div>
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <button class="btn sm" style="font-size: 11px; text-align: left; justify-content: flex-start; padding: 4px 6px;" onclick="insertFaqReply('assoc')">
-                🤝 Associação vs Seguradora
+          <!-- Aba Dúvidas -->
+          <div class="tab-panel" id="panel-faq" data-panel="faq" style="display:none;">
+            <div class="section">
+              <div class="section-top">Respostas rápidas do setor</div>
+              <div class="subtle">Clique para abrir a resposta e use o botão para inserir no chat.</div>
+              
+              <button class="faq-row" type="button" onclick="toggleFaqAccordion(this)">
+                Associação x seguradora <span style="float:right">⌄</span>
               </button>
-              <button class="btn sm" style="font-size: 11px; text-align: left; justify-content: flex-start; padding: 4px 6px;" onclick="insertFaqReply('guincho')">
-                🛠️ Guincho & Assistência 24h
+              <div class="faq-answer">
+                <p>A BGR Benefícios é um Clube de Benefícios mútuo legalmente respaldado. Não fazemos perfil de condutor, não consultamos SPC/Serasa e o valor da mensalidade é até 50% mais acessível mantendo 100% da FIPE.</p>
+                <button class="ctx-button" type="button" style="margin-top:8px; padding:6px 10px;" onclick="insertFaqReply('assoc')">Inserir no chat</button>
+              </div>
+
+              <button class="faq-row" type="button" onclick="toggleFaqAccordion(this)">
+                Guincho e assistência 24h <span style="float:right">⌄</span>
               </button>
-              <button class="btn sm" style="font-size: 11px; text-align: left; justify-content: flex-start; padding: 4px 6px;" onclick="insertFaqReply('reserva')">
-                🚗 Carro Reserva (7 a 30 dias)
+              <div class="faq-answer">
+                <p>Todos os nossos planos contam com assistência 24h em todo o Brasil: guincho/reboque com raio ampliado, socorro elétrico/mecânico, troca de pneus, chaveiro 24h e auxílio para pane seca.</p>
+                <button class="ctx-button" type="button" style="margin-top:8px; padding:6px 10px;" onclick="insertFaqReply('guincho')">Inserir no chat</button>
+              </div>
+
+              <button class="faq-row" type="button" onclick="toggleFaqAccordion(this)">
+                Carro reserva (7 a 30 dias) <span style="float:right">⌄</span>
               </button>
-              <button class="btn sm" style="font-size: 11px; text-align: left; justify-content: flex-start; padding: 4px 6px;" onclick="insertFaqReply('franquia')">
-                ⚖️ Cota de Participação (Franquia)
+              <div class="faq-answer">
+                <p>Em caso de sinistro (colisão, roubo ou furto com processo aberto), associados Ouro e Diamante contam com carro reserva de 7 a 30 dias para não ficar a pé.</p>
+                <button class="ctx-button" type="button" style="margin-top:8px; padding:6px 10px;" onclick="insertFaqReply('reserva')">Inserir no chat</button>
+              </div>
+
+              <button class="faq-row" type="button" onclick="toggleFaqAccordion(this)">
+                Cota de participação (Franquia) <span style="float:right">⌄</span>
               </button>
-              <button class="btn sm" style="font-size: 11px; text-align: left; justify-content: flex-start; padding: 4px 6px;" onclick="insertFaqReply('spc')">
-                ✅ Sem Consulta SPC / Perfil
+              <div class="faq-answer">
+                <p>Em caso de Roubo, Furto ou Perda Total (PT), você NÃO paga cota de participação (recebe 100% FIPE limpo). Em colisão parcial, participa apenas com a cota fixa reduzida prevista no contrato.</p>
+                <button class="ctx-button" type="button" style="margin-top:8px; padding:6px 10px;" onclick="insertFaqReply('franquia')">Inserir no chat</button>
+              </div>
+
+              <button class="faq-row" type="button" onclick="toggleFaqAccordion(this)">
+                Sem consulta SPC / Perfil <span style="float:right">⌄</span>
               </button>
-              <button class="btn sm" style="font-size: 11px; text-align: left; justify-content: flex-start; padding: 4px 6px;" onclick="insertFaqReply('uber')">
-                🚕 Motoristas de App (Uber/99)
+              <div class="faq-answer">
+                <p>Não consultamos SPC/Serasa para aprovar a proteção e não exigimos perfil de condutor. Qualquer pessoa habilitada pode dirigir o veículo protegido.</p>
+                <button class="ctx-button" type="button" style="margin-top:8px; padding:6px 10px;" onclick="insertFaqReply('spc')">Inserir no chat</button>
+              </div>
+
+              <button class="faq-row" type="button" onclick="toggleFaqAccordion(this)">
+                Motoristas de App (Uber/99) <span style="float:right">⌄</span>
               </button>
+              <div class="faq-answer">
+                <p>A BGR aceita motoristas de aplicativo e frotistas sem sobretaxa abusiva. Seu instrumento de trabalho fica resguardado 24 horas por dia com cobertura completa.</p>
+                <button class="ctx-button" type="button" style="margin-top:8px; padding:6px 10px;" onclick="insertFaqReply('uber')">Inserir no chat</button>
+              </div>
             </div>
           </div>
-
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <button class="btn primary sm" style="justify-content: center;" onclick="insertQuickReply('plans'); sendInboxMessage();">
-              📤 Disparar Planos no WhatsApp
-            </button>
-            <button class="btn success sm" style="justify-content: center;" onclick="insertQuickReply('contract'); sendInboxMessage();">
-              📝 Disparar Link de Adesão
-            </button>
-          </div>
         </div>
-      </section>
+        <div class="context-footer">BGR Benefícios • Console Visual Integrado ao WhatsApp e Power CRM</div>
+      </aside>
     </div>
 
     <!-- ABA 1: ATENDIMENTO, CENÁRIOS EM ÍCONES E CHAT AO VIVO -->
@@ -1766,6 +2019,40 @@ const HTML_PAGE = `<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- Modal: Central de Ajuda & Blueprint -->
+  <div id="modal-help" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.78); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#0f1a2d; border:1px solid var(--stroke); border-radius:13px; width:100%; max-width:520px; box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column;">
+      <div style="background:#0b1424; padding:14px 18px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--stroke);">
+        <div style="font-weight:750; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
+          <span data-icon="help"></span>
+          <span>Central de Ajuda & Blueprint</span>
+        </div>
+        <button type="button" class="icon-btn" onclick="closeHelpModal()" style="width:30px; height:30px;">✕</button>
+      </div>
+      <div style="padding:18px; display:flex; flex-direction:column; gap:14px; font-size:13px; line-height:1.6; color:#d2e3fa;">
+        <div>
+          <strong style="color:#fff;">Console Visual IA — BGR Benefícios</strong><br>
+          Sistema operacional inteligente para consultores e atendimento comercial de proteção veicular.
+        </div>
+        <div style="background:#13243a; padding:12px; border-radius:9px; border:1px solid #31527c;">
+          <strong style="color:#93c5fd; font-size:12px; text-transform:uppercase;">Atalhos & Operação</strong>
+          <ul style="padding-left:18px; margin-top:6px; font-size:12px; color:#adc6e5;">
+            <li><strong>Enter:</strong> envia a mensagem digitada.</li>
+            <li><strong>Shift + Enter:</strong> insere quebra de linha.</li>
+            <li><strong>Assumir / Devolver à IA:</strong> pausa ou reativa o bot para o cliente ativo.</li>
+            <li><strong>Ações Rápidas:</strong> preenchem mensagens oficiais de Planos, Placa, PIX e Adesão.</li>
+          </ul>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px;">
+          <a href="/blueprint.pdf" download="DOCUMENTO_TECNICO_BLUEPRINT_AGENTE_SETOR.pdf" class="new-btn" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+            <span data-icon="file"></span> Baixar Blueprint Técnico (PDF)
+          </a>
+          <button type="button" class="filter" onclick="closeHelpModal()">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Enviar Mensagem Manual para Número WhatsApp -->
   <div id="modal-manual-msg" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.78); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:16px;">
     <div style="background:#0f172a; border:1px solid #00a884; border-radius:12px; width:100%; max-width:490px; box-shadow:0 10px 30px rgba(0,0,0,0.8); overflow:hidden; display:flex; flex-direction:column;">
@@ -1813,22 +2100,199 @@ const HTML_PAGE = `<!DOCTYPE html>
 
   <script>
     let latestState = null;
+    let inboxFilter = 'all';
+
+    const paths = {
+      messages: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>',
+      layout: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M9 9h12"/>',
+      calculator: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 11h2M14 11h2M8 15h2M14 15h2M8 19h2M14 19h2"/>',
+      repeat: '<path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/>',
+      users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3a4 4 0 0 1 0 8m6 10v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/>',
+      phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.91.68 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.25a2 2 0 0 1 2.11-.45c.9.32 1.85.55 2.81.68A2 2 0 0 1 22 16.92z"/>',
+      plug: '<path d="M12 22v-5M9 8V2m6 6V2M7 8h10v5a5 5 0 0 1-10 0z"/>',
+      chart: '<path d="M3 3v18h18M8 16v-5m5 5V7m5 9V5"/>',
+      help: '<circle cx="12" cy="12" r="10"/><path d="M9.5 9a2.5 2.5 0 0 1 5 1c0 1.5-2.5 2-2.5 4m0 3h.01"/>',
+      settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06-1.9 1.9-.06-.06A1.65 1.65 0 0 0 16 18.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.4 1.04V21h-2.7v-.96A1.65 1.65 0 0 0 10.6 18.4a1.65 1.65 0 0 0-1.8.33l-.07.06-1.9-1.9.07-.06A1.65 1.65 0 0 0 7.2 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.04-.4H4.6v-2.7h.96A1.65 1.65 0 0 0 7.2 9.6a1.65 1.65 0 0 0-.33-1.8L6.8 7.73l1.9-1.9.07.07A1.65 1.65 0 0 0 10.6 6.2a1.65 1.65 0 0 0 1.3-1.64V3.6h2.7v.96A1.65 1.65 0 0 0 16 6.2a1.65 1.65 0 0 0 1.8-.33l.06-.07 1.9 1.9-.06.07A1.65 1.65 0 0 0 19.4 9.6a1.65 1.65 0 0 0 1.64 1.3H22v2.7h-.96A1.65 1.65 0 0 0 19.4 15z"/>',
+      plus: '<path d="M12 5v14M5 12h14"/>',
+      search: '<circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/>',
+      send: '<path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13"/>',
+      car: '<path d="M5 17h14M5 17l-2 2v2h4v-2h10v2h4v-2l-2-2M5 17 3.5 9h17L19 17M5 9l2-5h10l2 5"/><circle cx="7" cy="15" r="1"/><circle cx="17" cy="15" r="1"/>',
+      wallet: '<rect x="2" y="5" width="20" height="16" rx="2"/><path d="M2 10h20M17 15h1"/>',
+      file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8"/>',
+      more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+      x: '<path d="M18 6 6 18M6 6l12 12"/>',
+      'panel-right': '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',
+      'arrow-left': '<path d="m12 19-7-7 7-7M5 12h14"/>'
+    };
+
+    function renderIcons() {
+      for (const el of document.querySelectorAll('[data-icon]')) {
+        const n = el.dataset.icon;
+        const s = el.dataset.size || 18;
+        el.innerHTML = '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (paths[n] || paths.help) + '</svg>';
+      }
+    }
 
     function showToast(msg) {
       const t = document.getElementById('toast');
+      if (!t) return;
       t.textContent = '✅ ' + msg;
+      t.classList.add('show');
       t.style.display = 'block';
-      setTimeout(() => { t.style.display = 'none'; }, 3000);
+      setTimeout(() => {
+        t.classList.remove('show');
+        t.style.display = 'none';
+      }, 3500);
     }
 
     function switchView(viewName) {
-      for (const v of ['inbox', 'atendimento', 'regua', 'humanos', 'agente', 'apis', 'kpis']) {
+      const views = ['inbox', 'atendimento', 'regua', 'humanos', 'agente', 'apis', 'kpis'];
+      const titles = {
+        inbox: 'Central de Atendimento',
+        atendimento: 'Simulador de Vendas & Testes',
+        regua: 'Régua de Vendas & Cobrança',
+        humanos: 'Equipe & Atendentes Humanos',
+        agente: 'Número do Agente & Configuração do Bot',
+        apis: 'APIs, Supabase & Power CRM',
+        kpis: 'KPIs, Métricas & LGPD'
+      };
+
+      for (const v of views) {
         const vEl = document.getElementById('view-' + v);
         const nEl = document.getElementById('nav-' + v);
         if (vEl) vEl.classList.toggle('active', v === viewName);
         if (nEl) nEl.classList.toggle('active', v === viewName);
       }
+
+      const cockpitNav = document.getElementById('nav-cockpit');
+      if (cockpitNav) cockpitNav.classList.toggle('active', viewName === 'kpis');
+
+      const titleEl = document.getElementById('topbar-page-title');
+      if (titleEl && titles[viewName]) titleEl.textContent = titles[viewName];
+
+      renderIcons();
     }
+
+    function openContext() {
+      const ctx = document.getElementById('context');
+      const bdr = document.getElementById('backdrop');
+      if (ctx) ctx.classList.add('is-open');
+      if (bdr) bdr.classList.add('is-open');
+    }
+
+    function closeContext() {
+      const ctx = document.getElementById('context');
+      const bdr = document.getElementById('backdrop');
+      if (ctx) ctx.classList.remove('is-open');
+      if (bdr) bdr.classList.remove('is-open');
+    }
+
+    function switchCtxTab(tabName) {
+      const tabs = ['dados', 'cotacao', 'faq'];
+      for (const t of tabs) {
+        const tabBtn = document.getElementById('ctx-tab-' + t);
+        const panel = document.getElementById('panel-' + t);
+        if (tabBtn) tabBtn.classList.toggle('active', t === tabName);
+        if (panel) panel.style.display = (t === tabName) ? 'block' : 'none';
+      }
+      const scroll = document.getElementById('ctxScroll');
+      if (scroll) scroll.scrollTop = 0;
+    }
+
+    function toggleInboxMenu() {
+      const menu = document.getElementById('inbox-dropdown-menu');
+      const btn = document.getElementById('inbox-more-menu-btn');
+      if (!menu) return;
+      const isOpen = menu.classList.toggle('open');
+      if (btn) btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
+    document.addEventListener('click', (e) => {
+      const wrap = e.target.closest('.menu-wrap');
+      if (!wrap) {
+        const menu = document.getElementById('inbox-dropdown-menu');
+        const btn = document.getElementById('inbox-more-menu-btn');
+        if (menu) menu.classList.remove('open');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    function openManualFromActiveChat() {
+      toggleInboxMenu();
+      const name = document.getElementById('inbox-active-name')?.textContent;
+      openManualMessageModal(activeInboxPhone, name);
+    }
+
+    function copyActivePhone() {
+      toggleInboxMenu();
+      if (!activeInboxPhone) {
+        showToast('Nenhum telefone ativo no momento');
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(activeInboxPhone)
+          .then(() => showToast('Telefone copiado: ' + activeInboxPhone))
+          .catch(() => showToast('Telefone: ' + activeInboxPhone));
+      } else {
+        showToast('Telefone: ' + activeInboxPhone);
+      }
+    }
+
+    function preparePlanMessage(planName, price) {
+      const inp = document.getElementById('inbox-input-msg');
+      if (!inp) return;
+      inp.value = 'Olá! O *Plano ' + planName + '* da BGR Benefícios tem mensalidade de ' + price + ' e inclui proteção completa de 100% da FIPE com assistência 24h em todo o Brasil. Gostaria que eu prepare a sua adesão agora?';
+      inp.focus();
+      inp.setSelectionRange(inp.value.length, inp.value.length);
+      if (window.innerWidth <= 1220) closeContext();
+    }
+
+    function toggleFaqAccordion(btn) {
+      const answer = btn.nextElementSibling;
+      if (answer && answer.classList.contains('faq-answer')) {
+        answer.classList.toggle('open');
+      }
+    }
+
+    function openHelpModal() {
+      const modal = document.getElementById('modal-help');
+      if (modal) modal.style.display = 'flex';
+      renderIcons();
+    }
+
+    function closeHelpModal() {
+      const modal = document.getElementById('modal-help');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function closeMobileChat() {
+      const ws = document.getElementById('workspace');
+      if (ws) ws.classList.remove('chat-active');
+    }
+
+    function focusInboxInput() {
+      const inp = document.getElementById('inbox-input-msg');
+      if (inp) inp.focus();
+    }
+
+    function handleComposerKey(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendInboxMessage();
+      }
+    }
+
+    function setInboxFilter(flt) {
+      inboxFilter = flt;
+      const allBtn = document.getElementById('filter-btn-all');
+      const aiBtn = document.getElementById('filter-btn-ai');
+      const humBtn = document.getElementById('filter-btn-human');
+      if (allBtn) allBtn.classList.toggle('active', flt === 'all');
+      if (aiBtn) aiBtn.classList.toggle('active', flt === 'ai');
+      if (humBtn) humBtn.classList.toggle('active', flt === 'human');
+      renderInboxConversationList();
+    }
+
 
     function renderHumanAttendantCard(att) {
       const statusMap = {
@@ -2902,6 +3366,8 @@ const HTML_PAGE = `<!DOCTYPE html>
 
     function selectInboxConversation(phone) {
       activeInboxPhone = phone;
+      const ws = document.getElementById('workspace');
+      if (ws) ws.classList.add('chat-active');
       renderInboxConversationList();
       renderInboxActiveChat();
     }
@@ -2957,33 +3423,22 @@ const HTML_PAGE = `<!DOCTYPE html>
           ? new Date(conv.lastItem.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
           : '';
         const snippet = String(conv.lastItem.text || '').slice(0, 48);
-        const aiBadge = conv.isAiPaused
-          ? '<span class="badge warn" style="font-size: 10px; padding: 1px 5px;">🚨 Humano</span>'
-          : '<span class="badge" style="font-size: 10px; padding: 1px 5px;">🤖 IA</span>';
+        const initial = (conv.name && conv.name.trim().length > 0) ? conv.name.trim()[0].toUpperCase() : 'C';
 
         cardsHtml.unshift(
-          '<div class="inbox-chat-card ' + (isSelected ? 'active' : '') + '" data-phone="' + phone + '" onclick="selectInboxConversation(this.dataset.phone)">' +
-            '<div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, ' +
-            (conv.isAiPaused ? '#f59e0b, #ef4444' : '#10b981, #2563eb') +
-            '); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">' +
-            (conv.isAiPaused ? '👤' : '💬') +
+          '<button class="conv ' + (isSelected ? 'active' : '') + '" data-phone="' + phone + '" type="button" onclick="selectInboxConversation(this.dataset.phone)">' +
+            '<div class="avatar" style="background: ' + (conv.isAiPaused ? 'linear-gradient(135deg, #f59e0b, #ef4444)' : 'linear-gradient(135deg, #174f7d, #2563eb)') + ';">' + initial + '</div>' +
+            '<div class="conv-details">' +
+              '<div class="conv-header">' +
+                '<strong class="conv-title">' + conv.name + '</strong>' +
+                '<span class="conv-time">' + timeStr + '</span>' +
+              '</div>' +
+              '<div class="conv-snippet">' + (snippet || 'Atendimento iniciado') + '</div>' +
+              '<span class="conv-status ' + (conv.isAiPaused ? 'human' : '') + '">' +
+                (conv.isAiPaused ? '● Atendimento humano' : '● IA respondendo') +
+              '</span>' +
             '</div>' +
-            '<div style="flex: 1; min-width: 0;">' +
-              '<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 4px;">' +
-                '<strong style="font-size: 12.5px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' +
-                  conv.name +
-                '</strong>' +
-                '<span style="font-size: 10px; color: var(--muted);">' + timeStr + '</span>' +
-              '</div>' +
-              '<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">' +
-                '<span style="font-size: 11px; color: var(--muted);">' + phone + '</span>' +
-                aiBadge +
-              '</div>' +
-              '<div style="font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px;">' +
-                snippet +
-              '</div>' +
-            '</div>' +
-          '</div>'
+          '</button>'
         );
       }
 
@@ -3293,6 +3748,7 @@ const HTML_PAGE = `<!DOCTYPE html>
       }
     }
 
+    renderIcons();
     pollLiveWhatsAppState();
     setInterval(pollLiveWhatsAppState, 2500);
   </script>
