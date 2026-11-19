@@ -116,6 +116,7 @@ interface LiveWhatsAppFeedItem {
 }
 
 let liveWhatsAppFeed: LiveWhatsAppFeedItem[] = [];
+let pausedAiPhones = new Set<string>();
 
 function recordLiveWhatsAppFeed(item: LiveWhatsAppFeedItem): void {
   if (liveWhatsAppFeed.some((x) => x.feed_id === item.feed_id)) {
@@ -513,6 +514,7 @@ function getFullState(sessionId = DEFAULT_SESSION_ID) {
     live_whatsapp_feed: liveWhatsAppFeed.slice(-60),
     last_active_customer_phone: lastActiveCustomerPhone,
     last_active_customer_name: lastActiveCustomerName,
+    paused_ai_phones: Array.from(pausedAiPhones),
   };
 }
 
@@ -602,12 +604,34 @@ const HTML_PAGE = `<!DOCTYPE html>
     /* Views */
     .view-container { flex: 1; display: none; overflow: hidden; padding: 14px; gap: 14px; }
     .view-container.active { display: grid; }
+    #view-inbox.active { grid-template-columns: 320px 1fr 330px; }
     #view-atendimento.active { grid-template-columns: 350px 1fr 370px; }
     #view-regua.active { grid-template-columns: 1fr 1fr 380px; }
     #view-humanos.active { grid-template-columns: 430px 1fr; }
     #view-agente.active { grid-template-columns: 460px 1fr; }
     #view-apis.active { grid-template-columns: 480px 1fr; }
     #view-kpis.active { grid-template-columns: 1fr 1fr; }
+
+    /* Estilos do Cockpit / Inbox do Atendente */
+    .inbox-filter-btn {
+      flex: 1; padding: 4px 6px; font-size: 11px; font-weight: 600; border-radius: 6px;
+      background: #0b1120; border: 1px solid var(--border); color: var(--muted); cursor: pointer; text-align: center;
+      transition: all 0.15s;
+    }
+    .inbox-filter-btn.active {
+      background: rgba(59, 130, 246, 0.2); color: #93c5fd; border-color: #3b82f6; font-weight: 700;
+    }
+    .inbox-chat-card {
+      padding: 10px 12px; border-radius: 10px; background: rgba(11, 17, 32, 0.7);
+      border: 1px solid var(--border); cursor: pointer; transition: all 0.15s;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .inbox-chat-card:hover {
+      background: rgba(30, 41, 59, 0.8); border-color: #3b82f688;
+    }
+    .inbox-chat-card.active {
+      background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+    }
 
     .col {
       background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
@@ -817,9 +841,13 @@ const HTML_PAGE = `<!DOCTYPE html>
   <div class="workspace">
     <!-- Barra Lateral de Navegação Baseada em Ícones -->
     <nav class="icon-rail" aria-label="Navegação Principal por Ícones">
-      <button id="nav-atendimento" class="nav-item active" onclick="switchView('atendimento')">
-        <span class="ico">💬</span>
-        <span>Atendimento & Testes</span>
+      <button id="nav-inbox" class="nav-item active" onclick="switchView('inbox')">
+        <span class="ico">📥</span>
+        <span>Cockpit Atendente</span>
+      </button>
+      <button id="nav-atendimento" class="nav-item" onclick="switchView('atendimento')">
+        <span class="ico">🧪</span>
+        <span>Simulador & Testes</span>
       </button>
       <button id="nav-regua" class="nav-item" onclick="switchView('regua')">
         <span class="ico">📅</span>
@@ -843,8 +871,132 @@ const HTML_PAGE = `<!DOCTYPE html>
       </button>
     </nav>
 
+    <!-- ABA 0: COCKPIT / INBOX DO ATENDENTE (WHATSAPP WEB LIVE) -->
+    <div id="view-inbox" class="view-container active">
+      <!-- Coluna 1: Lista de Conversas do WhatsApp -->
+      <section class="col">
+        <div class="col-header" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 6px;">
+              📥 Conversas WhatsApp
+              <span id="inbox-total-badge" class="badge" style="font-size: 11px; padding: 2px 7px;">0</span>
+            </span>
+            <button class="btn sm" onclick="pollLiveWhatsAppState()" title="Atualizar agora" style="padding: 3px 8px; font-size: 11px;">🔄</button>
+          </div>
+          <input id="inbox-search" type="text" placeholder="🔍 Buscar por nome ou telefone..." style="width: 100%; font-size: 12px; padding: 6px 10px; border-radius: 6px; background: #060b16; border: 1px solid var(--border); color: #fff;" oninput="renderInboxConversationList()" />
+          <div style="display: flex; gap: 4px;">
+            <button class="inbox-filter-btn active" id="filter-btn-all" onclick="setInboxFilter('all')">Todas</button>
+            <button class="inbox-filter-btn" id="filter-btn-human" onclick="setInboxFilter('human')">🚨 Humano</button>
+            <button class="inbox-filter-btn" id="filter-btn-ai" onclick="setInboxFilter('ai')">🤖 Com IA</button>
+          </div>
+        </div>
+        <div class="col-body" id="inbox-conversations-list" style="padding: 8px; gap: 6px; overflow-y: auto;">
+          <div style="text-align: center; color: var(--muted); font-size: 12px; padding: 24px 8px;">
+            Aguardando mensagens dos clientes...
+          </div>
+        </div>
+      </section>
+
+      <!-- Coluna 2: Chat Ao Vivo com o Cliente -->
+      <section class="col" style="display: flex; flex-direction: column;">
+        <div class="col-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(15, 23, 42, 0.9);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div id="inbox-active-avatar" style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #2563eb); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #fff;">
+              👤
+            </div>
+            <div>
+              <div id="inbox-active-name" style="font-weight: 700; font-size: 14px; color: #fff;">Cliente WhatsApp</div>
+              <div style="font-size: 11.5px; color: var(--muted); display: flex; align-items: center; gap: 6px;">
+                <span id="inbox-active-phone">+55 21 96735-4521</span>
+                <span id="inbox-active-ai-badge" class="badge" style="font-size: 10px; padding: 1px 6px;">🤖 IA Respondendo</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button id="inbox-btn-takeover" class="btn sm warn" onclick="toggleInboxAiForActivePhone()" title="Pausar ou reativar IA para este cliente">
+              👤 Assumir Atendimento
+            </button>
+          </div>
+        </div>
+
+        <!-- Área de Histórico das Mensagens estilo WhatsApp -->
+        <div id="inbox-chat-messages" style="flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #070d18;">
+          <div style="text-align: center; color: var(--muted); font-size: 12px; margin: auto;">
+            Histórico de conversa em tempo real conectado ao número oficial da BGR.
+          </div>
+        </div>
+
+        <!-- Barra Inferior de Atalhos Rápidos & Envio -->
+        <div style="padding: 10px 12px; background: rgba(15, 23, 42, 0.95); border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;">
+            <button class="btn sm" style="font-size: 11px; padding: 3px 8px; white-space: nowrap;" onclick="insertQuickReply('plans')">💰 Enviar Planos BGR</button>
+            <button class="btn sm" style="font-size: 11px; padding: 3px 8px; white-space: nowrap;" onclick="insertQuickReply('fipe')">🚗 Pedir Placa e Modelo</button>
+            <button class="btn sm" style="font-size: 11px; padding: 3px 8px; white-space: nowrap;" onclick="insertQuickReply('pix')">💳 Dados Chave PIX</button>
+            <button class="btn sm" style="font-size: 11px; padding: 3px 8px; white-space: nowrap;" onclick="insertQuickReply('contract')">📄 Link de Adesão Digital</button>
+            <button class="btn sm" style="font-size: 11px; padding: 3px 8px; white-space: nowrap;" onclick="insertQuickReply('human_intro')">👋 Sou o Consultor BGR</button>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: flex-end;">
+            <textarea id="inbox-input-msg" rows="2" placeholder="Digite sua resposta oficial da BGR (pressione Enter para enviar)..." style="flex: 1; resize: none; background: #060b16; border: 1px solid var(--border); border-radius: 8px; color: #fff; padding: 8px 10px; font-size: 12.5px;" onkeydown="if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); sendInboxMessage(); }"></textarea>
+            <button class="btn primary" onclick="sendInboxMessage()" style="padding: 10px 16px; font-weight: 700; height: 50px;">
+              Enviar 🚀
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Coluna 3: Ficha Rápida do Lead & Proposta BGR -->
+      <section class="col" style="padding: 0;">
+        <div class="col-header" style="padding: 10px 14px;">
+          <span>📋 Ficha do Lead & Cotação</span>
+          <span id="inbox-lead-status-pill" class="badge info">Qualificação</span>
+        </div>
+        <div class="col-body" style="padding: 14px; gap: 12px; overflow-y: auto;">
+          <div class="form-box" style="gap: 6px;">
+            <div style="font-size: 11px; color: #93c5fd; font-weight: 700; text-transform: uppercase;">👤 Dados do Contato</div>
+            <div style="font-size: 12.5px; color: #fff;"><strong id="inbox-ficha-nome">Cliente WhatsApp</strong></div>
+            <div style="font-size: 11.5px; color: var(--muted);">📱 WhatsApp: <span id="inbox-ficha-phone" style="color: #6ee7b7;">-</span></div>
+            <div style="font-size: 11.5px; color: var(--muted);">📍 Localidade: <span id="inbox-ficha-city" style="color: #fff;">Rio de Janeiro / RJ</span></div>
+          </div>
+
+          <div class="form-box" style="gap: 6px;">
+            <div style="font-size: 11px; color: #93c5fd; font-weight: 700; text-transform: uppercase;">🚗 Veículo Consultado</div>
+            <div style="font-size: 12.5px; color: #fff;"><strong id="inbox-ficha-veiculo">Consultando...</strong></div>
+            <div style="font-size: 11.5px; color: var(--muted);">Placa: <strong id="inbox-ficha-placa" style="color: #facc15;">-</strong></div>
+            <div style="font-size: 11.5px; color: var(--muted);">Tabela FIPE: <strong id="inbox-ficha-fipe" style="color: #6ee7b7;">-</strong></div>
+          </div>
+
+          <div class="form-box" style="gap: 8px;">
+            <div style="font-size: 11px; color: #93c5fd; font-weight: 700; text-transform: uppercase;">🛡️ Planos Oficiais BGR</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
+              <div style="padding: 6px 8px; border-radius: 6px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                <strong>🥉 Plano Prata:</strong> R$ 119,90/mês
+                <div style="font-size: 10.5px; color: var(--muted);">Roubo, furto, colisão e assistência 24h</div>
+              </div>
+              <div style="padding: 6px 8px; border-radius: 6px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);">
+                <strong>🥈 Plano Ouro:</strong> R$ 149,90/mês
+                <div style="font-size: 10.5px; color: var(--muted);">Cobertura completa + terceiros + vidros</div>
+              </div>
+              <div style="padding: 6px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                <strong>🥇 Plano Diamante:</strong> R$ 189,90/mês
+                <div style="font-size: 10.5px; color: var(--muted);">Proteção Total 100% FIPE + Guincho ilimitado</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <button class="btn primary sm" style="justify-content: center;" onclick="insertQuickReply('plans'); sendInboxMessage();">
+              📤 Disparar Planos no WhatsApp
+            </button>
+            <button class="btn success sm" style="justify-content: center;" onclick="insertQuickReply('contract'); sendInboxMessage();">
+              📝 Disparar Link de Adesão
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
     <!-- ABA 1: ATENDIMENTO, CENÁRIOS EM ÍCONES E CHAT AO VIVO -->
-    <div id="view-atendimento" class="view-container active">
+    <div id="view-atendimento" class="view-container">
       <!-- Coluna 1: Cartões de Ação Rápida baseados em Ícones -->
       <section class="col">
         <div class="col-header">
@@ -1580,9 +1732,11 @@ const HTML_PAGE = `<!DOCTYPE html>
     }
 
     function switchView(viewName) {
-      for (const v of ['atendimento', 'regua', 'humanos', 'agente', 'apis', 'kpis']) {
-        document.getElementById('view-' + v).classList.toggle('active', v === viewName);
-        document.getElementById('nav-' + v).classList.toggle('active', v === viewName);
+      for (const v of ['inbox', 'atendimento', 'regua', 'humanos', 'agente', 'apis', 'kpis']) {
+        const vEl = document.getElementById('view-' + v);
+        const nEl = document.getElementById('nav-' + v);
+        if (vEl) vEl.classList.toggle('active', v === viewName);
+        if (nEl) nEl.classList.toggle('active', v === viewName);
       }
     }
 
@@ -2565,6 +2719,287 @@ const HTML_PAGE = `<!DOCTYPE html>
       }
     }
 
+    let activeInboxPhone = null;
+    let inboxFilter = 'all';
+    let lastInboundCount = 0;
+    let cachedFeedList = [];
+    let cachedPausedPhones = [];
+
+    function playNotificationSound() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.09);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.32);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.32);
+      } catch (e) {}
+    }
+
+    window.addEventListener('focus', () => {
+      document.title = 'BGR Benefícios — Console Visual do Agente Comercial IA';
+    });
+
+    function setInboxFilter(filter) {
+      inboxFilter = filter;
+      document.querySelectorAll('.inbox-filter-btn').forEach((b) => {
+        b.classList.toggle('active', b.id === 'filter-btn-' + filter);
+      });
+      renderInboxConversationList();
+    }
+
+    function insertQuickReply(type) {
+      const inp = document.getElementById('inbox-input-msg');
+      if (!inp) return;
+      const replies = {
+        plans:
+          '🛡️ *Planos Oficiais BGR Benefícios:*\n' +
+          '• *Plano Prata:* R$ 119,90/mês (Roubo, furto, colisão e assistência 24h)\n' +
+          '• *Plano Ouro:* R$ 149,90/mês (Completo + proteção a terceiros e vidros)\n' +
+          '• *Plano Diamante:* R$ 189,90/mês (Proteção Total 100% FIPE + Guincho ilimitado)\n\n' +
+          'Qual dessas opções atende melhor você?',
+        fipe:
+          'Olá! Para calcular a cotação exata da proteção na Tabela FIPE do seu veículo, você poderia me informar a *placa* ou o *modelo e ano* do carro?',
+        pix:
+          '💳 Para formalizar a adesão da sua proteção, a chave PIX oficial da BGR Benefícios é nosso CNPJ. Assim que realizar o pagamento, basta me enviar o comprovante por aqui!',
+        contract:
+          '📝 Segue o link seguro para você conferir e assinar digitalmente a sua adesão à BGR Benefícios:\nhttps://bgrbeneficios.com.br/proposta-digital\nLeva menos de 1 minuto!',
+        human_intro:
+          'Olá! Aqui é o consultor comercial da BGR Benefícios assumindo o seu atendimento humano no WhatsApp. Como posso te ajudar agora?'
+      };
+      inp.value = replies[type] || '';
+      inp.focus();
+    }
+
+    function selectInboxConversation(phone) {
+      activeInboxPhone = phone;
+      renderInboxConversationList();
+      renderInboxActiveChat();
+    }
+
+    function renderInboxConversationList() {
+      const listEl = document.getElementById('inbox-conversations-list');
+      const searchVal = (document.getElementById('inbox-search')?.value || '').toLowerCase().trim();
+      if (!listEl) return;
+
+      const grouped = new Map();
+      for (const item of cachedFeedList) {
+        if (!item.customer_phone) continue;
+        if (!grouped.has(item.customer_phone)) {
+          grouped.set(item.customer_phone, {
+            phone: item.customer_phone,
+            name: item.customer_name || 'Cliente WhatsApp',
+            messages: [],
+            lastItem: item,
+            isAiPaused: cachedPausedPhones.includes(item.customer_phone)
+          });
+        }
+        const conv = grouped.get(item.customer_phone);
+        conv.messages.push(item);
+        conv.lastItem = item;
+      }
+
+      const totalBadge = document.getElementById('inbox-total-badge');
+      if (totalBadge) totalBadge.textContent = grouped.size;
+
+      if (grouped.size === 0) {
+        listEl.innerHTML =
+          '<div style="text-align: center; color: var(--muted); font-size: 12px; padding: 24px 8px;">Aguardando mensagens dos clientes...</div>';
+        return;
+      }
+
+      if (!activeInboxPhone || !grouped.has(activeInboxPhone)) {
+        activeInboxPhone = Array.from(grouped.keys())[grouped.size - 1];
+      }
+
+      const cardsHtml = [];
+      for (const [phone, conv] of grouped.entries()) {
+        const matchesSearch =
+          phone.toLowerCase().includes(searchVal) ||
+          conv.name.toLowerCase().includes(searchVal) ||
+          String(conv.lastItem.text || '').toLowerCase().includes(searchVal);
+        if (!matchesSearch) continue;
+
+        if (inboxFilter === 'human' && !conv.isAiPaused) continue;
+        if (inboxFilter === 'ai' && conv.isAiPaused) continue;
+
+        const isSelected = phone === activeInboxPhone;
+        const timeStr = conv.lastItem.timestamp
+          ? new Date(conv.lastItem.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          : '';
+        const snippet = String(conv.lastItem.text || '').slice(0, 48);
+        const aiBadge = conv.isAiPaused
+          ? '<span class="badge warn" style="font-size: 10px; padding: 1px 5px;">🚨 Humano</span>'
+          : '<span class="badge" style="font-size: 10px; padding: 1px 5px;">🤖 IA</span>';
+
+        cardsHtml.unshift(
+          '<div class="inbox-chat-card ' + (isSelected ? 'active' : '') + '" onclick="selectInboxConversation(\'' + phone + '\')">' +
+            '<div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, ' +
+            (conv.isAiPaused ? '#f59e0b, #ef4444' : '#10b981, #2563eb') +
+            '); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">' +
+            (conv.isAiPaused ? '👤' : '💬') +
+            '</div>' +
+            '<div style="flex: 1; min-width: 0;">' +
+              '<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 4px;">' +
+                '<strong style="font-size: 12.5px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' +
+                  conv.name +
+                '</strong>' +
+                '<span style="font-size: 10px; color: var(--muted);">' + timeStr + '</span>' +
+              '</div>' +
+              '<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">' +
+                '<span style="font-size: 11px; color: var(--muted);">' + phone + '</span>' +
+                aiBadge +
+              '</div>' +
+              '<div style="font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px;">' +
+                snippet +
+              '</div>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+
+      listEl.innerHTML = cardsHtml.join('') || '<div style="text-align: center; color: var(--muted); font-size: 12px; padding: 20px;">Nenhuma conversa encontrada neste filtro.</div>';
+    }
+
+    function renderInboxActiveChat() {
+      const nameEl = document.getElementById('inbox-active-name');
+      const phoneEl = document.getElementById('inbox-active-phone');
+      const aiBadgeEl = document.getElementById('inbox-active-ai-badge');
+      const btnTakeover = document.getElementById('inbox-btn-takeover');
+      const chatBox = document.getElementById('inbox-chat-messages');
+
+      const fichaNome = document.getElementById('inbox-ficha-nome');
+      const fichaPhone = document.getElementById('inbox-ficha-phone');
+      const fichaPlaca = document.getElementById('inbox-ficha-placa');
+
+      if (!activeInboxPhone) return;
+
+      const isPaused = cachedPausedPhones.includes(activeInboxPhone);
+      const convMsgs = cachedFeedList.filter((m) => m.customer_phone === activeInboxPhone);
+      const lastInbound = [...convMsgs].reverse().find((m) => m.direction === 'inbound');
+      const clientName = (lastInbound && lastInbound.customer_name) || 'Cliente WhatsApp';
+
+      if (nameEl) nameEl.textContent = clientName;
+      if (phoneEl) phoneEl.textContent = activeInboxPhone;
+      if (fichaNome) fichaNome.textContent = clientName;
+      if (fichaPhone) fichaPhone.textContent = activeInboxPhone;
+
+      const fullText = convMsgs.map((m) => m.text).join(' ');
+      const plateMatch = fullText.match(/\b([A-Z]{3}-?\d[0-9A-Z]\d{2})\b/i);
+      if (plateMatch && fichaPlaca) fichaPlaca.textContent = plateMatch[1].toUpperCase();
+
+      if (aiBadgeEl) {
+        aiBadgeEl.className = isPaused ? 'badge warn' : 'badge';
+        aiBadgeEl.innerHTML = isPaused ? '👤 Modo Humano (IA Silenciada)' : '🤖 IA Respondendo Automático';
+      }
+
+      if (btnTakeover) {
+        btnTakeover.className = isPaused ? 'btn sm success' : 'btn sm warn';
+        btnTakeover.textContent = isPaused ? '🤖 Devolver para IA' : '👤 Assumir Atendimento';
+      }
+
+      if (!chatBox) return;
+
+      if (convMsgs.length === 0) {
+        chatBox.innerHTML = '<div style="text-align: center; color: var(--muted); font-size: 12px; margin: auto;">Nenhuma mensagem registrada nesta conversa ainda.</div>';
+        return;
+      }
+
+      chatBox.innerHTML = convMsgs
+        .map((m) => {
+          const isIn = m.direction === 'inbound';
+          const isHuman = m.text.includes('[Atendente');
+          const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('pt-BR') : '';
+          const align = isIn ? 'flex-start' : 'flex-end';
+          const bg = isIn ? '#202c33' : isHuman ? '#312e81' : '#005c4b';
+          const borderCol = isIn ? '#3b82f6' : isHuman ? '#a855f7' : '#00a884';
+          const authorLabel = isIn
+            ? '📥 ' + (m.customer_name || 'Cliente') + ' (' + m.customer_phone + ')'
+            : isHuman
+            ? '👨‍💼 Atendente Humano BGR'
+            : '🤖 Robô Comercial BGR';
+
+          return (
+            '<div style="align-self:' + align + '; max-width:82%; background:' + bg + '; border-left:3px solid ' + borderCol + '; padding:8px 12px; border-radius:10px; color:#e9edef; box-shadow:0 1px 3px rgba(0,0,0,0.45);">' +
+              '<div style="font-size:10.5px; font-weight:700; color:' + (isIn ? '#93c5fd' : isHuman ? '#c084fc' : '#6ee7b7') + '; margin-bottom:4px; display:flex; justify-content:space-between; gap:12px;">' +
+                '<span>' + authorLabel + '</span>' +
+                '<span style="opacity:0.75;">' + timeStr + '</span>' +
+              '</div>' +
+              '<div style="white-space:pre-wrap; line-height:1.4; font-size:12.5px;">' +
+                String(m.text || '').replace(/</g, '&lt;') +
+              '</div>' +
+            '</div>'
+          );
+        })
+        .join('');
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function toggleInboxAiForActivePhone() {
+      if (!activeInboxPhone) {
+        showToast('Nenhuma conversa selecionada');
+        return;
+      }
+      try {
+        const targetUrl = window.location.hostname === 'localhost'
+          ? 'https://agente-de-atendimento-bgr1.onrender.com/api/inbox/toggle-ai'
+          : '/api/inbox/toggle-ai';
+        const res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: activeInboxPhone })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          cachedPausedPhones = data.state?.paused_ai_phones || [];
+          renderInboxActiveChat();
+          renderInboxConversationList();
+          showToast(data.paused ? '👤 Você assumiu o atendimento! IA pausada para este cliente.' : '🤖 Atendimento devolvido para a IA da BGR com sucesso!');
+        }
+      } catch (e) {
+        showToast('Erro ao alterar status: ' + e.message);
+      }
+    }
+
+    async function sendInboxMessage() {
+      const inp = document.getElementById('inbox-input-msg');
+      const text = inp ? inp.value.trim() : '';
+      if (!text) return;
+      if (!activeInboxPhone) {
+        showToast('Selecione uma conversa para enviar');
+        return;
+      }
+      inp.value = '';
+      try {
+        const targetUrl = window.location.hostname === 'localhost'
+          ? 'https://agente-de-atendimento-bgr1.onrender.com/api/inbox/send-message'
+          : '/api/inbox/send-message';
+        const res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to_phone: activeInboxPhone, text_body: text, attendant_name: 'Consultor BGR' })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('📤 Mensagem enviada para o WhatsApp ' + activeInboxPhone);
+          await pollLiveWhatsAppState();
+        } else {
+          showToast('Erro: ' + (data.error || 'Falha no envio'));
+        }
+      } catch (e) {
+        showToast('Erro ao enviar mensagem: ' + e.message);
+      }
+    }
+
     async function pollLiveWhatsAppState() {
       try {
         const localRes = await fetch('/api/state');
@@ -2592,6 +3027,9 @@ const HTML_PAGE = `<!DOCTYPE html>
                 activePhone = cloudData.state.last_active_customer_phone;
                 activeName = cloudData.state.last_active_customer_name;
               }
+              if (cloudData.state?.paused_ai_phones) {
+                localData.state.paused_ai_phones = cloudData.state.paused_ai_phones;
+              }
               if (cloudData.state?.integrations_status?.meta_module_stats && localData.state?.integrations_status) {
                 localData.state.integrations_status.meta_module_stats =
                   cloudData.state.integrations_status.meta_module_stats;
@@ -2604,6 +3042,17 @@ const HTML_PAGE = `<!DOCTYPE html>
 
         if (localData.state) {
           localData.state.live_whatsapp_feed = mergedFeed;
+          cachedFeedList = mergedFeed;
+          cachedPausedPhones = localData.state.paused_ai_phones || [];
+
+          // Notificação sonora para novas mensagens inbound
+          const currentInboundCount = mergedFeed.filter((m) => m.direction === 'inbound').length;
+          if (lastInboundCount > 0 && currentInboundCount > lastInboundCount) {
+            playNotificationSound();
+            document.title = '🔔 (1) Nova Mensagem • BGR Atendimento';
+          }
+          lastInboundCount = currentInboundCount;
+
           updateDashboard(localData.state);
           renderLiveWhatsAppMonitor(
             mergedFeed,
@@ -2611,6 +3060,8 @@ const HTML_PAGE = `<!DOCTYPE html>
             activeName,
             localData.state.agent_config?.agent_phone
           );
+          renderInboxConversationList();
+          renderInboxActiveChat();
         }
       } catch {
         // Ignora falha transitória de rede
@@ -3913,6 +4364,11 @@ const server = http.createServer(async (req, res) => {
           continue;
         }
 
+        if (pausedAiPhones.has(item.from_phone)) {
+          // Atendimento Humano Ativo: IA pausada para este cliente pelo Cockpit do Atendente
+          continue;
+        }
+
         if (!inboundDecision.allow_ai_agent) {
           lastOutboundPreview = inboundDecision.immediate_reply_text || '';
           if (lastOutboundPreview) {
@@ -4567,6 +5023,78 @@ const server = http.createServer(async (req, res) => {
           system_note: `📅 Régua de ${targetCat === 'cobranca' ? 'Cobranças em Modo Geral' : 'Campanhas de Venda'} executada via Agente ${agentConfig.agent_phone}: ${sentCount} mensagem(ns) enviada(s) e ${blockedCount} bloqueada(s) por proteção LGPD/Opt-Out.`,
           chat_preview: firstRenderedPreview,
           meta: `remetente: ${agentConfig.agent_phone} | régua: ${targetCat} | enviados: ${sentCount} | bloqueados_lgpd: ${blockedCount}`,
+          state: getFullState(),
+        })
+      );
+      return;
+    }
+
+    // Endpoint Cockpit 1: Pausar / Retomar IA para cliente específico (Takeover Humano)
+    if (req.method === 'POST' && req.url === '/api/inbox/toggle-ai') {
+      const targetPhone = String(payload.phone ?? '').trim();
+      if (!targetPhone) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ ok: false, error: 'Telefone obrigatório' }));
+        return;
+      }
+      const shouldPause = typeof payload.paused === 'boolean' ? payload.paused : !pausedAiPhones.has(targetPhone);
+      if (shouldPause) {
+        pausedAiPhones.add(targetPhone);
+      } else {
+        pausedAiPhones.delete(targetPhone);
+      }
+      const auditEv = buildCustomAuditEvent(
+        'inbox_ai_toggled',
+        `IA ${shouldPause ? 'pausada (Atendente Humano assumiu)' : 'reativada'} para o WhatsApp ${targetPhone}`,
+        'LOW'
+      );
+      dashboardService.recordEvent({ auditEvent: auditEv });
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          ok: true,
+          phone: targetPhone,
+          paused: pausedAiPhones.has(targetPhone),
+          state: getFullState(),
+        })
+      );
+      return;
+    }
+
+    // Endpoint Cockpit 2: Envio direto de mensagem do Atendente Humano para o WhatsApp Oficial do cliente
+    if (req.method === 'POST' && req.url === '/api/inbox/send-message') {
+      const targetPhone = String(payload.to_phone || lastActiveCustomerPhone || '').trim();
+      const textMsg = String(payload.text_body ?? '').trim();
+      if (!textMsg || !targetPhone) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ ok: false, error: 'Telefone e mensagem são obrigatórios' }));
+        return;
+      }
+      const attendantName = String(payload.attendant_name || 'Consultor BGR').trim();
+      const sent = await dispatchViaMetaCloud({
+        toPhone: targetPhone,
+        textBody: textMsg,
+        moduleKey: 'handoff_humanos',
+        recordInLiveMonitor: false,
+      });
+
+      recordLiveWhatsAppFeed({
+        feed_id: sent.wamid || `feed_att_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        timestamp: new Date().toISOString(),
+        direction: 'outbound',
+        customer_phone: targetPhone,
+        customer_name: lastActiveCustomerName || 'Cliente WhatsApp',
+        text: `👨‍💼 [${attendantName}]: ${textMsg}`,
+        wamid: sent.wamid || 'sim.human',
+        module: 'handoff_humanos',
+      });
+
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          ok: sent.ok,
+          wamid: sent.wamid,
+          simulated: sent.simulated,
           state: getFullState(),
         })
       );
