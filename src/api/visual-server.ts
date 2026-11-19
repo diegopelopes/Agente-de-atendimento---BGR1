@@ -3284,7 +3284,6 @@ const HTML_PAGE = `<!DOCTYPE html>
     }
 
     let activeInboxPhone = null;
-    let inboxFilter = 'all';
     let lastInboundCount = 0;
     let cachedFeedList = [];
     let cachedPausedPhones = [];
@@ -3311,14 +3310,6 @@ const HTML_PAGE = `<!DOCTYPE html>
     window.addEventListener('focus', () => {
       document.title = 'BGR Benefícios — Console Visual do Agente Comercial IA';
     });
-
-    function setInboxFilter(filter) {
-      inboxFilter = filter;
-      document.querySelectorAll('.inbox-filter-btn').forEach((b) => {
-        b.classList.toggle('active', b.id === 'filter-btn-' + filter);
-      });
-      renderInboxConversationList();
-    }
 
     function insertQuickReply(type) {
       const inp = document.getElementById('inbox-input-msg');
