@@ -575,9 +575,15 @@ const HTML_PAGE = `<!DOCTYPE html>
     }
 
     /* Logo Oficial BGR */
-    .brand-logo-img {
-      height: 38px; width: auto; max-width: 44px; object-fit: contain;
-      border-radius: 8px; display: block; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    .logo {
+      width: 42px; height: 42px; border-radius: 11px;
+      object-fit: cover; display: block; flex-shrink: 0;
+      box-shadow: 0 4px 16px rgba(25, 109, 218, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    body.theme-light .logo {
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
     }
     .theme-toggle-btn {
       border: 1px solid var(--stroke); color: var(--txt); background: rgba(255,255,255,0.04);
@@ -699,12 +705,6 @@ const HTML_PAGE = `<!DOCTYPE html>
       gap: 16px; padding: 0 20px; background: #0b1424; border-bottom: 1px solid var(--stroke); flex-shrink: 0;
     }
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .logo {
-      width: 40px; height: 40px; border-radius: 11px;
-      background: linear-gradient(145deg, #2476fa, #13a48c);
-      display: grid; place-items: center; font-size: 18px; font-weight: 900; color: #fff;
-      box-shadow: 0 5px 22px rgba(25, 109, 218, 0.3);
-    }
     .brand-title { font-size: 15px; font-weight: 750; white-space: nowrap; color: #fff; }
     .brand-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .brand-divider { width: 1px; height: 30px; background: var(--stroke); margin: 0 8px; }
@@ -1098,8 +1098,7 @@ const HTML_PAGE = `<!DOCTYPE html>
 <div class="app">
   <header class="topbar">
     <div class="brand">
-      <img src="/logo.png" alt="BGR Benefícios" class="brand-logo-img" />
-      <div class="logo" aria-hidden="true" title="BGR">B</div>
+      <img src="/logo.png" alt="BGR Benefícios" class="logo" title="BGR Benefícios" />
       <div>
         <div class="brand-title">BGR Benefícios</div>
         <div class="brand-sub">Console Visual IA</div>
