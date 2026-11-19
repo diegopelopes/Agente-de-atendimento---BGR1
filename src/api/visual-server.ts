@@ -227,7 +227,7 @@ async function notifyHumanAttendantViaMeta(params: {
 
   const attPhone = params.attendantPhoneOverride || targetAtt?.whatsapp_phone;
   const attName = params.attendantNameOverride || targetAtt?.name || 'Consultor BGR';
-  if (!attPhone) return null;
+  if (!attPhone || attPhone.includes('971624051') || attPhone.trim() === '') return null;
 
   const alertMsg =
     `🚨 *[BGR Benefícios — Transbordo IA para Humano]*\n` +
