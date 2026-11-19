@@ -186,4 +186,73 @@ describe('Fase 2 — PowerCRM Adapter (Leitura Controlada, Mocks, Resiliência H
       );
     }
   });
+
+  test('Sincronização no Power CRM: Registra cotação e lead no funil sob a origem 19266 (BGR - DIEGO)', async () => {
+    let capturedUrl = '';
+    let capturedBody: any = null;
+
+    const adapter = new PowerCrmAdapter({
+      mode: 'http',
+      baseUrl: 'https://api.powercrm.com.br/api',
+      originId: '19266',
+      bearerToken: 'token_teste_123',
+      fetchImpl: async (url, init) => {
+        capturedUrl = String(url);
+        capturedBody = JSON.parse(String(init?.body || '{}'));
+        return new Response('ok', { status: 200 });
+      },
+    });
+
+    assert.equal(adapter.getOriginId(), '19266');
+
+    const syncRes = await adapter.syncLeadToPowerCrm({
+      lead: {
+        id: 'lead_diego_01',
+        name: 'Diego Gomes',
+        phone: '+5521969573517',
+        email: 'diego@bgrbeneficios.com.br',
+        city_uf: 'Rio de Janeiro/RJ',
+        origin: 'whatsapp_oficial',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      vehicle: {
+        brand: 'FIAT',
+        model: 'ARGO',
+        year: 2022,
+        usage: 'particular',
+        plate_masked: 'BRA2E19',
+        fipe_code: '001509-1',
+      },
+      quotationCode: 'COT-OFICIAL01',
+      fipeCode: '001509-1',
+      fipeValueFormatted: 'R$ 68.900,00',
+      modelFullName: 'ARGO DRIVE 1.0 6V FLEX',
+      plans: [
+        {
+          plan_id: 'bgr_master',
+          plan_name: 'BGR Master',
+          monthly_fee_brl: 149.9,
+          enrollment_fee_brl: 250,
+          deductible_description: '5% FIPE',
+          coverages: ['Roubo', 'Colisão'],
+        },
+      ],
+    });
+
+    assert.equal(syncRes.ok, true);
+    assert.equal(syncRes.status, 200);
+    assert.equal(capturedUrl, 'https://api.powercrm.com.br/rdstation/add/19266');
+    assert.ok(capturedBody.leads && capturedBody.leads.length === 1);
+    const capturedLead = capturedBody.leads[0];
+    assert.equal(capturedLead.name, 'Diego Gomes');
+    assert.equal(capturedLead.email, 'diego@bgrbeneficios.com.br');
+    assert.equal(capturedLead.first_conversion.content.placa, 'BRA2E19');
+    assert.equal(capturedLead.first_conversion.content.codigo_fipe, '001509-1');
+    assert.equal(capturedLead.first_conversion.content.codigo_cotacao, 'COT-OFICIAL01');
+    assert.equal(capturedLead.custom_fields['Placa'], 'BRA2E19');
+    assert.equal(capturedLead.custom_fields['FIPE'], '001509-1');
+    assert.equal(capturedLead.custom_fields['Código Cotação'], 'COT-OFICIAL01');
+    assert.equal(capturedLead.custom_fields['Canal'], 'Agente Comercial IA BGR (+55 21 96957-3517)');
+  });
 });

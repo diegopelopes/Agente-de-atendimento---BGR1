@@ -45,6 +45,11 @@ export interface PowerCrmAdapterConfig {
    */
   quotationPathTemplate?: string;
   bearerToken?: string;
+  /**
+   * ID da Origem no Power CRM para ingestão de oportunidades e pedidos de cotação.
+   * Padrão oficial BGR: 19266 (BGR - DIEGO)
+   */
+  originId?: string | number;
   timeoutMs?: number;
   maxRetriesGet?: number;
   environment?: 'teste' | 'homologacao' | 'producao';
@@ -119,7 +124,7 @@ export class PowerCrmAdapter {
       PowerCrmAdapterConfig,
       'mode' | 'baseUrl' | 'quotationPathTemplate' | 'timeoutMs' | 'maxRetriesGet' | 'environment' | 'companyId'
     >
-  > &
+  > & { originId: string } &
     Pick<PowerCrmAdapterConfig, 'bearerToken' | 'fetchImpl'>;
 
   private readonly idempotencyStore = new Map<string, PowerCrmAdapterResponse<QuoteResult>>();
@@ -131,6 +136,7 @@ export class PowerCrmAdapter {
       baseUrl: (config.baseUrl || 'https://api.powercrm.com.br/api').replace(/\/+$/, ''),
       quotationPathTemplate: config.quotationPathTemplate ?? '/quotation/{code}',
       bearerToken: config.bearerToken,
+      originId: String(config.originId ?? (process.env.POWERCRM_ORIGIN_ID || '19266')),
       timeoutMs: config.timeoutMs ?? 10000,
       maxRetriesGet: config.maxRetriesGet ?? 2,
       environment: config.environment ?? 'teste',
@@ -145,6 +151,10 @@ export class PowerCrmAdapter {
 
   isHttpMode(): boolean {
     return this.config.mode === 'http' && this.config.fetchImpl === globalThis.fetch;
+  }
+
+  getOriginId(): string {
+    return this.config.originId;
   }
 
   getFipeService(): PowerCrmNativeFipeService {
@@ -491,6 +501,24 @@ export class PowerCrmAdapter {
           fetched_at: new Date().toISOString(),
         };
 
+        let syncStatus = '';
+        try {
+          const syncResult = await this.syncLeadToPowerCrm({
+            lead,
+            vehicle,
+            quotationCode: generatedCode,
+            plans: fipeLookup.calculated_plans,
+            fipeCode: fipeLookup.fipe_code,
+            fipeValueFormatted: fipeLookup.fipe_value_formatted,
+            modelFullName: fipeLookup.model_full_name,
+            sessionId,
+            correlationId,
+          });
+          syncStatus = ` Sincronizado no funil Power CRM (${syncResult.message})`;
+        } catch (syncErr) {
+          syncStatus = ` Aviso de sincronização Power CRM: ${syncErr instanceof Error ? syncErr.message : String(syncErr)}`;
+        }
+
         const liveResponse = this.buildResponse<QuoteResult>({
           status: 'success',
           data: liveResult,
@@ -503,7 +531,7 @@ export class PowerCrmAdapter {
           userSafeMessage: `Cotação oficial ${generatedCode} calculada na Tabela FIPE Power CRM (${fipeLookup.fipe_code} - ${fipeLookup.fipe_value_formatted}).`,
           eventType: 'powercrm_create_quotation_fipe_live_success',
           severity: 'LOW',
-          rawAuditSummary: `Cotação FIPE oficial ${generatedCode} calculada via Power CRM (/quotation/cmby + /plans/) para ${lead.name} - ${fipeLookup.model_full_name} (FIPE ${fipeLookup.fipe_code}: ${fipeLookup.fipe_value_formatted}).`,
+          rawAuditSummary: `Cotação FIPE oficial ${generatedCode} calculada via Power CRM (/quotation/cmby + /plans/) para ${lead.name} - ${fipeLookup.model_full_name} (FIPE ${fipeLookup.fipe_code}: ${fipeLookup.fipe_value_formatted}).${syncStatus}`,
         });
 
         this.idempotencyStore.set(idemKey, liveResponse);
@@ -660,6 +688,159 @@ export class PowerCrmAdapter {
         severity: 'HIGH',
         rawAuditSummary: `Timeout/erro de rede em POST ${url} (sem retry para preservar idempotência).`,
       });
+    }
+  }
+
+  /**
+   * Sincroniza o pedido de cotação e os dados do Lead diretamente no Power CRM
+   * através do endpoint oficial de ingestão de oportunidades (RD Station / Power CRM):
+   * POST https://api.powercrm.com.br/rdstation/add/{originId}
+   *
+   * Origem oficial padrão BGR: 19266 (BGR - DIEGO)
+   */
+  async syncLeadToPowerCrm(params: {
+    lead: Lead;
+    vehicle: Vehicle;
+    quotationCode: string;
+    plans?: QuotePlanOption[];
+    fipeCode?: string | null;
+    fipeValueFormatted?: string | null;
+    modelFullName?: string | null;
+    sessionId?: string;
+    correlationId?: string;
+    originId?: string | number;
+  }): Promise<{ ok: boolean; status: number; message: string }> {
+    const originId = String(params.originId || this.config.originId || '19266');
+    const cleanPhone = (params.lead.phone || '').replace(/\D/g, '');
+    const effectiveEmail =
+      params.lead.email && params.lead.email.includes('@')
+        ? params.lead.email.trim()
+        : `cliente.${cleanPhone || 'sem_telefone'}@bgrbeneficios.com.br`;
+
+    const cityUfRaw = (params.lead.city_uf || '').trim();
+    let city = cityUfRaw;
+    let state = 'RJ';
+    if (cityUfRaw.includes('/')) {
+      const parts = cityUfRaw.split('/');
+      city = parts[0].trim();
+      state = parts[1].trim().toUpperCase();
+    } else if (cityUfRaw.includes('-')) {
+      const parts = cityUfRaw.split('-');
+      city = parts[0].trim();
+      state = parts[1].trim().toUpperCase();
+    }
+
+    const plansSummary = (params.plans ?? [])
+      .map((p) => `${p.plan_name}: R$ ${p.monthly_fee_brl.toFixed(2)}/mês`)
+      .join(' | ');
+
+    const payload = {
+      leads: [
+        {
+          id: `lead_${cleanPhone}_${params.quotationCode || Date.now()}`,
+          email: effectiveEmail,
+          name: params.lead.name || 'Cliente BGR',
+          opportunity: 'true',
+          number_conversions: '1',
+          first_conversion: {
+            source: 'whatsapp_oficial',
+            content: {
+              identificador: 'cotacao-whatsapp-bgr',
+              email_lead: effectiveEmail,
+              nome: params.lead.name || 'Cliente BGR',
+              telefone: cleanPhone,
+              celular: cleanPhone,
+              cidade: city || 'Rio de Janeiro',
+              estado: state || 'RJ',
+              placa: params.vehicle.plate_masked || '',
+              marca: params.vehicle.brand || '',
+              modelo: params.modelFullName || params.vehicle.model || '',
+              ano: String(params.vehicle.year || ''),
+              codigo_fipe: params.fipeCode || params.vehicle.fipe_code || '',
+              valor_fipe: params.fipeValueFormatted || '',
+              codigo_cotacao: params.quotationCode,
+              valor_mensal: plansSummary,
+            },
+          },
+          last_conversion: {
+            source: 'whatsapp_oficial',
+            content: {
+              identificador: 'cotacao-whatsapp-bgr',
+              email_lead: effectiveEmail,
+              nome: params.lead.name || 'Cliente BGR',
+              telefone: cleanPhone,
+              celular: cleanPhone,
+              cidade: city || 'Rio de Janeiro',
+              estado: state || 'RJ',
+              placa: params.vehicle.plate_masked || '',
+              marca: params.vehicle.brand || '',
+              modelo: params.modelFullName || params.vehicle.model || '',
+              ano: String(params.vehicle.year || ''),
+              codigo_fipe: params.fipeCode || params.vehicle.fipe_code || '',
+              valor_fipe: params.fipeValueFormatted || '',
+              codigo_cotacao: params.quotationCode,
+              valor_mensal: plansSummary,
+            },
+          },
+          custom_fields: {
+            Placa: params.vehicle.plate_masked || 'Não informada',
+            Marca: params.vehicle.brand || '',
+            Modelo: params.vehicle.model || '',
+            Ano: String(params.vehicle.year || ''),
+            Veiculo: `${params.vehicle.brand || ''} ${params.vehicle.model || ''} ${params.vehicle.year || ''}`.trim(),
+            FIPE: params.fipeCode || params.vehicle.fipe_code || 'N/D',
+            'Valor FIPE': params.fipeValueFormatted || 'N/D',
+            'Código Cotação': params.quotationCode,
+            Planos: plansSummary || 'Em análise',
+            Canal: 'Agente Comercial IA BGR (+55 21 96957-3517)',
+          },
+        },
+      ],
+    };
+
+    if (this.config.mode === 'mock') {
+      return {
+        ok: true,
+        status: 200,
+        message: `[MOCK] Pedido de cotação ${params.quotationCode} sincronizado com sucesso para origem ${originId}.`,
+      };
+    }
+
+    const cleanBase = this.config.baseUrl.replace(/\/api\/?$/, '');
+    const url = `${cleanBase}/rdstation/add/${originId}`;
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      };
+      if (this.config.bearerToken) {
+        headers['Authorization'] = `Bearer ${this.config.bearerToken}`;
+      }
+
+      const res = await this.config.fetchImpl!(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      const responseText = await res.text();
+      const isOk = res.ok || res.status === 200;
+
+      return {
+        ok: isOk,
+        status: res.status,
+        message: isOk
+          ? `Pedido de cotação registrado no Power CRM sob a origem BGR - DIEGO (${originId}): ${responseText}`
+          : `Erro HTTP ${res.status} ao sincronizar no Power CRM: ${responseText}`,
+      };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      return {
+        ok: false,
+        status: 500,
+        message: `Falha na requisição de sincronização Power CRM: ${errMsg}`,
+      };
     }
   }
 

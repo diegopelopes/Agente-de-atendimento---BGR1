@@ -72,6 +72,7 @@ let powerCrmRuntimeConfig = {
   mode: (process.env.POWERCRM_MODE === 'mock' ? 'mock' : 'http') as 'mock' | 'http',
   baseUrl: process.env.POWERCRM_BASE_URL || 'https://api.powercrm.com.br/api',
   quotationPathTemplate: process.env.POWERCRM_PATH_TEMPLATE || '/quotation/{code}',
+  originId: process.env.POWERCRM_ORIGIN_ID || '19266',
   bearerToken:
     process.env.POWERCRM_BEARER_TOKEN ||
     'elI3apUqtodItXXHpXDYLGuimRJaN1XUzhZI7cSx7zi7wgNImYM68hLZ5NMDdBDjMFh4AaciMbNAxjqHOZVWQObCqJRmNihHLj1yQeywiLLX4qBeIlJbZC5RyUEGoRoI9r0TRgz5dwDzWFEPyjoDH2SbbZdh7KQnBfPXVrYQUrjJl84PfFxvoBG25BSv1UboDF74wURbfKGucDJFmYgAqj9i',
@@ -89,6 +90,7 @@ let crmAdapter = new PowerCrmAdapter({
   mode: powerCrmRuntimeConfig.mode,
   baseUrl: powerCrmRuntimeConfig.baseUrl,
   quotationPathTemplate: powerCrmRuntimeConfig.quotationPathTemplate,
+  originId: powerCrmRuntimeConfig.originId,
   bearerToken: powerCrmRuntimeConfig.bearerToken || undefined,
 });
 let quotationService = new QuotationService(crmAdapter);
@@ -491,6 +493,7 @@ function getFullState(sessionId = DEFAULT_SESSION_ID) {
       powercrm_mode: powerCrmRuntimeConfig.mode,
       powercrm_base_url: powerCrmRuntimeConfig.baseUrl,
       powercrm_path_template: powerCrmRuntimeConfig.quotationPathTemplate,
+      powercrm_origin_id: powerCrmRuntimeConfig.originId,
       powercrm_token_masked: getMaskedSecret(powerCrmRuntimeConfig.bearerToken, 'Não configurado (Modo Mock)'),
       supabase_configured: Boolean(supabaseRuntimeConfig.projectUrl && supabaseRuntimeConfig.apiKey),
       supabase_url: supabaseRuntimeConfig.projectUrl || 'Não configurado (Memória Local)',
@@ -1655,6 +1658,13 @@ const HTML_PAGE = `<!DOCTYPE html>
                 Token atual: <strong id="api-crm-masked">Não configurado (Modo Mock)</strong>
               </div>
             </div>
+            <div>
+              <label style="font-size: 12px; color: #93c5fd; font-weight: 600;">🎯 ID da Origem no Power CRM (Funil Oficial BGR)</label>
+              <input id="api-crm-origin" type="text" value="19266" placeholder="19266" style="width: 100%; margin-top: 4px;" />
+              <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">
+                Origem oficial BGR: <strong id="api-crm-origin-label">19266 (BGR - DIEGO)</strong> • Ingestão via <code>/rdstation/add/19266</code>
+              </div>
+            </div>
             <div style="display: flex; gap: 8px; align-items: center;">
               <button type="button" class="btn sm primary" onclick="testIntegrationConnection('powercrm')" style="flex: 1; justify-content: center;">
                 🧪 Testar Conexão Power CRM Agora
@@ -2108,8 +2118,16 @@ const HTML_PAGE = `<!DOCTYPE html>
         if (crmPathEl && ig.powercrm_path_template) {
           crmPathEl.value = ig.powercrm_path_template;
         }
-        document.getElementById('api-crm-url').value = ig.powercrm_base_url || 'https://api.powercrm.com.br/api/v1';
+        document.getElementById('api-crm-url').value = ig.powercrm_base_url || 'https://api.powercrm.com.br/api';
         document.getElementById('api-crm-masked').textContent = ig.powercrm_token_masked;
+        const originEl = document.getElementById('api-crm-origin');
+        if (originEl && ig.powercrm_origin_id) {
+          originEl.value = ig.powercrm_origin_id;
+        }
+        const originLbl = document.getElementById('api-crm-origin-label');
+        if (originLbl && ig.powercrm_origin_id) {
+          originLbl.textContent = ig.powercrm_origin_id + ' (BGR - DIEGO)';
+        }
         const sqlBox = document.getElementById('supabase-sql-box');
         if (sqlBox && !sqlBox.value) {
           sqlBox.value = ig.supabase_sql_schema || '';
@@ -2406,6 +2424,7 @@ const HTML_PAGE = `<!DOCTYPE html>
       const powercrm_mode = document.getElementById('api-crm-mode').value;
       const powercrm_path_template = document.getElementById('api-crm-path').value;
       const powercrm_base_url = document.getElementById('api-crm-url').value.trim();
+      const powercrm_origin_id = document.getElementById('api-crm-origin') ? document.getElementById('api-crm-origin').value.trim() : '19266';
       const powercrm_bearer_token = document.getElementById('api-crm-token').value.trim();
       const supabase_url = document.getElementById('api-supabase-url').value.trim();
       const supabase_key = document.getElementById('api-supabase-key').value.trim();
@@ -2419,6 +2438,7 @@ const HTML_PAGE = `<!DOCTYPE html>
           powercrm_mode,
           powercrm_path_template,
           powercrm_base_url,
+          powercrm_origin_id: powercrm_origin_id || '19266',
           powercrm_bearer_token: powercrm_bearer_token || undefined,
           supabase_url: supabase_url || undefined,
           supabase_key: supabase_key || undefined
@@ -4062,6 +4082,7 @@ const server = http.createServer(async (req, res) => {
         mode: powerCrmRuntimeConfig.mode,
         baseUrl: powerCrmRuntimeConfig.baseUrl,
         quotationPathTemplate: powerCrmRuntimeConfig.quotationPathTemplate,
+        originId: powerCrmRuntimeConfig.originId,
         bearerToken: powerCrmRuntimeConfig.bearerToken || undefined,
       });
       quotationService = new QuotationService(crmAdapter);
@@ -4112,6 +4133,10 @@ const server = http.createServer(async (req, res) => {
         powerCrmRuntimeConfig.baseUrl = payload.powercrm_base_url.trim();
         envUpdates.POWERCRM_BASE_URL = powerCrmRuntimeConfig.baseUrl;
       }
+      if (typeof payload.powercrm_origin_id === 'string' && payload.powercrm_origin_id.trim()) {
+        powerCrmRuntimeConfig.originId = payload.powercrm_origin_id.trim();
+        envUpdates.POWERCRM_ORIGIN_ID = powerCrmRuntimeConfig.originId;
+      }
       if (typeof payload.powercrm_bearer_token === 'string' && payload.powercrm_bearer_token.trim()) {
         powerCrmRuntimeConfig.bearerToken = payload.powercrm_bearer_token.trim();
         envUpdates.POWERCRM_BEARER_TOKEN = powerCrmRuntimeConfig.bearerToken;
@@ -4136,13 +4161,14 @@ const server = http.createServer(async (req, res) => {
         mode: powerCrmRuntimeConfig.mode,
         baseUrl: powerCrmRuntimeConfig.baseUrl,
         quotationPathTemplate: powerCrmRuntimeConfig.quotationPathTemplate,
+        originId: powerCrmRuntimeConfig.originId,
         bearerToken: powerCrmRuntimeConfig.bearerToken || undefined,
       });
       quotationService = new QuotationService(crmAdapter);
 
       const auditEv = buildCustomAuditEvent(
         'integrations_config_updated',
-        `APIs salvas (.env): OpenAI=${openAiAssistant.isConfigured() ? openAiAssistant.getModel() : 'local'} | PowerCRM=${powerCrmRuntimeConfig.mode} (${powerCrmRuntimeConfig.quotationPathTemplate}) | Supabase=${Boolean(supabaseRuntimeConfig.projectUrl)}`,
+        `APIs salvas (.env): OpenAI=${openAiAssistant.isConfigured() ? openAiAssistant.getModel() : 'local'} | PowerCRM=${powerCrmRuntimeConfig.mode} (${powerCrmRuntimeConfig.quotationPathTemplate} • Origem ${powerCrmRuntimeConfig.originId}) | Supabase=${Boolean(supabaseRuntimeConfig.projectUrl)}`,
         'LOW'
       );
       dashboardService.recordEvent({ auditEvent: auditEv });
@@ -4151,7 +4177,7 @@ const server = http.createServer(async (req, res) => {
       res.end(
         JSON.stringify({
           ok: true,
-          system_note: `🔑 Conexões salvas no arquivo .env local! OpenAI: ${openAiAssistant.isConfigured() ? `ATIVA (${openAiAssistant.getModel()})` : 'Modo NLU Local'} | Power CRM: ${powerCrmRuntimeConfig.mode.toUpperCase()} (${powerCrmRuntimeConfig.quotationPathTemplate})`,
+          system_note: `🔑 Conexões salvas no arquivo .env local! OpenAI: ${openAiAssistant.isConfigured() ? `ATIVA (${openAiAssistant.getModel()})` : 'Modo NLU Local'} | Power CRM: ${powerCrmRuntimeConfig.mode.toUpperCase()} (${powerCrmRuntimeConfig.quotationPathTemplate}) • Origem Funil: ${powerCrmRuntimeConfig.originId} (BGR - DIEGO)`,
           state: getFullState(),
         })
       );
@@ -4233,7 +4259,7 @@ const server = http.createServer(async (req, res) => {
 
             const auditEv = buildCustomAuditEvent(
               'powercrm_connection_test',
-              `Power CRM HTTP autenticado com sucesso (HTTP 200 • ${latencyMs}ms): Origens BGR=${originsLabel}`,
+              `Power CRM HTTP autenticado com sucesso (HTTP 200 • ${latencyMs}ms): Origens BGR=${originsLabel} • Funil de Ingestão: Origem ${powerCrmRuntimeConfig.originId} (BGR - DIEGO) via /rdstation/add/${powerCrmRuntimeConfig.originId}`,
               'LOW'
             );
             dashboardService.recordEvent({ auditEvent: auditEv });
@@ -4243,7 +4269,7 @@ const server = http.createServer(async (req, res) => {
               JSON.stringify({
                 ok: true,
                 title: `Power CRM Produção Autenticado (HTTP 200 • ${latencyMs}ms)`,
-                message: `Bearer Token validado ao vivo em ${cleanBase}/quotation/origins! Origens BGR ativas localizadas: ${originsLabel}. Rota de cotação ativa: ${powerCrmRuntimeConfig.quotationPathTemplate}.`,
+                message: `Bearer Token validado ao vivo em ${cleanBase}! Origens BGR: ${originsLabel}. Funil de Ingestão: Origem ${powerCrmRuntimeConfig.originId} (BGR - DIEGO) ativa e pronta para registrar cotações via POST /rdstation/add/${powerCrmRuntimeConfig.originId}.`,
                 state: getFullState(),
               })
             );
@@ -4261,6 +4287,7 @@ const server = http.createServer(async (req, res) => {
             mode: 'http',
             baseUrl: powerCrmRuntimeConfig.baseUrl,
             quotationPathTemplate: altPath,
+            originId: powerCrmRuntimeConfig.originId,
             bearerToken: powerCrmRuntimeConfig.bearerToken || undefined,
           });
           const altRes = await altAdapter.getQuotationByCode('COT-10001');
