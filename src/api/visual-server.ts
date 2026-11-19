@@ -574,6 +574,125 @@ const HTML_PAGE = `<!DOCTYPE html>
       height: 100dvh; min-height: 640px; display: flex; flex-direction: column; overflow: hidden;
     }
 
+    /* Logo Oficial BGR */
+    .brand-logo-img {
+      height: 38px; width: auto; max-width: 44px; object-fit: contain;
+      border-radius: 8px; display: block; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .theme-toggle-btn {
+      border: 1px solid var(--stroke); color: var(--txt); background: rgba(255,255,255,0.04);
+      display: inline-flex; gap: 7px; align-items: center; padding: 6px 11px; border-radius: 999px;
+      font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s ease;
+    }
+    .theme-toggle-btn:hover { background: var(--panel3); border-color: var(--primary); }
+
+    /* Tema Claro na Base Branca */
+    body.theme-light {
+      --bg: #f4f6fa;
+      --panel: #ffffff;
+      --panel2: #f8fafc;
+      --panel3: #f1f5f9;
+      --card: #ffffff;
+      --stroke: #e2e8f0;
+      --txt: #0f172a;
+      --muted: #64748b;
+      --blue: #2563eb;
+      --blue2: #1d4ed8;
+      --green: #059669;
+      --amber: #d97706;
+      --danger: #dc2626;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --purple: #7c3aed;
+      --border: #e2e8f0;
+      --shadow: 0 16px 50px rgba(15, 23, 42, 0.08);
+    }
+    body.theme-light .topbar { background: #ffffff; border-bottom-color: var(--stroke); }
+    body.theme-light .brand-title { color: #0f172a; }
+    body.theme-light .page-title { color: #1e293b; }
+    body.theme-light .tag { background: #f1f5f9; border-color: #cbd5e1; color: #475569; }
+    body.theme-light .tag.success { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+    body.theme-light .tag.secondary { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+    body.theme-light .theme-toggle-btn { background: #ffffff; border-color: #cbd5e1; color: #334155; }
+    body.theme-light .theme-toggle-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+    body.theme-light .rail { background: #ffffff; border-right-color: var(--stroke); }
+    body.theme-light .rail-btn { color: #64748b; }
+    body.theme-light .rail-btn:hover { background: #f1f5f9; color: #0f172a; }
+    body.theme-light .rail-btn.active { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    body.theme-light .rail-btn.active:before { background: #2563eb; }
+    body.theme-light .inbox { background: #f8fafc; border-right-color: var(--stroke); }
+    body.theme-light .inbox-head { border-bottom-color: var(--stroke); }
+    body.theme-light .pane-title h2 { color: #0f172a; }
+    body.theme-light .mini-count { background: #e2e8f0; border-color: #cbd5e1; color: #334155; }
+    body.theme-light .searchbox { background: #ffffff; border-color: #cbd5e1; color: #64748b; }
+    body.theme-light .searchbox input { color: #0f172a; }
+    body.theme-light .searchbox input::placeholder { color: #94a3b8; }
+    body.theme-light .filter { border-color: #cbd5e1; color: #475569; background: #ffffff; }
+    body.theme-light .filter.active { background: #2563eb; border-color: #2563eb; color: #ffffff; }
+    body.theme-light .conv { background: #ffffff; border-color: #e2e8f0; color: #0f172a; box-shadow: 0 1px 3px rgba(15,23,42,0.04); }
+    body.theme-light .conv:hover { background: #f8fafc; border-color: #cbd5e1; }
+    body.theme-light .conv.active { background: #eff6ff; border-color: #93c5fd; box-shadow: 0 0 10px rgba(37,99,235,0.12); }
+    body.theme-light .conv-title { color: #0f172a; }
+    body.theme-light .conv-time { color: #64748b; }
+    body.theme-light .conv-snippet { color: #475569; }
+    body.theme-light .conv-status { color: #059669; }
+    body.theme-light .conv-status.human { color: #d97706; }
+    body.theme-light .inbox-foot { border-top-color: var(--stroke); color: #64748b; }
+    body.theme-light .inbox-foot b { color: #0f172a; }
+    body.theme-light .chat { background: #f1f5f9; }
+    body.theme-light .chat-head { background: #ffffff; border-bottom-color: var(--stroke); }
+    body.theme-light .chat-person h1 { color: #0f172a; }
+    body.theme-light .btn-assume { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    body.theme-light .btn-assume:hover { background: #fef3c7; }
+    body.theme-light .btn-assume.to-ai { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+    body.theme-light .dropdown { background: #ffffff; border-color: #cbd5e1; box-shadow: 0 10px 30px rgba(15,23,42,0.12); }
+    body.theme-light .dropdown button { color: #334155; }
+    body.theme-light .dropdown button:hover { background: #f1f5f9; }
+    body.theme-light .dropdown button.danger { color: #dc2626; }
+    body.theme-light .chat-empty-card h3 { color: #0f172a; }
+    body.theme-light .illustration { background: linear-gradient(145deg, #e0edff, #f1f5f9); border-color: #bfdbfe; color: #2563eb; }
+    body.theme-light .message { background: #ffffff; border-color: #cbd5e1; color: #0f172a; box-shadow: 0 1px 2px rgba(15,23,42,0.06); }
+    body.theme-light .message.outgoing { background: #ecfdf5; border-color: #a7f3d0; color: #064e3b; }
+    body.theme-light .message.human-outgoing { background: #faf5ff; border-color: #e9d5ff; color: #581c87; }
+    body.theme-light .message small { color: #64748b; }
+    body.theme-light .composer { background: #ffffff; border-top-color: var(--stroke); }
+    body.theme-light .quick { background: #f8fafc; border-color: #cbd5e1; color: #334155; }
+    body.theme-light .quick:hover { background: #f1f5f9; border-color: #94a3b8; }
+    body.theme-light .compose-input { background: #f8fafc; border-color: #cbd5e1; color: #0f172a; }
+    body.theme-light .compose-input::placeholder { color: #94a3b8; }
+    body.theme-light .composer-note { color: #94a3b8; }
+    body.theme-light .context { background: #ffffff; border-left-color: var(--stroke); }
+    body.theme-light .context-head { border-bottom-color: var(--stroke); }
+    body.theme-light .context-head h2 { color: #0f172a; }
+    body.theme-light .context-tabs { background: #f1f5f9; border-color: #cbd5e1; }
+    body.theme-light .ctx-tab { color: #64748b; }
+    body.theme-light .ctx-tab.active { background: #ffffff; color: #1d4ed8; box-shadow: 0 1px 3px rgba(15,23,42,0.08); }
+    body.theme-light .section { background: #f8fafc; border-color: #e2e8f0; }
+    body.theme-light .section-top { color: #2563eb; }
+    body.theme-light .field-label { color: #64748b; }
+    body.theme-light .field-value { color: #0f172a; }
+    body.theme-light .field-value.pending { color: #94a3b8; }
+    body.theme-light .step { background: #e2e8f0; }
+    body.theme-light .fine { color: #64748b; }
+    body.theme-light .ctx-button { background: #2563eb; border-color: #2563eb; color: #ffffff; }
+    body.theme-light .ctx-button:hover { background: #1d4ed8; }
+    body.theme-light .subtle { color: #64748b; }
+    body.theme-light .plan { background: #ffffff; border-color: #cbd5e1; }
+    body.theme-light .plan h3 { color: #0f172a; }
+    body.theme-light .plan p { color: #475569; }
+    body.theme-light .plan .value { color: #0f172a; }
+    body.theme-light .plan .small-note { color: #64748b; }
+    body.theme-light .plan button { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    body.theme-light .plan button:hover { background: #2563eb; color: #ffffff; }
+    body.theme-light .faq-row { background: #ffffff; border-color: #cbd5e1; color: #0f172a; }
+    body.theme-light .faq-answer { color: #334155; }
+    body.theme-light .context-footer { border-top-color: var(--stroke); color: #94a3b8; }
+    body.theme-light .col { background: #ffffff; border-color: var(--stroke); }
+    body.theme-light .col-header { background: #f8fafc; border-bottom-color: var(--stroke); color: #0f172a; }
+    body.theme-light .form-box { background: #f8fafc; border-color: var(--stroke); }
+
     /* Topbar Global (70px) */
     .topbar {
       height: 70px; min-height: 70px; display: flex; align-items: center; justify-content: space-between;
@@ -979,7 +1098,8 @@ const HTML_PAGE = `<!DOCTYPE html>
 <div class="app">
   <header class="topbar">
     <div class="brand">
-      <div class="logo" aria-hidden="true">B</div>
+      <img src="/logo.png" alt="BGR Benefícios" class="brand-logo-img" />
+      <div class="logo" aria-hidden="true" title="BGR">B</div>
       <div>
         <div class="brand-title">BGR Benefícios</div>
         <div class="brand-sub">Console Visual IA</div>
@@ -988,6 +1108,10 @@ const HTML_PAGE = `<!DOCTYPE html>
       <div class="page-title" id="topbar-page-title">Central de Atendimento</div>
     </div>
     <div class="top-actions">
+      <button id="themeToggleBtn" class="theme-toggle-btn" type="button" aria-label="Alternar Tema Claro / Escuro" title="Alternar Tema Claro / Escuro" onclick="toggleTheme()">
+        <span data-icon="sun"></span>
+        <span id="theme-btn-label">Modo Claro</span>
+      </button>
       <span id="topbar-wa-tag" class="tag success"><i class="dot"></i> WhatsApp conectado</span>
       <span id="topbar-ia-tag" class="tag secondary">✦ IA ativa</span>
       <button class="icon-btn settings-icon" type="button" aria-label="Configurações e APIs" title="Configurações e APIs" onclick="switchView('apis')">
@@ -2122,8 +2246,34 @@ const HTML_PAGE = `<!DOCTYPE html>
       more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
       x: '<path d="M18 6 6 18M6 6l12 12"/>',
       'panel-right': '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',
-      'arrow-left': '<path d="m12 19-7-7 7-7M5 12h14"/>'
+      'arrow-left': '<path d="m12 19-7-7 7-7M5 12h14"/>',
+      sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+      moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>'
     };
+
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('theme-light');
+      document.body.classList.toggle('theme-dark', !isLight);
+      localStorage.setItem('bgr_theme', isLight ? 'light' : 'dark');
+      updateThemeButton(isLight);
+    }
+
+    function updateThemeButton(isLight) {
+      const btn = document.getElementById('themeToggleBtn');
+      if (!btn) return;
+      btn.innerHTML = isLight
+        ? '<span data-icon="moon"></span><span id="theme-btn-label">Modo Escuro</span>'
+        : '<span data-icon="sun"></span><span id="theme-btn-label">Modo Claro</span>';
+      renderIcons();
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem('bgr_theme');
+      const isLight = saved === 'light';
+      document.body.classList.toggle('theme-light', isLight);
+      document.body.classList.toggle('theme-dark', !isLight);
+      updateThemeButton(isLight);
+    }
 
     function renderIcons() {
       for (const el of document.querySelectorAll('[data-icon]')) {
@@ -3739,6 +3889,7 @@ const HTML_PAGE = `<!DOCTYPE html>
       }
     }
 
+    initTheme();
     renderIcons();
     pollLiveWhatsAppState();
     setInterval(pollLiveWhatsAppState, 2500);
@@ -4465,6 +4616,29 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && req.url === '/chat') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(CHAT_ONLY_HTML);
+      return;
+    }
+
+    if (req.method === 'GET' && (req.url === '/logo.png' || req.url === '/bgr-logo.png')) {
+      const candidates = [
+        path.resolve(import.meta.dirname, '..', '..', 'public', 'logo.png'),
+        path.resolve(process.cwd(), 'public', 'logo.png'),
+        path.resolve(process.cwd(), 'logo.png'),
+      ];
+      for (const p of candidates) {
+        if (fs.existsSync(p)) {
+          const logoBytes = fs.readFileSync(p);
+          res.writeHead(200, {
+            'Content-Type': 'image/png',
+            'Content-Length': logoBytes.length,
+            'Cache-Control': 'public, max-age=86400',
+          });
+          res.end(logoBytes);
+          return;
+        }
+      }
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Logo not found');
       return;
     }
 
